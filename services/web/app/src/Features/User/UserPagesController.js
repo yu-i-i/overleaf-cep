@@ -52,8 +52,10 @@ async function settingsPage(req, res) {
 
   const reconfirmedViaSAML = _.get(req.session, ['saml', 'reconfirmed'])
   delete req.session.saml
+
+  const isLdapUser = req.session.passport.user.isLdapAuth
   let shouldAllowEditingDetails = true
-  if (Settings.ldap && Settings.ldap.updateUserDetailsOnLogin) {
+  if (Settings.ldap && Settings.ldap.updateUserDetailsOnLogin && isLdapUser) {
     shouldAllowEditingDetails = false
   }
   if (Settings.saml && Settings.saml.updateUserDetailsOnLogin) {
@@ -172,6 +174,7 @@ async function settingsPage(req, res) {
     },
     hasPassword: !!user.hashedPassword,
     shouldAllowEditingDetails,
+    isLdapUser,
     oauthProviders: UserPagesController._translateProviderDescriptions(
       oauthProviders,
       req

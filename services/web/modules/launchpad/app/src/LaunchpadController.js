@@ -96,7 +96,7 @@ const _LaunchpadController = {
         )
         return res.sendStatus(403)
       }
-      const { email } = req.body
+      const email = req.body.email.toLowerCase()
       if (!email) {
         logger.debug({ authMethod }, 'no email supplied, disallow')
         return res.sendStatus(400)
@@ -140,8 +140,8 @@ const _LaunchpadController = {
         await User.updateOne(
           { _id: user._id },
           {
-            $set: { isAdmin: true },
-            emails: [{ email }],
+            $set: { isAdmin: true, 'emails.0.confirmedAt' : Date.now() }, // no email confirmation is required
+            $unset: { 'hashedPassword': "" }, // external-auth user must not have a hashedPassword 
           }
         ).exec()
       } catch (err) {
@@ -211,7 +211,6 @@ const _LaunchpadController = {
         {
           $set: {
             isAdmin: true,
-            emails: [{ email }],
           },
         }
       ).exec()

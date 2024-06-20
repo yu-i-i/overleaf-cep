@@ -298,6 +298,7 @@ module.exports = {
   // Where your instance of Overleaf Community Edition/Server Pro can be found publicly. Used in emails
   // that are sent out, generated links, etc.
   siteUrl: (siteUrl = process.env.PUBLIC_URL || 'http://127.0.0.1:3000'),
+  siteUrlOverleaf: 'https://overleaf.com',
 
   lockManager: {
     lockTestInterval: intFromEnv('LOCK_MANAGER_LOCK_TEST_INTERVAL', 50),
@@ -899,6 +900,8 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    'track-changes',
+    'ldap-contacts',
   ],
 
   csp: {
@@ -919,6 +922,41 @@ module.exports = {
 
   managedUsers: {
     enabled: false,
+  },
+
+  ldap: {
+    enable: true,
+    updateUserDetailsOnLogin: process.env.OVERLEAF_LDAP_UPDATE_USER_DETAILS_ON_LOGIN === 'true',
+    attEmail:     process.env.OVERLEAF_LDAP_EMAIL_ATT || 'mail',
+    attFirstName: process.env.OVERLEAF_LDAP_FIRST_NAME_ATT || 'givenName',
+    attLastName:  process.env.OVERLEAF_LDAP_LAST_NAME_ATT || 'sn',
+    server: {
+      url: process.env.OVERLEAF_LDAP_URL,
+      bindDN: process.env.OVERLEAF_LDAP_BIND_DN || '',
+      bindCredentials: process.env.OVERLEAF_LDAP_BIND_CREDENTIALS || '',
+      bindProperty: process.env.OVERLEAF_LDAP_BIND_PROPERTY,
+      searchBase: process.env.OVERLEAF_LDAP_SEARCH_BASE,
+      searchFilter: process.env.OVERLEAF_LDAP_SEARCH_FILTER,
+      searchScope: process.env.OVERLEAF_LDAP_SEARCH_SCOPE || 'sub',
+      searchAttributes: [
+        process.env.OVERLEAF_LDAP_EMAIL_ATT || 'mail',
+        process.env.OVERLEAF_LDAP_LAST_NAME_ATT || 'sn',
+        process.env.OVERLEAF_LDAP_FIRST_NAME_ATT || 'givenName',
+      ],
+      cache: process.env.OVERLEAF_LDAP_CACHE,
+      timeout: process.env.OVERLEAF_LDAP_TIMEOUT,
+      connectTimeout: process.env.OVERLEAF_LDAP_CONNECT_TIMEOUT,
+      searchSizeLimit: 1,
+      searchTimeLimit: 10,
+      starttls: Boolean(process.env.OVERLEAF_LDAP_TLS_OPTS_CA_PATH), 
+      tlsOptions: { 
+        ca: process.env.OVERLEAF_LDAP_TLS_OPTS_CA_PATH,
+	rejectUnauthorized: process.env.OVERLEAF_LDAP_TLS_OPTS_REJECT_UNAUTH,      
+      },
+    },
+  },
+  splitTestOverrides: {
+    'history-ranges-support': 'enabled',
   },
 }
 

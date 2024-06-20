@@ -84,6 +84,7 @@ const formatUser = (user: any): any => {
 
   if (id == null) {
     return {
+      id: 'anonymous-user',
       email: null,
       name: 'Anonymous',
       isSelf: false,
@@ -283,15 +284,19 @@ function useReviewPanelState(): ReviewPanel.ReviewPanelState {
           // Always include ourself, since if we submit an op, we might need to display info
           // about it locally before it has been flushed through the server
           if (user) {
-            tempUsers[user.id] = formatUser(user)
+            if (user.id) {
+              tempUsers[user.id] = formatUser(user) 
+            } else { 
+              tempUsers['anonymous-user'] = formatUser(user) 
+            } 
           }
-
           for (const user of usersResponse) {
             if (user.id) {
               tempUsers[user.id] = formatUser(user)
+            } else {
+              tempUsers['anonymous-user'] = formatUser(user)
             }
           }
-
           setUsers(tempUsers)
         })
         .catch(error => {
@@ -532,9 +537,9 @@ function useReviewPanelState(): ReviewPanel.ReviewPanelState {
     }
   }, [currentDocument, regenerateTrackChangesId, resolvedThreadIds])
 
-  const currentUserType = useCallback((): 'member' | 'guest' | 'anonymous' => {
+  const currentUserType = useCallback((): 'member' | 'guest' | 'anonymous-user' => {
     if (!user) {
-      return 'anonymous'
+      return 'anonymous-user'
     }
     if (project.owner._id === user.id) {
       return 'member'
@@ -587,7 +592,7 @@ function useReviewPanelState(): ReviewPanel.ReviewPanelState {
   const setGuestsTCState = useCallback(
     (newValue: boolean) => {
       setTrackChangesOnForGuests(newValue)
-      if (currentUserType() === 'guest' || currentUserType() === 'anonymous') {
+      if (currentUserType() === 'guest' || currentUserType() === 'anonymous-user') {
         setWantTrackChanges(newValue)
       }
     },

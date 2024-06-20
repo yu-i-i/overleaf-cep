@@ -177,6 +177,40 @@ const AuthenticationManager = {
     return { user, isPasswordReused }
   },
 
+  async findOrCreateLdapUser(ldapUser, auditLog) {
+    //user is already authenticated in Ldap
+    const userFirstName = ldapUser[Settings.ldap.attFirstName]
+    const userLastName = ldapUser[Settings.ldap.attLastName]
+    const userEmail = ldapUser[Settings.ldap.attEmail].toLowerCase()
+    var user = await User.findOne({ 'email': userEmail }).exec()
+
+    if( !user ) {
+      const UserCreator = require("../User/UserCreator")
+      user = await UserCreator.promises.createNewUser(
+        {
+          email: userEmail,
+          first_name: userFirstName,
+          last_name: userLastName,
+          holdingAccount: false,
+        }
+      )
+      await User.updateOne(
+        { _id: user._id }, 
+        { $set : { 'emails.0.confirmedAt' : Date.now() } }).exec() //email of ldap user is confirmed
+    }
+
+    const userDetails = Settings.ldap.updateUserDetailsOnLogin ? { first_name : userFirstName, last_name: userLastName } : {}
+    const result = await User.updateOne(
+      { _id: user._id, loginEpoch: user.loginEpoch }, { $inc: { loginEpoch: 1 }, $set: userDetails },
+      {} 
+    ).exec()
+ 
+    if (result.modifiedCount !== 1) {
+      throw new ParallelLoginError()
+    }
+    return user
+  },
+
   validateEmail(email) {
     const parsed = EmailHelper.parseEmail(email)
     if (!parsed) {
@@ -473,6 +507,7 @@ module.exports = {
     'user',
     'isPasswordReused',
   ]),
+  findOrCreateLdapUser: callbackify(AuthenticationManager.findOrCreateLdapUser),
   setUserPassword: callbackify(AuthenticationManager.setUserPassword),
   checkRounds: callbackify(AuthenticationManager.checkRounds),
   hashPassword: callbackify(AuthenticationManager.hashPassword),

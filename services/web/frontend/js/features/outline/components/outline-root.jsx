@@ -20,7 +20,7 @@ function OutlineRoot({ outline, jumpToLine, highlightedLine }) {
         <div className="outline-body-no-elements">
           {t('we_cant_find_any_sections_or_subsections_in_this_file')}.{' '}
           <a
-            href="/learn/how-to/Using_the_File_Outline_feature"
+            href="https://www.overleaf.com/learn/how-to/Using_the_File_Outline_feature"
             className="outline-body-link"
             target="_blank"
             rel="noopener noreferrer"

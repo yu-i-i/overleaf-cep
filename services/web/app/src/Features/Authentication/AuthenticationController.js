@@ -19,6 +19,7 @@ const AsyncFormHelper = require('../Helpers/AsyncFormHelper')
 const _ = require('lodash')
 const UserAuditLogHandler = require('../User/UserAuditLogHandler')
 const AnalyticsRegistrationSourceHelper = require('../Analytics/AnalyticsRegistrationSourceHelper')
+const EmailHelper = require('../Helpers/EmailHelper')
 const {
   acceptsJson,
 } = require('../../infrastructure/RequestContentTypeDetection')
@@ -103,10 +104,16 @@ const AuthenticationController = {
     // This function is middleware which wraps the passport.authenticate middleware,
     // so we can send back our custom `{message: {text: "", type: ""}}` responses on failure,
     // and send a `{redir: ""}` response on success
+    let passportAuthStrategy
+    if(EmailHelper.parseEmail(req.body.email)) {
+      passportAuthStrategy = ['custom-fail-ldapauth','local']
+    } else {
+      passportAuthStrategy = ['custom-fail-ldapauth'] // uid login, ldap user
+    }
     passport.authenticate(
-      'local',
+      passportAuthStrategy,
       { keepSessionInfo: true },
-      function (err, user, info) {
+      function (err, user, infoArray) {
         if (err) {
           return next(err)
         }
@@ -117,6 +124,7 @@ const AuthenticationController = {
           })
           return AuthenticationController.finishLogin(user, req, res, next)
         } else {
+	  let info = infoArray[0]
           if (info.redir != null) {
             return res.json({ redir: info.redir })
           } else {
@@ -293,6 +301,73 @@ const AuthenticationController = {
                   key: 'invalid-password-retry-or-reset',
                   status: 401,
                 })
+              }
+            }
+          )
+        })
+      }
+    )
+  },
+
+  doPassportLdapLogin(req, ldapUser, done) {
+    const  email = ldapUser.mail.toLowerCase()
+    Modules.hooks.fire(
+      'preDoPassportLogin',
+      req,
+      email,
+      function (err, infoList) {
+        if (err) {
+          return done(err)
+        }
+        const info = infoList.find(i => i != null)
+        if (info != null) {
+          return done(null, false, info)
+        }
+        LoginRateLimiter.processLoginRequest(email, function (err, isAllowed) {
+          if (err) {
+            return done(err)
+          }
+          if (!isAllowed) {
+            logger.debug({ email }, 'too many login requests')
+            return done(null, null, {
+              text: req.i18n.translate('to_many_login_requests_2_mins'),
+              type: 'error',
+              key: 'to-many-login-requests-2-mins',
+              status: 429,
+            })
+          }
+          const { fromKnownDevice } = AuthenticationController.getAuditInfo(req)
+          const auditLog = {
+            ipAddress: req.ip,
+            info: { method: 'Ldap login', fromKnownDevice },
+          }
+          AuthenticationManager.findOrCreateLdapUser(
+            ldapUser,
+            auditLog,
+            function (error, user) {
+              if (error != null) {
+                if (error instanceof ParallelLoginError) {
+                  return done(null, false, { status: 429 })
+                }
+                return done(error)
+              }
+              if (
+                user &&
+                AuthenticationController.captchaRequiredForLogin(req, user)
+              ) {
+                done(null, false, {
+                  text: req.i18n.translate('cannot_verify_user_not_robot'),
+                  type: 'error',
+                  errorReason: 'cannot_verify_user_not_robot',
+                  status: 400,
+                })
+              } else if (user) {
+		req.session.isLdapAuth = true
+                // async actions
+                done(null, user)
+              } else {  //something wrong
+                logger.debug({ email }, 'user is null')
+                done(null, false, { status: 500 } )
               }
             }
           )
@@ -607,6 +682,11 @@ function _afterLoginSessionSetup(req, user, callback) {
     }
     delete req.session.__tmp
     delete req.session.csrfSecret
+
+    if(req.session.isLdapAuth) {
+      req.session.passport.user.isLdapAuth = true
+      delete req.session.isLdapAuth
+    }
     req.session.save(function (err) {
       if (err) {
         OError.tag(err, 'error saving regenerated session after login', {

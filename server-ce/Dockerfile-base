@@ -65,12 +65,7 @@ RUN mkdir /install-tl-unx \
       -repository ${TEXLIVE_MIRROR} \
     \
 &&  $(find /usr/local/texlive -name tlmgr) path add \
-&&  tlmgr install --repository ${TEXLIVE_MIRROR} \
-      latexmk \
-      texcount \
-      synctex \
-      etoolbox \
-      xetex \
+&&  tlmgr install --repository ${TEXLIVE_MIRROR} scheme-full \
 &&  tlmgr path add \
 &&  rm -rf /install-tl-unx
 

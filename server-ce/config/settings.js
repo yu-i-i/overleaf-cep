@@ -406,6 +406,24 @@ if (
   }
 }
 
+// ######################
+// Overleaf Server Pro
+// ######################
+
+// /Learn
+// -------
+if (process.env.OVERLEAF_PROXY_LEARN != null) {
+  settings.proxyLearn = parse(process.env.OVERLEAF_PROXY_LEARN)
+  if (settings.proxyLearn) {
+    settings.nav.header_extras = [
+      {
+        url: 'https://www.overleaf.com/learn',
+        text: 'documentation',
+      },
+    ].concat(settings.nav.header_extras || [])
+  }
+}
+
 // /References
 // -----------
 if (process.env.OVERLEAF_ELASTICSEARCH_URL != null) {

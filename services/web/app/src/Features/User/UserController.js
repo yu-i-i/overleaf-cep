@@ -378,7 +378,7 @@ async function updateUserSettings(req, res, next) {
   if (
     newEmail == null ||
     newEmail === user.email ||
-    req.externalAuthenticationSystemUsed()
+    (req.externalAuthenticationSystemUsed() && req.session.passport.user.isLdapAuth)
   ) {
     // end here, don't update email
     SessionManager.setInSessionUser(req.session, {

@@ -125,6 +125,45 @@ block content
 															span(data-ol-inflight="idle") #{translate("register")}
 															span(hidden data-ol-inflight="pending") #{translate("registering")}…
 
+												h3 #{translate('local_account')}
+												p
+													| #{translate('alternatively_create_local_admin_account')}
+
+												form(
+													data-ol-async-form
+													data-ol-register-admin
+													action="/launchpad/register_admin"
+													method="POST"
+												)
+													input(name='_csrf', type='hidden', value=csrfToken)
+													+formMessages()
+													.form-group
+														label(for='email') #{translate("email")}
+														input.form-control(
+															type='email',
+															name='email',
+															placeholder="email@example.com"
+															autocomplete="username"
+															required,
+															autofocus="true"
+														)
+													.form-group
+														label(for='password') #{translate("password")}
+														input.form-control#passwordField(
+															type='password',
+															name='password',
+															placeholder="********",
+															autocomplete="new-password"
+															required,
+														)
+													.actions
+														button.btn-primary.btn(
+															type='submit'
+															data-ol-disabled-inflight
+														)
+															span(data-ol-inflight="idle") #{translate("register")}
+															span(hidden data-ol-inflight="pending") #{translate("registering")}…
+
 											// Saml Form
 											if authMethod === 'saml'
 												h3 #{translate('saml')}
@@ -226,7 +265,7 @@ block content
 												p
 													a(href="/admin").btn.btn-info
 														| Go To Admin Panel
-													| &nbsp;
+												p
 													a(href="/project").btn.btn-primary
 														| Start Using #{settings.appName}
 												br

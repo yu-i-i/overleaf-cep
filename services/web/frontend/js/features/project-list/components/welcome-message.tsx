@@ -29,7 +29,7 @@ export default function WelcomeMessage() {
                 <WelcomeMessageLink
                   imgSrc="/img/welcome-page/learn-latex.svg"
                   title="Learn LaTeX with a tutorial"
-                  href="/learn/latex/Learn_LaTeX_in_30_minutes"
+                  href="https://www.overleaf.com/learn/latex/Learn_LaTeX_in_30_minutes"
                   target="_blank"
                 />
               )}

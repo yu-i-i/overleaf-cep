@@ -177,7 +177,7 @@ function useCodeMirrorScope(view: EditorView) {
 
     if (currentDoc) {
       if (trackChanges) {
-        currentDoc.track_changes_as = userId || 'anonymous'
+        currentDoc.track_changes_as = userId || 'anonymous-user'
       } else {
         currentDoc.track_changes_as = null
       }

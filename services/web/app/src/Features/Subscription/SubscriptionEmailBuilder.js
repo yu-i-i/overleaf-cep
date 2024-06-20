@@ -15,78 +15,78 @@ EmailBuilder.templates.trialOnboarding = EmailBuilder.NoCTAEmailTemplate({
   message(opts, isPlainText) {
     const invitingNamedCollaborators = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/Sharing_a_project?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=invitelink#Inviting_named_collaborators`,
+      `${settings.siteUrlOverleaf}/learn/how-to/Sharing_a_project?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=invitelink#Inviting_named_collaborators`,
       isPlainText
     )
     const increasedCompileTimeout = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/What_is_the_maximum_compilation_time,_file_number_and_project_size_allowed_on_free_vs_paid_plans%3F?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=compilelink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/What_is_the_maximum_compilation_time,_file_number_and_project_size_allowed_on_free_vs_paid_plans%3F?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=compilelink`,
       isPlainText
     )
     const realTimeTrackChanges = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/Track_Changes_in_Overleaf?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=trackchangeslink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/Track_Changes_in_Overleaf?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=trackchangeslink`,
       isPlainText
     )
     const history = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/latex/Using_the_History_feature?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=historylink`,
+      `${settings.siteUrlOverleaf}/learn/latex/Using_the_History_feature?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=historylink`,
       isPlainText
     )
     const versioning = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/Can_I_save_versions_of_my_work%3F?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=versioninglink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/Can_I_save_versions_of_my_work%3F?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=versioninglink`,
       isPlainText
     )
     const advancedReferenceSearch = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/How_to_search_for_references_in_an_Overleaf_project?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=adrefsearchlink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/How_to_search_for_references_in_an_Overleaf_project?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=adrefsearchlink`,
       isPlainText
     )
     const referenceManagerSync = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/How_to_link_your_Overleaf_account_to_Mendeley_and_Zotero?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=refmansynclink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/How_to_link_your_Overleaf_account_to_Mendeley_and_Zotero?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=refmansynclink`,
       isPlainText
     )
     const dropboxSync = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/Dropbox_Synchronization?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=dropboxlink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/Dropbox_Synchronization?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=dropboxlink`,
       isPlainText
     )
     const gitSync = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/Using_Git_and_GitHub?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=gitgithublink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/Using_Git_and_GitHub?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=gitgithublink`,
       isPlainText
     )
     const symbolPalette = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/how-to/Using_the_Symbol_Palette_in_Overleaf#:~:text=To%20open%20the%20Symbol%20Palette,the%20handle%20up%20and%20down.`,
+      `${settings.siteUrlOverleaf}/learn/how-to/Using_the_Symbol_Palette_in_Overleaf#:~:text=To%20open%20the%20Symbol%20Palette,the%20handle%20up%20and%20down.`,
       isPlainText
     )
     const latexTutorials = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/latex/Learn_LaTeX_in_30_minutes?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=latextutorialslink`,
+      `${settings.siteUrlOverleaf}/learn/latex/Learn_LaTeX_in_30_minutes?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=latextutorialslink`,
       isPlainText
     )
     const knowledgeBase = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=learnlink`,
+      `${settings.siteUrlOverleaf}/learn?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=learnlink`,
       isPlainText
     )
     const technicalArticles = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/learn/latex/Articles?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=articleslink`,
+      `${settings.siteUrlOverleaf}/learn/latex/Articles?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=articleslink`,
       isPlainText
     )
     const webinars = EmailMessageHelper.displayLink(
       'Read More',
-      `${settings.siteUrl}/events/webinars?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=webinarslink`,
+      `${settings.siteUrlOverleaf}/events/webinars?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=webinarslink`,
       isPlainText
     )
 
     const cancel = EmailMessageHelper.displayLink(
       'cancel at any time',
-      `${settings.siteUrl}/learn/how-to/Canceling_Subscription?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=cancellink`,
+      `${settings.siteUrlOverleaf}/learn/how-to/Canceling_Subscription?utm_source=Overleaf&utm_medium=email&utm_campaign=TrialEmail&utm_content=cancellink`,
       isPlainText
     )
 
