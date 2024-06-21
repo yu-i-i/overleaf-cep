@@ -955,9 +955,9 @@ module.exports = {
       },
     },
   },
-  splitTestOverrides: {
-    'history-ranges-support': 'enabled',
-  },
+//  splitTestOverrides: {
+//    'history-ranges-support': 'enabled',
+//  },
 }
 
 module.exports.mergeWith = function (overrides) {

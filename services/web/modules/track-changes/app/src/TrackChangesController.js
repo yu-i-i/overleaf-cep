@@ -193,12 +193,23 @@ const TrackChangesController = {
     )
   },
   resolveThread(req, res, next) {
-    const { project_id, thread_id } = req.params
+    const { project_id, doc_id, thread_id } = req.params
     const user_id = SessionManager.getLoggedInUserId(req.session)
     if (user_id == null) {
       const err = new Error('no logged-in user')
       return next(err)
     }
+    DocumentUpdaterHandler.resolveThread(
+      project_id,
+      doc_id,
+      thread_id,
+      user_id,
+      function (err, message) {
+        if (err != null) {
+          return next(err)
+        }
+      }
+    )
     return ChatApiHandler.resolveThread(
       project_id,
       thread_id,
@@ -226,7 +237,23 @@ const TrackChangesController = {
     )
   },
   reopenThread(req, res, next) {
-    const { project_id, thread_id } = req.params
+    const { project_id, doc_id, thread_id } = req.params
+    const user_id = SessionManager.getLoggedInUserId(req.session)
+    if (user_id == null) {
+      const err = new Error('no logged-in user')
+      return next(err)
+    }
+    DocumentUpdaterHandler.reopenThread(
+      project_id,
+      doc_id,
+      thread_id,
+      user_id,
+      function (err, message) {
+        if (err != null) {
+          return next(err)
+        }
+      }
+    )
     return ChatApiHandler.reopenThread(
       project_id,
       thread_id,
