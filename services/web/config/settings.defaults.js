@@ -925,7 +925,7 @@ module.exports = {
   },
 
   ldap: {
-    enable: true,
+    enable: process.env.EXTERNAL_AUTH === 'ldap',
     updateUserDetailsOnLogin: process.env.OVERLEAF_LDAP_UPDATE_USER_DETAILS_ON_LOGIN === 'true',
     attEmail:     process.env.OVERLEAF_LDAP_EMAIL_ATT || 'mail',
     attFirstName: process.env.OVERLEAF_LDAP_FIRST_NAME_ATT || 'givenName',
@@ -955,6 +955,9 @@ module.exports = {
       },
     },
   },
+
+  enableRegistrationPage: true,
+
 //  splitTestOverrides: {
 //    'history-ranges-support': 'enabled',
 //  },

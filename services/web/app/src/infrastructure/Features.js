@@ -53,9 +53,8 @@ const Features = {
         return Boolean(Settings.enableHomepage)
       case 'registration-page':
         return (
-	  true	
-     //     !Features.externalAuthenticationSystemUsed() ||
-     //     Boolean(Settings.overleaf)
+          !Features.externalAuthenticationSystemUsed() ||
+          Boolean(Settings.overleaf) || Boolean(Settings.enableRegistrationPage)
         )
       case 'registration':
         return Boolean(Settings.overleaf)

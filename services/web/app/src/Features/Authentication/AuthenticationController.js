@@ -19,7 +19,6 @@ const AsyncFormHelper = require('../Helpers/AsyncFormHelper')
 const _ = require('lodash')
 const UserAuditLogHandler = require('../User/UserAuditLogHandler')
 const AnalyticsRegistrationSourceHelper = require('../Analytics/AnalyticsRegistrationSourceHelper')
-const EmailHelper = require('../Helpers/EmailHelper')
 const {
   acceptsJson,
 } = require('../../infrastructure/RequestContentTypeDetection')
@@ -104,12 +103,7 @@ const AuthenticationController = {
     // This function is middleware which wraps the passport.authenticate middleware,
     // so we can send back our custom `{message: {text: "", type: ""}}` responses on failure,
     // and send a `{redir: ""}` response on success
-    let passportAuthStrategy
-    if(EmailHelper.parseEmail(req.body.email)) {
-      passportAuthStrategy = ['custom-fail-ldapauth','local']
-    } else {
-      passportAuthStrategy = ['custom-fail-ldapauth'] // uid login, ldap user
-    }
+    const passportAuthStrategy = Settings.ldap?.enable ? ['custom-fail-ldapauth','local'] : ['local']
     passport.authenticate(
       passportAuthStrategy,
       { keepSessionInfo: true },
@@ -362,7 +356,6 @@ const AuthenticationController = {
                   status: 400,
                 })
               } else if (user) {
-		req.session.isLdapAuth = true
                 // async actions
                 done(null, user)
               } else {  //something wrong
@@ -683,10 +676,6 @@ function _afterLoginSessionSetup(req, user, callback) {
     delete req.session.__tmp
     delete req.session.csrfSecret
 
-    if(req.session.isLdapAuth) {
-      req.session.passport.user.isLdapAuth = true
-      delete req.session.isLdapAuth
-    }
     req.session.save(function (err) {
       if (err) {
         OError.tag(err, 'error saving regenerated session after login', {

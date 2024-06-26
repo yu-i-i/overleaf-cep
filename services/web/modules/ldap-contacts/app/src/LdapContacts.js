@@ -1,25 +1,25 @@
-const settings = require('@overleaf/settings')
+const Settings = require('@overleaf/settings')
 const ldapjs = require('ldapauth-fork/node_modules/ldapjs')
 
 async function fetchLdapContacts(contacts) {
-  if (!process.env.OVERLEAF_LDAP_CONTACT_FILTER) { return [] }
+  if (!Settings.ldap?.enable || !process.env.OVERLEAF_LDAP_CONTACT_FILTER) { return [] }
 
-  const email = settings.ldap.attEmail
-  const firstName = settings.ldap.attFirstName
-  const lastName = settings.ldap.attLastName
+  const email = Settings.ldap.attEmail
+  const firstName = Settings.ldap.attFirstName
+  const lastName = Settings.ldap.attLastName
 
   const ldapConfig = {
-    url: settings.ldap.server.url,
+    url: Settings.ldap.server.url,
   }
 
   const searchOptions = {
-    scope: settings.ldap.server.searchScope,
+    scope: Settings.ldap.server.searchScope,
     attributes: [email, firstName, lastName],
     filter: process.env.OVERLEAF_LDAP_CONTACT_FILTER,
   }
-  const bindDN = settings.ldap.server.bindDN
-  const bindCredentials = settings.ldap.server.bindCredentials
-  const ldap_base = settings.ldap.server.searchBase
+  const bindDN = Settings.ldap.server.bindDN
+  const bindCredentials = Settings.ldap.server.bindCredentials
+  const ldap_base = Settings.ldap.server.searchBase
 
   const client = ldapjs.createClient(ldapConfig)
 

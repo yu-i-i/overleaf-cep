@@ -53,16 +53,6 @@ async function settingsPage(req, res) {
   const reconfirmedViaSAML = _.get(req.session, ['saml', 'reconfirmed'])
   delete req.session.saml
 
-  const isLdapUser = req.session.passport.user.isLdapAuth
-  let shouldAllowEditingDetails = true
-  if (Settings.ldap && Settings.ldap.updateUserDetailsOnLogin && isLdapUser) {
-    shouldAllowEditingDetails = false
-  }
-  if (Settings.saml && Settings.saml.updateUserDetailsOnLogin) {
-    shouldAllowEditingDetails = false
-  }
-  const oauthProviders = Settings.oauthProviders || {}
-
   const user = await UserGetter.promises.getUser(userId)
   if (!user) {
     // The user has just deleted their account.
@@ -72,6 +62,15 @@ async function settingsPage(req, res) {
       () => res.redirect('/')
     )
   }
+
+  let shouldAllowEditingDetails = true
+  if (Settings.ldap && Settings.ldap.updateUserDetailsOnLogin && !user.hashedPassword) {
+    shouldAllowEditingDetails = false
+  }
+  if (Settings.saml && Settings.saml.updateUserDetailsOnLogin) {
+    shouldAllowEditingDetails = false
+  }
+  const oauthProviders = Settings.oauthProviders || {}
 
   const showPersonalAccessToken =
     !Features.hasFeature('saas') || req.query?.personal_access_token === 'true'
@@ -174,7 +173,6 @@ async function settingsPage(req, res) {
     },
     hasPassword: !!user.hashedPassword,
     shouldAllowEditingDetails,
-    isLdapUser,
     oauthProviders: UserPagesController._translateProviderDescriptions(
       oauthProviders,
       req

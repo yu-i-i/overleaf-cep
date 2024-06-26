@@ -16,7 +16,7 @@ const {
 
 const _LaunchpadController = {
   _getAuthMethod() {
-    if (Settings.ldap) {
+    if (Settings.ldap?.enable) {
       return 'ldap'
     } else if (Settings.saml) {
       return 'saml'
