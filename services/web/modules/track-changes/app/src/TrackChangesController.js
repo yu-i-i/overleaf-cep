@@ -297,7 +297,7 @@ const TrackChangesController = {
               project_id,
               'delete-thread',
               thread_id
-            )   
+            )
             return res.sendStatus(204)
           }
         )

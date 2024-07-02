@@ -285,10 +285,10 @@ function useReviewPanelState(): ReviewPanel.ReviewPanelState {
           // about it locally before it has been flushed through the server
           if (user) {
             if (user.id) {
-              tempUsers[user.id] = formatUser(user) 
-            } else { 
-              tempUsers['anonymous-user'] = formatUser(user) 
-            } 
+              tempUsers[user.id] = formatUser(user)
+            } else {
+              tempUsers['anonymous-user'] = formatUser(user)
+            }
           }
           for (const user of usersResponse) {
             if (user.id) {
