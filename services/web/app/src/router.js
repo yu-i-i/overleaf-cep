@@ -771,7 +771,6 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     '/project/:project_id/restore_file',
     AuthorizationMiddleware.ensureUserCanWriteProjectContent,
     HistoryController.restoreFileFromV2
-    // HistoryController.revertFile  // restore with ranges
   )
   webRouter.post(
     '/project/:project_id/revert_file',

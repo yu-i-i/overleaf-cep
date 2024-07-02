@@ -103,9 +103,8 @@ const AuthenticationController = {
     // This function is middleware which wraps the passport.authenticate middleware,
     // so we can send back our custom `{message: {text: "", type: ""}}` responses on failure,
     // and send a `{redir: ""}` response on success
-    const passportAuthStrategy = Settings.ldap?.enable ? ['custom-fail-ldapauth','local'] : ['local']
     passport.authenticate(
-      passportAuthStrategy,
+      Settings.ldap?.enable ? ['custom-fail-ldapauth','local'] : ['local'],
       { keepSessionInfo: true },
       function (err, user, infoArray) {
         if (err) {
@@ -295,72 +294,6 @@ const AuthenticationController = {
                   key: 'invalid-password-retry-or-reset',
                   status: 401,
                 })
-              }
-            }
-          )
-        })
-      }
-    )
-  },
-
-  doPassportLdapLogin(req, ldapUser, done) {
-    const  email = ldapUser.mail.toLowerCase()
-    Modules.hooks.fire(
-      'preDoPassportLogin',
-      req,
-      email,
-      function (err, infoList) {
-        if (err) {
-          return done(err)
-        }
-        const info = infoList.find(i => i != null)
-        if (info != null) {
-          return done(null, false, info)
-        }
-        LoginRateLimiter.processLoginRequest(email, function (err, isAllowed) {
-          if (err) {
-            return done(err)
-          }
-          if (!isAllowed) {
-            logger.debug({ email }, 'too many login requests')
-            return done(null, null, {
-              text: req.i18n.translate('to_many_login_requests_2_mins'),
-              type: 'error',
-              key: 'to-many-login-requests-2-mins',
-              status: 429,
-            })
-          }
-          const { fromKnownDevice } = AuthenticationController.getAuditInfo(req)
-          const auditLog = {
-            ipAddress: req.ip,
-            info: { method: 'Ldap login', fromKnownDevice },
-          }
-          AuthenticationManager.findOrCreateLdapUser(
-            ldapUser,
-            auditLog,
-            function (error, user) {
-              if (error != null) {
-                if (error instanceof ParallelLoginError) {
-                  return done(null, false, { status: 429 })
-                }
-                return done(error)
-              }
-              if (
-                user &&
-                AuthenticationController.captchaRequiredForLogin(req, user)
-              ) {
-                done(null, false, {
-                  text: req.i18n.translate('cannot_verify_user_not_robot'),
-                  type: 'error',
-                  errorReason: 'cannot_verify_user_not_robot',
-                  status: 400,
-                })
-              } else if (user) {
-                // async actions
-                done(null, user)
-              } else {  //something wrong
-                logger.debug({ email }, 'user is null')
-                done(null, false, { status: 500 } )
               }
             }
           )
@@ -675,7 +608,6 @@ function _afterLoginSessionSetup(req, user, callback) {
     }
     delete req.session.__tmp
     delete req.session.csrfSecret
-
     req.session.save(function (err) {
       if (err) {
         OError.tag(err, 'error saving regenerated session after login', {

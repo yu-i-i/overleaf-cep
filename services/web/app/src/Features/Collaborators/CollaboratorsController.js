@@ -185,7 +185,7 @@ async function getShareTokens(req, res) {
     logger.info(
       {
         projectId,
-        userId: userId || 'anonymous-user',
+        userId: userId || 'anonymous',
         ip: req.ip,
         tokens: Object.keys(tokens),
       },

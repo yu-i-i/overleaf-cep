@@ -1,32 +1,35 @@
 const Settings = require('@overleaf/settings')
 const ldapjs = require('ldapauth-fork/node_modules/ldapjs')
+const { splitFullName } = require('../../../../app/src/Features/Authentication/AuthenticationManagerLdap')
 
 async function fetchLdapContacts(contacts) {
   if (!Settings.ldap?.enable || !process.env.OVERLEAF_LDAP_CONTACT_FILTER) { return [] }
 
-  const email = Settings.ldap.attEmail
-  const firstName = Settings.ldap.attFirstName
-  const lastName = Settings.ldap.attLastName
+  const attEmail = Settings.ldap.attEmail
+  const attFirstName = Settings.ldap?.attFirstName || ""
+  const attLastName = Settings.ldap?.attLastName || ""
+  const attName = Settings.ldap?.attName || ""
 
   const ldapConfig = {
     url: Settings.ldap.server.url,
   }
 
   const searchOptions = {
-    scope: Settings.ldap.server.searchScope,
-    attributes: [email, firstName, lastName],
+    scope: Settings.ldap.server.searchScope || 'sub',
+    attributes: [attEmail, attFirstName, attLastName, attName],
     filter: process.env.OVERLEAF_LDAP_CONTACT_FILTER,
   }
-  const bindDN = Settings.ldap.server.bindDN
-  const bindCredentials = Settings.ldap.server.bindCredentials
-  const ldap_base = Settings.ldap.server.searchBase
+
+  const bindDN = Settings.ldap.server.bindDN || ""
+  const bindCredentials = Settings.ldap.server.bindCredentials || ""
+  const searchBase = Settings.ldap.server.searchBase
 
   const client = ldapjs.createClient(ldapConfig)
 
-  let searchEntries
+  let ldapUsers
   try {
     await _bindLdap(client, bindDN, bindCredentials)
-    searchEntries = await _searchLdap(client, ldap_base, searchOptions)
+    ldapUsers = await _searchLdap(client, searchBase, searchOptions)
   } catch (error) {
       console.error('Error: ', error)
       return []
@@ -34,22 +37,29 @@ async function fetchLdapContacts(contacts) {
       client.unbind()
   }
 
-  searchEntries.sort((a, b) => a[lastName].localeCompare(b[lastName]))
-
   const newLdapContacts = []
-  searchEntries.forEach(entry => {
-    if (!contacts.some(contact => contact.email == entry[email].toLowerCase())) {
+  ldapUsers.forEach(ldapUser => {
+    if (!contacts.some(contact => contact.email == ldapUser[attEmail].toLowerCase())) {
+      let nameParts = ["",""]
+      if ((!attFirstName || !attLastName) && attName) {
+        nameParts = splitFullName(ldapUser[attName])
+      }
+      const firstName = attFirstName ? ldapUser[attFirstName] : nameParts[0]
+      const lastName  = attLastName  ? ldapUser[attLastName]  : nameParts[1]
       newLdapContacts.push(
         {
-          first_name: entry[firstName],
-          last_name: entry[lastName],
-          email: entry[email].toLowerCase(),
+          first_name: firstName,
+          last_name: lastName,
+          email: ldapUser[attEmail].toLowerCase(),
           type: 'user',
         }
       )
     }
   })
-  return newLdapContacts
+  return newLdapContacts.sort((a, b) => a.last_name.localeCompare(b.last_name)
+                                     || a.first_name.localeCompare(b.first_name)
+                                     || a.email.localeCompare(b.email)
+                             )
 }
 
 const _bindLdap = (client, bindDN, bindCredentials) => {

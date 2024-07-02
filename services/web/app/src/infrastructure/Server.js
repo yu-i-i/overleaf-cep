@@ -38,6 +38,7 @@ const ErrorController = require('../Features/Errors/ErrorController')
 const HttpErrorHandler = require('../Features/Errors/HttpErrorHandler')
 const UserSessionsManager = require('../Features/User/UserSessionsManager')
 const AuthenticationController = require('../Features/Authentication/AuthenticationController')
+const AuthenticationControllerLdap = require('../Features/Authentication/AuthenticationControllerLdap')
 const SessionManager = require('../Features/Authentication/SessionManager')
 const {
   hasAdminAccess,
@@ -234,7 +235,7 @@ passport.use(
       usernameField: 'email',
       passwordField: 'password',
     },
-    AuthenticationController.doPassportLdapLogin
+    AuthenticationControllerLdap.doPassportLdapLogin
   )
 )
 
