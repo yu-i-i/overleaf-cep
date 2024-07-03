@@ -901,7 +901,7 @@ module.exports = {
     'server-ce-scripts',
     'user-activate',
     'track-changes',
-    'ldap-contacts',
+    'ldap-authentication',
   ],
 
   csp: {

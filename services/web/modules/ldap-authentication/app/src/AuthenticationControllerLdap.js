@@ -1,11 +1,11 @@
-const AuthenticationController = require('./AuthenticationController')
 const AuthenticationManagerLdap = require('./AuthenticationManagerLdap')
-const LoginRateLimiter = require('../Security/LoginRateLimiter')
+const AuthenticationController = require('../../../../app/src/Features/Authentication/AuthenticationController')
+const LoginRateLimiter = require('../../../../app/src/Features/Security/LoginRateLimiter')
 const logger = require('@overleaf/logger')
 const {
   ParallelLoginError,
-} = require('./AuthenticationErrors')
-const Modules = require('../../infrastructure/Modules')
+} = require('../../../../app/src/Features/Authentication/AuthenticationErrors')
+const Modules = require('../../../../app/src/infrastructure/Modules')
 
 const AuthenticationControllerLdap = {
   doPassportLdapLogin(req, ldapUser, done) {

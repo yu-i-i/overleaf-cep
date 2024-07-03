@@ -25,7 +25,6 @@ const bearerTokenMiddleware = require('express-bearer-token')
 
 const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
-const LdapStrategy = require('passport-ldapauth').Strategy
 
 const oneDayInMilliseconds = 86400000
 const ReferalConnect = require('../Features/Referal/ReferalConnect')
@@ -38,7 +37,6 @@ const ErrorController = require('../Features/Errors/ErrorController')
 const HttpErrorHandler = require('../Features/Errors/HttpErrorHandler')
 const UserSessionsManager = require('../Features/User/UserSessionsManager')
 const AuthenticationController = require('../Features/Authentication/AuthenticationController')
-const AuthenticationControllerLdap = require('../Features/Authentication/AuthenticationControllerLdap')
 const SessionManager = require('../Features/Authentication/SessionManager')
 const {
   hasAdminAccess,
@@ -208,37 +206,6 @@ passport.use(
     AuthenticationController.doPassportLogin
   )
 )
-
-//  custom responses on authentication failure
-class CustomFailLdapStrategy extends LdapStrategy {
-  constructor(options, validate) {
-    super(options, validate);
-    this.name = 'custom-fail-ldapauth'
-  }
-  authenticate(req, options) {
-    const defaultFail = this.fail.bind(this)
-    this.fail = function(info, status) {
-      info.type = 'error'
-      info.key = 'invalid-password-retry-or-reset'
-      info.status = 401
-      return defaultFail(info, status)
-    }.bind(this)
-    super.authenticate(req, options)
-  }
-}
-
-passport.use(
-  new CustomFailLdapStrategy(
-    {
-      server: Settings.ldap.server,
-      passReqToCallback: true,
-      usernameField: 'email',
-      passwordField: 'password',
-    },
-    AuthenticationControllerLdap.doPassportLdapLogin
-  )
-)
-
 passport.serializeUser(AuthenticationController.serializeUser)
 passport.deserializeUser(AuthenticationController.deserializeUser)
 

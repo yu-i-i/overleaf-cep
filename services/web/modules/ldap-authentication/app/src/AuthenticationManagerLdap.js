@@ -1,5 +1,6 @@
 const Settings = require('@overleaf/settings')
-const { User } = require('../../models/User')
+const UserCreator = require('../../../../app/src/Features/User/UserCreator')
+const { User } = require('../../../../app/src/models/User')
 const {
   callbackify,
   promisify,
@@ -31,7 +32,6 @@ const AuthenticationManagerLdap = {
 
     var user = await User.findOne({ 'email': email }).exec()
     if( !user ) {
-      const UserCreator = require("../User/UserCreator")
       const isAdmin = ldapUser._groups.length > 0 ? true : false
       user = await UserCreator.promises.createNewUser(
         {

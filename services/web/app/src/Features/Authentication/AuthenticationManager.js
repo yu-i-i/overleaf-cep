@@ -57,14 +57,6 @@ function _metricsForSuccessfulPasswordMatch(password) {
   return null
 }
 
-function _splitFullName(fullName) {
-  fullName = fullName.trim();
-  let lastSpaceIndex = fullName.lastIndexOf(' ');
-  let firstNames = fullName.substring(0, lastSpaceIndex).trim();
-  let lastName = fullName.substring(lastSpaceIndex + 1).trim();
-  return [firstNames, lastName];
-}
-
 const AuthenticationManager = {
   async _checkUserPassword(query, password) {
     // Using Mongoose for legacy reasons here. The returned User instance

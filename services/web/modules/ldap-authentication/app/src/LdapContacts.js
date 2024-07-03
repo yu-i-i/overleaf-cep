@@ -1,6 +1,6 @@
 const Settings = require('@overleaf/settings')
 const ldapjs = require('ldapauth-fork/node_modules/ldapjs')
-const { splitFullName } = require('../../../../app/src/Features/Authentication/AuthenticationManagerLdap')
+const { splitFullName } = require('./AuthenticationManagerLdap')
 
 async function fetchLdapContacts(contacts) {
   if (!Settings.ldap?.enable || !process.env.OVERLEAF_LDAP_CONTACT_FILTER) { return [] }
