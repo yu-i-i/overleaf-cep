@@ -49,8 +49,11 @@ describe('editor', () => {
       cy.findByText(word)
         .parent()
         .within(() => cy.get('button').click())
+
+      // the modal has 2 close buttons, this ensures the one with the visible label is
+      // clicked, otherwise it would need `force: true`
+      cy.get('.btn').contains('Close').click()
     })
-    cy.get('button').contains('Close').click({ force: true })
 
     cy.log('close left panel')
     cy.get('[id="left-menu"]').type('{esc}')
@@ -146,8 +149,14 @@ describe('editor', () => {
 
       cy.log('enable visual editor and make changes in main file')
       cy.findByText('Visual Editor').click()
-      cy.contains('Introduction').dblclick()
-      cy.contains('Introduction').type('{del}{enter}{enter}')
+
+      // cy.type() "clicks" in the center of the selected element before typing. This "click" discards the text as selected by the dblclick.
+      // Go down to the lower level event based typing, the frontend tests in web use similar events.
+      cy.get('.cm-editor').as('editor')
+      cy.get('@editor').contains('Introduction').dblclick()
+      cy.get('@editor').trigger('keydown', { key: 'Delete' })
+      cy.get('@editor').trigger('keydown', { key: 'Enter' })
+      cy.get('@editor').trigger('keydown', { key: 'Enter' })
 
       cy.log('recompile to force flush')
       cy.findByText('Recompile').click()
@@ -290,6 +299,64 @@ describe('editor', () => {
         cy.findByText('Math Display:')
         cy.findByText('1')
       })
+    })
+  })
+
+  describe('layout selector', () => {
+    let projectId: string
+    beforeEach(() => {
+      login('user@example.com')
+      cy.visit(`/project`)
+      createProject(`project-${uuid()}`, { type: 'Example Project' })
+    })
+
+    it('show editor only and switch between editor and pdf', () => {
+      cy.get('.pdf-viewer').should('be.visible')
+      cy.get('.cm-editor').should('be.visible')
+
+      cy.findByText('Layout').click()
+      cy.findByText('Editor only').click()
+
+      cy.get('.pdf-viewer').should('not.exist')
+      cy.get('.cm-editor').should('be.visible')
+
+      cy.findByText('Switch to PDF').click()
+
+      cy.get('.pdf-viewer').should('be.visible')
+      cy.get('.cm-editor').should('not.be.visible')
+
+      cy.findByText('Switch to editor').click()
+
+      cy.get('.pdf-viewer').should('not.exist')
+      cy.get('.cm-editor').should('be.visible')
+    })
+
+    it('show PDF only and go back to Editor & PDF', () => {
+      cy.get('.pdf-viewer').should('be.visible')
+      cy.get('.cm-editor').should('be.visible')
+
+      cy.findByText('Layout').click()
+      cy.findByText('PDF only').click()
+
+      cy.get('.pdf-viewer').should('be.visible')
+      cy.get('.cm-editor').should('not.be.visible')
+
+      cy.findByText('Layout').click()
+      cy.findByText('Editor & PDF').click()
+
+      cy.get('.pdf-viewer').should('be.visible')
+      cy.get('.cm-editor').should('be.visible')
+    })
+
+    it('PDF in a separate tab (tests editor only)', () => {
+      cy.get('.pdf-viewer').should('be.visible')
+      cy.get('.cm-editor').should('be.visible')
+
+      cy.findByText('Layout').click()
+      cy.findByText('PDF in separate tab').click()
+
+      cy.get('.pdf-viewer').should('not.exist')
+      cy.get('.cm-editor').should('be.visible')
     })
   })
 })
