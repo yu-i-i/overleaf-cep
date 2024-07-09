@@ -9,7 +9,7 @@ block vars
 
 block append meta
 	meta(name="ol-hasPassword" data-type="boolean" content=hasPassword)
-	meta(name="ol-shouldAllowEditingDetails" data-type="boolean" content=shouldAllowEditingDetails)
+	meta(name="ol-shouldAllowEditingDetails" data-type="boolean" content=shouldAllowEditingDetails || hasPassword)
 	meta(name="ol-oauthProviders", data-type="json", content=oauthProviders)
 	meta(name="ol-institutionLinked", data-type="json", content=institutionLinked)
 	meta(name="ol-samlError", data-type="json", content=samlError)

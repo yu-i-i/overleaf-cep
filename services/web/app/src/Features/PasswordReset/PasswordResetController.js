@@ -135,7 +135,7 @@ async function requestReset(req, res, next) {
       message: req.i18n.translate('secondary_email_password_reset'),
     })
   } else if (status === 'external') {
-    return res.status(404).json({
+    return res.status(403).json({
       message: req.i18n.translate('password_managed_externally'),
     })
   } else {
