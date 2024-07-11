@@ -21,7 +21,7 @@ class CustomFailLdapStrategy extends LdapStrategy {
   }
 }
 
-async function addLdapStrategy(passport) {
+function addLdapStrategy(passport) {
   passport.use(
     new CustomFailLdapStrategy(
       {

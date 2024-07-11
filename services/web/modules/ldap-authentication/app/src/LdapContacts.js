@@ -1,96 +1,128 @@
 const Settings = require('@overleaf/settings')
 const ldapjs = require('ldapauth-fork/node_modules/ldapjs')
 const { splitFullName } = require('./AuthenticationManagerLdap')
+const UserGetter = require('../../../../app/src/Features/User/UserGetter')
 
-async function fetchLdapContacts(contacts) {
-  if (!Settings.ldap?.enable || !process.env.OVERLEAF_LDAP_CONTACT_FILTER) { return [] }
-
-  const attEmail = Settings.ldap.attEmail
-  const attFirstName = Settings.ldap?.attFirstName || ""
-  const attLastName = Settings.ldap?.attLastName || ""
-  const attName = Settings.ldap?.attName || ""
-
-  const ldapConfig = {
-    url: Settings.ldap.server.url,
+async function fetchLdapContacts(userId, contacts) {
+  if (!Settings.ldap?.enable || !process.env.OVERLEAF_LDAP_CONTACTS_FILTER) {
+    return []
   }
 
-  const searchOptions = {
-    scope: Settings.ldap.server.searchScope || 'sub',
-    attributes: [attEmail, attFirstName, attLastName, attName],
-    filter: process.env.OVERLEAF_LDAP_CONTACT_FILTER,
-  }
-
-  const bindDN = Settings.ldap.server.bindDN || ""
-  const bindCredentials = Settings.ldap.server.bindCredentials || ""
-  const searchBase = Settings.ldap.server.searchBase
-
-  const client = ldapjs.createClient(ldapConfig)
+  const { attEmail, attFirstName = "", attLastName = "", attName = "" } = Settings.ldap
+  const {
+    url,
+    timeout,
+    connectTimeout,
+    tlsOptions,
+    starttls,
+    bindDN = "",
+    bindCredentials = "",
+    searchBase,
+    searchScope = 'sub'
+  } = Settings.ldap.server
+  const ldapConfig = { url, timeout, connectTimeout, tlsOptions }
 
   let ldapUsers
+  const client = ldapjs.createClient(ldapConfig)
   try {
+    await _upgradeToTLS(client, starttls, tlsOptions)
     await _bindLdap(client, bindDN, bindCredentials)
+
+    const filter = await _formContactsSearchFilter(client, userId, process.env.OVERLEAF_LDAP_CONTACTS_FILTER)
+    const searchOptions = { scope: searchScope, attributes: [attEmail, attFirstName, attLastName, attName], filter }
+
     ldapUsers = await _searchLdap(client, searchBase, searchOptions)
   } catch (error) {
-      console.error('Error: ', error)
-      return []
+    console.error('Error in fetchLdapContacts: ', error)
+    return []
   } finally {
-      client.unbind()
+    client.unbind()
   }
 
-  const newLdapContacts = []
-  ldapUsers.forEach(ldapUser => {
-    if (!contacts.some(contact => contact.email == ldapUser[attEmail].toLowerCase())) {
-      let nameParts = ["",""]
-      if ((!attFirstName || !attLastName) && attName) {
-        nameParts = splitFullName(ldapUser[attName])
-      }
-      const firstName = attFirstName ? ldapUser[attFirstName] : nameParts[0]
-      const lastName  = attLastName  ? ldapUser[attLastName]  : nameParts[1]
-      newLdapContacts.push(
-        {
-          first_name: firstName,
-          last_name: lastName,
-          email: ldapUser[attEmail].toLowerCase(),
-          type: 'user',
-        }
-      )
+  const newLdapContacts = ldapUsers.reduce((acc, ldapUser) => {
+    if (!contacts.some(contact => contact.email === ldapUser[attEmail]?.toLowerCase())) {
+      const [firstName, lastName] = (!attFirstName || !attLastName) && attName
+        ? splitFullName(ldapUser[attName])
+        : [ldapUser[attFirstName], ldapUser[attLastName]]
+
+      acc.push({
+        first_name: firstName || "",
+        last_name: lastName || "",
+        email: ldapUser[attEmail]?.toLowerCase(),
+        type: 'user',
+      })
     }
-  })
-  return newLdapContacts.sort((a, b) => a.last_name.localeCompare(b.last_name)
-                                     || a.first_name.localeCompare(b.first_name)
-                                     || a.email.localeCompare(b.email)
-                             )
+    return acc
+  }, [])
+
+  return newLdapContacts.sort((a, b) =>
+    a.last_name.localeCompare(b.last_name) ||
+    a.first_name.localeCompare(a.first_name) ||
+    a.email.localeCompare(b.email)
+  )
 }
 
-const _bindLdap = (client, bindDN, bindCredentials) => {
+function _upgradeToTLS(client, starttls, tlsOptions) {
   return new Promise((resolve, reject) => {
-    client.bind(bindDN, bindCredentials, (err) => {
-      if (err) {
-        reject(err)
+    client.on('error', error => reject(new Error(`LDAP client error: ${error}`)))
+    client.on('connect', () => {
+      if (starttls) {
+        client.starttls(tlsOptions, null, error => {
+          if (error) {
+            reject(new Error(`StartTLS error: ${error}`))
+          } else {
+            resolve()
+          }
+        })
+      }
+    })
+  })
+}
+
+function _bindLdap(client, bindDN, bindCredentials) {
+  return new Promise((resolve, reject) => {
+    client.bind(bindDN, bindCredentials, error => {
+      if (error) {
+        reject(error)
       } else {
         resolve()
       }
     })
   })
 }
-const _searchLdap = (client, baseDN, options) => {
+
+function _searchLdap(client, baseDN, options) {
   return new Promise((resolve, reject) => {
     const searchEntries = []
-    client.search(baseDN, options, (err, res) => {
-      if (err) {
-        reject(err)
+    client.search(baseDN, options, (error, res) => {
+      if (error) {
+        reject(error)
       } else {
-        res.on('searchEntry', (entry) => {
-          searchEntries.push(entry.object)
-        })
-        res.on('error', (err) => {
-          reject(err)
-        })
-        res.on('end', () => {
-          resolve(searchEntries)
-        })
+        res.on('searchEntry', entry => searchEntries.push(entry.object))
+        res.on('error', reject)
+        res.on('end', () => resolve(searchEntries))
       }
     })
   })
 }
+
+async function _formContactsSearchFilter(client, userId, contactsFilter) {
+  const searchProperty = process.env.OVERLEAF_LDAP_CONTACTS_PROPERTY
+  if (!searchProperty) {
+    return contactsFilter
+  }
+  const email = await UserGetter.promises.getUserEmail(userId)
+  const searchOptions = {
+    scope: Settings.ldap.server.searchScope || 'sub',
+    attributes: [searchProperty],
+    filter: `(${Settings.ldap.attEmail}=${email})`,
+  }
+  const searchBase = Settings.ldap.server.searchBase
+  const ldapUser = (await _searchLdap(client, searchBase, searchOptions))[0]
+  if (!ldapUser) {
+    throw new Error('Current user is not found in LDAP')
+  }
+  return contactsFilter.replace(/{{userProperty}}/g, ldapUser[searchProperty])
+}
+
 module.exports = { fetchLdapContacts }
