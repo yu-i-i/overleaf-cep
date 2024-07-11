@@ -119,10 +119,9 @@ async function _formContactsSearchFilter(client, userId, contactsFilter) {
   }
   const searchBase = Settings.ldap.server.searchBase
   const ldapUser = (await _searchLdap(client, searchBase, searchOptions))[0]
-  if (!ldapUser) {
-    throw new Error('Current user is not found in LDAP')
-  }
-  return contactsFilter.replace(/{{userProperty}}/g, ldapUser[searchProperty])
+  const searchPropertyValue = ldapUser ? ldapUser[searchProperty]
+                                       : process.env.OVERLEAF_LDAP_CONTACTS_PROPERTY_NON_LDAP_USER || 'IMATCHNOTHING'
+  return contactsFilter.replace(/{{userProperty}}/g, searchPropertyValue)
 }
 
 module.exports = { fetchLdapContacts }
