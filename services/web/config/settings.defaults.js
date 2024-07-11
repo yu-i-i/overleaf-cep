@@ -903,6 +903,7 @@ module.exports = {
     'track-changes',
     'ldap-authentication',
   ],
+  viewIncludes: {},
 
   csp: {
     enabled: process.env.CSP_ENABLED === 'true',

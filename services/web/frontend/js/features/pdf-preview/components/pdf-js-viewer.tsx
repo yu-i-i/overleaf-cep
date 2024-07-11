@@ -16,6 +16,7 @@ import { debugConsole } from '@/utils/debugging'
 import { usePdfPreviewContext } from '@/features/pdf-preview/components/pdf-preview-provider'
 import { useFeatureFlag } from '@/shared/context/split-test-context'
 import usePresentationMode from '../hooks/use-presentation-mode'
+import useMouseWheelZoom from '../hooks/use-mouse-wheel-zoom'
 
 type PdfJsViewerProps = {
   url: string
@@ -461,11 +462,18 @@ function PdfJsViewer({ url, pdfFile }: PdfJsViewerProps) {
             event.preventDefault()
             setZoom('page-width')
             break
+
+          case '9':
+            event.preventDefault()
+            setZoom('page-height')
+            break
         }
       }
     },
     [initialised, setZoom]
   )
+
+  useMouseWheelZoom(pdfJsWrapper, setScale)
 
   const requestPresentationMode = usePresentationMode(
     pdfJsWrapper,
