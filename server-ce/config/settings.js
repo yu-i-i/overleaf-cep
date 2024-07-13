@@ -406,10 +406,6 @@ if (
   }
 }
 
-// ######################
-// Overleaf Server Pro
-// ######################
-
 // /Learn
 // -------
 if (process.env.OVERLEAF_PROXY_LEARN != null) {
@@ -417,7 +413,7 @@ if (process.env.OVERLEAF_PROXY_LEARN != null) {
   if (settings.proxyLearn) {
     settings.nav.header_extras = [
       {
-        url: 'https://www.overleaf.com/learn',
+        url: '/learn',
         text: 'documentation',
       },
     ].concat(settings.nav.header_extras || [])

@@ -415,7 +415,7 @@ templates.verifyEmailToJoinManagedUsers = ctaTemplate({
   secondaryMessage(opts, isPlainText) {
     const changeProjectOwnerLink = EmailMessageHelper.displayLink(
       'change project owner',
-      `${settings.siteUrlOverleaf}/learn/how-to/How_to_Transfer_Project_Ownership`,
+      `${settings.siteUrl}/learn/how-to/How_to_Transfer_Project_Ownership`,
       isPlainText
     )
 
@@ -622,7 +622,7 @@ templates.surrenderAccountForManagedUsers = ctaTemplate({
 
     const managedUsersLink = EmailMessageHelper.displayLink(
       'user account management',
-      `${settings.siteUrlOverleaf}/learn/how-to/Understanding_Managed_Overleaf_Accounts`,
+      `${settings.siteUrl}/learn/how-to/Understanding_Managed_Overleaf_Accounts`,
       isPlainText
     )
 
@@ -635,7 +635,7 @@ templates.surrenderAccountForManagedUsers = ctaTemplate({
   secondaryMessage(opts, isPlainText) {
     const transferProjectOwnershipLink = EmailMessageHelper.displayLink(
       'change project owner',
-      `${settings.siteUrlOverleaf}/learn/how-to/How_to_Transfer_Project_Ownership`,
+      `${settings.siteUrl}/learn/how-to/How_to_Transfer_Project_Ownership`,
       isPlainText
     )
 
@@ -753,22 +753,22 @@ templates.userOnboardingEmail = NoCTAEmailTemplate({
   message(opts, isPlainText) {
     const learnLatexLink = EmailMessageHelper.displayLink(
       'Learn LaTeX in 30 minutes',
-      `${settings.siteUrlOverleaf}/learn/latex/Learn_LaTeX_in_30_minutes?utm_source=overleaf&utm_medium=email&utm_campaign=onboarding`,
+      `${settings.siteUrl}/learn/latex/Learn_LaTeX_in_30_minutes?utm_source=overleaf&utm_medium=email&utm_campaign=onboarding`,
       isPlainText
     )
     const templatesLinks = EmailMessageHelper.displayLink(
       'Find a beautiful template',
-      `${settings.siteUrlOverleaf}/latex/templates?utm_source=overleaf&utm_medium=email&utm_campaign=onboarding`,
+      `${settings.siteUrl}/latex/templates?utm_source=overleaf&utm_medium=email&utm_campaign=onboarding`,
       isPlainText
     )
     const collaboratorsLink = EmailMessageHelper.displayLink(
       'Work with your collaborators',
-      `${settings.siteUrlOverleaf}/learn/how-to/Sharing_a_project?utm_source=overleaf&utm_medium=email&utm_campaign=onboarding`,
+      `${settings.siteUrl}/learn/how-to/Sharing_a_project?utm_source=overleaf&utm_medium=email&utm_campaign=onboarding`,
       isPlainText
     )
     const siteLink = EmailMessageHelper.displayLink(
       'www.overleaf.com',
-      settings.siteUrlOverleaf,
+      settings.siteUrl,
       isPlainText
     )
     const userSettingsLink = EmailMessageHelper.displayLink(
@@ -807,7 +807,7 @@ templates.securityAlert = NoCTAEmailTemplate({
     const timeFormatted = moment().format('HH:mm')
     const helpLink = EmailMessageHelper.displayLink(
       'quick guide',
-      `${settings.siteUrlOverleaf}/learn/how-to/Keeping_your_account_secure`,
+      `${settings.siteUrl}/learn/how-to/Keeping_your_account_secure`,
       isPlainText
     )
 
@@ -879,12 +879,12 @@ templates.welcome = ctaTemplate({
     )
     const helpGuidesDisplay = EmailMessageHelper.displayLink(
       'Help Guides',
-      `${settings.siteUrlOverleaf}/learn`,
+      `${settings.siteUrl}/learn`,
       isPlainText
     )
     const templatesDisplay = EmailMessageHelper.displayLink(
       'Templates',
-      `${settings.siteUrlOverleaf}/templates`,
+      `${settings.siteUrl}/templates`,
       isPlainText
     )
 
@@ -925,12 +925,12 @@ templates.welcomeWithoutCTA = NoCTAEmailTemplate({
     )
     const helpGuidesDisplay = EmailMessageHelper.displayLink(
       'Help Guides',
-      `${settings.siteUrlOvreleaf}/learn`,
+      `${settings.siteUrl}/learn`,
       isPlainText
     )
     const templatesDisplay = EmailMessageHelper.displayLink(
       'Templates',
-      `${settings.siteUrlOverleaf}/templates`,
+      `${settings.siteUrl}/templates`,
       isPlainText
     )
 

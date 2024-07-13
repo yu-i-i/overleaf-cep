@@ -298,7 +298,6 @@ module.exports = {
   // Where your instance of Overleaf Community Edition/Server Pro can be found publicly. Used in emails
   // that are sent out, generated links, etc.
   siteUrl: (siteUrl = process.env.PUBLIC_URL || 'http://127.0.0.1:3000'),
-  siteUrlOverleaf: 'https://overleaf.com',
 
   lockManager: {
     lockTestInterval: intFromEnv('LOCK_MANAGER_LOCK_TEST_INTERVAL', 50),

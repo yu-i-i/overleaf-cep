@@ -18,16 +18,16 @@ mixin linkAdvisors(linkText, linkClass, track)
 		span #{linkText ? linkText : 'advisor programme'}
 
 mixin linkBenefits(linkText, linkClass)
-	a(href=(settings.siteUrlOverleaf ? settings.siteUrlOverleaf : '') + "/for/authors" class=linkClass ? linkClass : '')
+	a(href=(settings.siteUrl ? settings.siteUrl : '') + "/for/authors" class=linkClass ? linkClass : '')
 		| #{linkText ? linkText : 'benefits'}
 		
 mixin linkBlog(linkText, linkClass, slug)
 	if slug
-		a(href=(settings.siteUrlOverleaf ? settings.siteUrlOverleaf : '') + "/blog/" + slug class=linkClass ? linkClass : '')
+		a(href=(settings.siteUrl ? settings.siteUrl : '') + "/blog/" + slug class=linkClass ? linkClass : '')
 			| #{linkText ? linkText : 'blog'}
 
 mixin linkContact(linkText, linkClass)
-	a(href=(settings.siteUrlOverleaf ? settings.siteUrlOverleaf : '') + "/contact" class=linkClass ? linkClass : '')
+	a(href=(settings.siteUrl ? settings.siteUrl : '') + "/contact" class=linkClass ? linkClass : '')
 		| #{linkText ? linkText : 'contact'}
 
 mixin linkDash(linkText, linkClass)
@@ -35,7 +35,7 @@ mixin linkDash(linkText, linkClass)
 		| #{linkText ? linkText : 'project dashboard'}
 
 mixin linkEducation(linkText, linkClass)
-	a(href=(settings.siteUrlOverleaf ? settings.siteUrlOverleaf : '') + "/for/edu" class=linkClass ? linkClass : '')
+	a(href=(settings.siteUrl ? settings.siteUrl : '') + "/for/edu" class=linkClass ? linkClass : '')
 		| #{linkText ? linkText : 'teaching toolkit'}
 
 mixin linkInvite(linkText, linkClass, track)
@@ -114,5 +114,5 @@ mixin linkTweet(linkText, linkClass, tweetText, track)
 	) #{linkText ? linkText : 'tweet'}
 
 mixin linkUniversities(linkText, linkClass)
-	a(href=(settings.siteUrlOverleaf ? settings.siteUrlOverleaf : '') + "/for/universities" class=linkClass ? linkClass : '')
+	a(href=(settings.siteUrl ? settings.siteUrl : '') + "/for/universities" class=linkClass ? linkClass : '')
 		| #{linkText ? linkText : 'universities'}
