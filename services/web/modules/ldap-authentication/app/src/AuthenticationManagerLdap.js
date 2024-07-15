@@ -29,10 +29,10 @@ const AuthenticationManagerLdap = {
     const firstName = attFirstName ? ldapUser[attFirstName] : nameParts[0]
     const lastName  = attLastName  ? ldapUser[attLastName]  : nameParts[1]
     const email = ldapUser[attEmail].toLowerCase()
+    const isAdmin = ldapUser._groups.length > 0 ? true : false
 
     var user = await User.findOne({ 'email': email }).exec()
     if( !user ) {
-      const isAdmin = ldapUser._groups.length > 0 ? true : false
       user = await UserCreator.promises.createNewUser(
         {
           email: email,
@@ -47,7 +47,11 @@ const AuthenticationManagerLdap = {
         { $set : { 'emails.0.confirmedAt' : Date.now() } }
       ).exec() //email of ldap user is confirmed
     }
-    const userDetails = Settings.ldap.updateUserDetailsOnLogin ? { first_name : firstName, last_name: lastName } : {}
+    var userDetails = Settings.ldap.updateUserDetailsOnLogin ? { first_name : firstName, last_name: lastName } : {}
+    if( Settings.ldap.updateAdminOnLogin ) {
+      user.isAdmin = isAdmin
+      userDetails.isAdmin = isAdmin
+    }
     const result = await User.updateOne(
       { _id: user._id, loginEpoch: user.loginEpoch }, { $inc: { loginEpoch: 1 }, $set: userDetails },
       {}

@@ -17,9 +17,9 @@ async function fetchLdapContacts(userId, contacts) {
     starttls,
     bindDN = "",
     bindCredentials = "",
-    searchBase,
-    searchScope = 'sub'
   } = Settings.ldap.server
+  const searchBase = process.env.OVERLEAF_LDAP_CONTACTS_SEARCH_BASE || Settings.ldap.server.searchBase
+  const searchScope = process.env.OVERLEAF_LDAP_CONTACTS_SEARCH_SCOPE || 'sub'
   const ldapConfig = { url, timeout, connectTimeout, tlsOptions }
 
   let ldapUsers
@@ -113,14 +113,14 @@ async function _formContactsSearchFilter(client, userId, contactsFilter) {
   }
   const email = await UserGetter.promises.getUserEmail(userId)
   const searchOptions = {
-    scope: Settings.ldap.server.searchScope || 'sub',
+    scope: Settings.ldap.server.searchScope,
     attributes: [searchProperty],
     filter: `(${Settings.ldap.attEmail}=${email})`,
   }
   const searchBase = Settings.ldap.server.searchBase
   const ldapUser = (await _searchLdap(client, searchBase, searchOptions))[0]
   const searchPropertyValue = ldapUser ? ldapUser[searchProperty]
-                                       : process.env.OVERLEAF_LDAP_CONTACTS_PROPERTY_NON_LDAP_USER || 'IMATCHNOTHING'
+                                       : process.env.OVERLEAF_LDAP_CONTACTS_NON_LDAP_VALUE || 'IMATCHNOTHING'
   return contactsFilter.replace(/{{userProperty}}/g, searchPropertyValue)
 }
 
