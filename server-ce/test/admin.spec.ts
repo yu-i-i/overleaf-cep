@@ -1,4 +1,4 @@
-import { startWith } from './helpers/config'
+import { isExcludedBySharding, startWith } from './helpers/config'
 import { activateUser, ensureUserExists, login } from './helpers/login'
 import { v4 as uuid } from 'uuid'
 import { createProject } from './helpers/project'
@@ -10,9 +10,9 @@ describe('admin panel', function () {
     const user1 = 'user@example.com'
     const user2 = 'user2@example.com'
 
-    const testProjectName = `project-${uuid()}`
+    let testProjectName = ''
     let testProjectId = ''
-    const deletedProjectName = `deleted-project-${uuid()}`
+    let deletedProjectName = ''
     let projectToDeleteId = ''
 
     const findProjectRow = (projectName: string) => {
@@ -20,6 +20,7 @@ describe('admin panel', function () {
       return cy.findByText(projectName).parent().parent()
     }
 
+    if (isExcludedBySharding('PRO_DEFAULT_2')) return
     startWith({
       pro: true,
     })
@@ -28,6 +29,8 @@ describe('admin panel', function () {
     ensureUserExists({ email: user2 })
 
     beforeWithReRunOnTestRetry(() => {
+      testProjectName = `project-${uuid()}`
+      deletedProjectName = `deleted-project-${uuid()}`
       login(user1)
       cy.visit('/project')
       createProject(testProjectName).then(id => (testProjectId = id))
@@ -179,7 +182,7 @@ describe('admin panel', function () {
 
       cy.log('delete project')
       findProjectRow(deletedProjectName).within(() =>
-        cy.get('button[aria-label="Trash"]').click()
+        cy.contains('Trash').click()
       )
       cy.get('button').contains('Confirm').click()
       cy.findByText(deletedProjectName).should('not.exist')
@@ -189,7 +192,7 @@ describe('admin panel', function () {
         cy.findByText('Trashed Projects').click()
       })
       findProjectRow(deletedProjectName).within(() =>
-        cy.get('button[aria-label="Delete"]').click()
+        cy.contains('Delete').click()
       )
       cy.get('button').contains('Confirm').click()
       cy.findByText(deletedProjectName).should('not.exist')

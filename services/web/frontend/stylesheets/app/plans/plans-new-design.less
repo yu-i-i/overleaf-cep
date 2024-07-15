@@ -1,4 +1,22 @@
-@import './plans-new-variables.less';
+@z-index-plans-new-tabs: 1;
+@z-index-plans-new-tabs-content: 0;
+
+@highlighted-heading-line-height: (@line-height-03 / 1rem) * 16px; // convert to px
+@highlighted-heading-padding-vertical: @spacing-02;
+@highlighted-heading-height: (
+  @highlighted-heading-line-height + (2 * @highlighted-heading-padding-vertical)
+);
+
+@switcher-container-width: 270px;
+@switcher-container-height: 44px;
+@switcher-container-border-radius: @switcher-container-height / 2;
+@switcher-container-padding: 6px;
+@switcher-container-margin-bottom: @highlighted-heading-height + @spacing-10;
+@switcher-padding-vertical: 2px;
+@switcher-height: @switcher-container-height - 2 * @switcher-container-padding;
+@switcher-border-radius: @switcher-height / 2;
+
+@nondiscounted-price-element-height: var(--line-height-02);
 
 .plans-new-design {
   padding-top: calc(var(--spacing-16) + var(--header-height));
@@ -318,7 +336,7 @@
     padding: @spacing-06 @spacing-08;
 
     @media (max-width: @screen-md-max) {
-      padding: @spacing-05;
+      padding: var(--spacing-05);
     }
   }
 
@@ -331,72 +349,55 @@
       font-size: var(--font-size-05);
       font-weight: 600;
       line-height: var(--line-height-04);
-      margin-bottom: @spacing-04;
+      margin-bottom: var(--spacing-04);
       color: var(--neutral-90);
       text-align: center;
     }
 
     .plans-new-table-header-grid-container {
-      display: grid;
-      grid-column-gap: var(--spacing-04);
-      // priceUnitTotal is an optional row
-      grid-template:
-        'nonDiscountedPrice price .' 2fr
-        'priceUnit priceUnit priceUnit' 1fr
-        'priceUnitTotal priceUnitTotal priceUnitTotal' auto / 1fr 1fr 1fr;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      s {
+        font-size: var(--font-size-02);
+        line-height: @nondiscounted-price-element-height;
+        color: var(--neutral-40);
+        font-weight: 600;
+      }
 
       .plans-new-table-header-price {
-        grid-area: price;
-        justify-self: center;
-
         font-size: var(--font-size-08);
         font-weight: 600;
         line-height: var(--line-height-07);
         color: var(--neutral-90);
+
+        // will affect the element if header does not have nondiscounted price
+        &:first-child {
+          margin-top: @nondiscounted-price-element-height;
+        }
       }
 
       .plans-new-table-header-price-unit {
-        grid-area: priceUnit;
-        justify-self: center;
-
         font-size: var(--font-size-02);
         line-height: var(--line-height-02);
       }
 
       .plans-new-table-header-price-unit-total {
-        grid-area: priceUnitTotal;
-        justify-self: center;
-
         font-size: var(--font-size-01);
         line-height: var(--line-height-01);
       }
 
-      .plans-new-table-header-nondiscounted-price {
-        grid-area: nonDiscountedPrice;
-        justify-self: end;
-        align-self: end;
-
-        font-size: var(--font-size-04);
-        line-height: var(--line-height-05);
-        color: var(--neutral-40);
-        font-weight: 600;
-      }
-
       .plans-new-table-header-icon {
-        // this element should only be placed in the grid
-        // where it's the only element in the grid
-        // the grid-area below will make sure that it covers the whole grid
-        grid-area: ~'span 2 / span 3';
-        justify-self: center;
-
         font-size: 56px;
         color: var(--neutral-90);
+        margin-top: @nondiscounted-price-element-height;
       }
     }
 
     .plans-new-table-header-desc {
-      margin-top: @spacing-05;
-      margin-bottom: @spacing-08;
+      margin-top: var(--spacing-05);
+      margin-bottom: var(--spacing-08);
       font-size: var(--font-size-02);
       line-height: var(--line-height-02);
     }
@@ -440,7 +441,7 @@
       background-color: var(--neutral-10);
     }
     &:nth-child(even):not(.plans-new-table-heading-row) {
-      background-color: white;
+      background-color: var(--white);
     }
   }
 
@@ -499,7 +500,7 @@
     text-align: center;
     line-height: @highlighted-heading-line-height;
     background-color: var(--green-50);
-    color: white;
+    color: var(--white);
   }
 
   .plans-new-table-highlighted-cell {
@@ -530,62 +531,60 @@
     }
   }
 
-  // ------------------------------------------------------------------
-  // ------------------------------------------------------------------
-  // These comments will be deleted when the cards section is completed for mobile screens.
-  // Below is the styling for plans cards on mobile screen
-
   .plans-card-container-mobile {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-06);
 
     .mt-spacing-06 {
-      margin-top: @spacing-06;
+      margin-top: var(--spacing-06);
     }
 
     .highlighted-plans-card {
-      border: 2px solid @green-50 !important;
+      border: 2px solid var(--green-50) !important;
     }
 
     .plans-card-mobile {
-      padding: @spacing-09;
-      border: 2px solid @neutral-20;
+      padding: var(--spacing-09);
+      border: 2px solid var(--neutral-20);
       width: 100%; // might need max-width
       border-radius: 8px;
       display: flex;
       flex-direction: column;
 
       .plans-card-title-mobile {
-        color: @neutral-90;
-        font-size: @font-size-05; // 20px
+        color: var(--neutral-90);
+        font-size: var(--font-size-05); // 20px
         font-weight: 600;
-        line-height: @line-height-04;
+        line-height: var(--line-height-04);
       }
 
       .old-price-plans-card-mobile {
-        padding: @spacing-04 0 0 0;
-        color: @neutral-40;
-        font-size: @font-size-04; // 18px
+        padding: var(--spacing-04) 0 0 0;
+        color: var(--neutral-40);
+        font-size: var(--font-size-04); // 18px
         font-weight: 600;
-        line-height: @line-height-05;
-        margin-bottom: -@spacing-04;
+        line-height: var(--line-height-05);
+        margin-bottom: var(--spacing-04);
       }
 
       .plans-card-price-container-mobile {
         display: flex;
         align-items: baseline;
         .plans-card-price-mobile {
-          color: @neutral-90;
-          font-size: @font-size-08; // 36px
+          color: var(--neutral-90);
+          font-size: var(--font-size-08); // 36px
           font-weight: 600;
-          line-height: @line-height-07;
-          margin-right: @spacing-03;
+          line-height: var(--line-height-07);
+          margin-right: var(--spacing-03);
         }
       }
 
       .light-gray-text {
-        color: @neutral-70;
-        font-size: @font-size-02; // 14px
-        line-height: @line-height-02;
+        color: var(--neutral-70);
+        font-size: var(--font-size-02); // 14px
+        line-height: var(--line-height-02);
       }
 
       .plans-card-description-mobile {
@@ -600,20 +599,163 @@
           margin-bottom: unset;
           li {
             display: flex;
-            margin-top: @spacing-05;
+            margin-top: var(--spacing-05);
           }
         }
 
         .plans-card-cta-buy-now-mobile {
           width: 100%;
-          margin-top: @spacing-08;
-          line-height: @line-height-03;
+          margin-top: var(--spacing-08);
+          line-height: var(--line-height-03);
         }
       }
     }
   }
-  // ------------------------------------------------------------------
-  // ------------------------------------------------------------------
+
+  .plans-features-table-section-container-mobile {
+    margin-top: var(--spacing-13);
+    .plans-features-section-heading-mobile {
+      font-size: var(--font-size-06);
+      font-weight: 600;
+      line-height: var(--line-height-05);
+      color: var(--neutral-90);
+      text-align: center;
+      margin-bottom: var(--spacing-08);
+    }
+
+    .plans-features-table-mobile {
+      width: 100%;
+      .plans-features-table-header {
+        margin-bottom: var(--space-08);
+      }
+
+      .plans-features-table-header-container-mobile {
+        margin: var(--spacing-08) auto;
+        border-bottom: unset;
+        width: 100%;
+        max-width: 544px;
+
+        .plans-features-table-header-item-mobile {
+          width: 33%;
+          min-width: 114px;
+
+          .plans-features-table-header-item-content-mobile {
+            margin-bottom: var(--spacing-08);
+            padding: var(--spacing-04);
+            text-align: center;
+            background-color: var(--neutral-10);
+          }
+
+          .plans-features-table-header-item-title-mobile {
+            color: var(--neutral-90);
+            line-height: var(--line-height-03);
+            font-weight: 600;
+          }
+
+          .plans-features-table-header-item-price-mobile {
+            font-weight: 400;
+            color: var(--neutral-70);
+            line-height: var(--line-height-01);
+            font-size: var(--spacing-05);
+          }
+        }
+
+        .plans-features-table-header-item-content-mobile.active {
+          background-color: var(--neutral-80);
+          .plans-features-table-header-item-title-mobile {
+            color: var(--white);
+          }
+
+          .plans-features-table-header-item-price-mobile {
+            color: var(--white);
+          }
+        }
+      }
+
+      .plans-features-table-body-container-mobile {
+        .plans-features-table-row-heading-mobile {
+          font-weight: 600;
+          text-align: center;
+          line-height: var(--line-height-03);
+          .plans-features-table-row-section-heading-content-mobile {
+            padding-top: var(--spacing-08);
+            padding-bottom: var(--spacing-05);
+            font-size: var(--font-size-04);
+            color: var(--neutral-90);
+          }
+        }
+
+        // .plans-features-table-row-title-mobile and .plans-features-table-row-mobile are combined together to make one row visually, so we are using factors of 4 to alternatively color their backgrounds.
+        .plans-features-table-row-title-mobile {
+          &.plans-features-table-row-title-mobile-without-heading {
+            &:nth-child(4n - 3) {
+              background-color: var(--neutral-10);
+            }
+
+            &:nth-child(4n - 1) {
+              background-color: var(--white);
+            }
+          }
+
+          &:nth-child(4n - 2) {
+            background-color: var(--neutral-10);
+          }
+
+          &:nth-child(4n) {
+            background-color: var(--white);
+          }
+
+          .plans-features-table-row-title-content-mobile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: var(--spacing-06);
+            font-weight: 600;
+            line-height: var(--line-height-03);
+          }
+        }
+
+        .plans-features-table-row-mobile {
+          &.plans-features-table-row-mobile-without-heading {
+            &:nth-child(4n - 2) {
+              background-color: var(--neutral-10);
+            }
+
+            &:nth-child(4n) {
+              background-color: var(--white);
+            }
+          }
+
+          &:nth-child(4n - 3) {
+            background-color: var(--white);
+          }
+
+          &:nth-child(4n - 1) {
+            background-color: var(--neutral-10);
+          }
+
+          .plans-features-table-cell-content-mobile {
+            text-align: center;
+            padding-top: var(--spacing-05);
+            padding-bottom: var(--spacing-06);
+          }
+        }
+      }
+    }
+  }
+
+  .plans-price-disclaimer {
+    font-size: var(--font-size-01);
+    line-height: var(--line-height-01);
+    margin-top: var(--spacing-08);
+    text-align: center;
+
+    .plans-price-disclaimer-icons {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-04);
+    }
+  }
 }
 
 .plans-faq {

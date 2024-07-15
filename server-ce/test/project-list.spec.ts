@@ -1,12 +1,13 @@
 import { ensureUserExists, login } from './helpers/login'
 import { createProject } from './helpers/project'
-import { startWith } from './helpers/config'
+import { isExcludedBySharding, startWith } from './helpers/config'
 import { v4 as uuid } from 'uuid'
 
 const WITHOUT_PROJECTS_USER = 'user-without-projects@example.com'
 const REGULAR_USER = 'user@example.com'
 
 describe('Project List', () => {
+  if (isExcludedBySharding('PRO_DEFAULT_2')) return
   startWith({ pro: true })
 
   const findProjectRow = (projectName: string) => {
@@ -27,15 +28,12 @@ describe('Project List', () => {
 
   describe('user with projects', () => {
     const projectName = `test-project-${uuid()}`
-    let projectId: string | undefined
     ensureUserExists({ email: REGULAR_USER })
 
     before(() => {
       login(REGULAR_USER)
       cy.visit('/project')
-      createProject(projectName, { type: 'Example Project' }).then(
-        id => (projectId = id)
-      )
+      createProject(projectName, { type: 'Example Project' })
     })
 
     it('Can download project sources', () => {
@@ -43,7 +41,7 @@ describe('Project List', () => {
       cy.visit('/project')
 
       findProjectRow(projectName).within(() =>
-        cy.get(`[aria-label="Download .zip file"]`).click()
+        cy.contains(`Download .zip file`).click()
       )
 
       cy.task('readFileInZip', {
@@ -57,7 +55,7 @@ describe('Project List', () => {
       cy.visit('/project')
 
       findProjectRow(projectName).within(() =>
-        cy.get(`[aria-label="Download PDF"]`).click()
+        cy.contains(`Download PDF`).click()
       )
 
       const pdfName = projectName.replaceAll('-', '_')
@@ -73,7 +71,7 @@ describe('Project List', () => {
       cy.visit('/project')
 
       cy.log('select project')
-      cy.get(`[id="select-project-${projectId}"`).click()
+      cy.get(`[aria-label="Select ${projectName}"]`).click()
 
       cy.log('add tag to project')
       cy.get('button[aria-label="Tags"]').click()
@@ -97,7 +95,7 @@ describe('Project List', () => {
       cy.visit('/project')
 
       cy.log('select project')
-      cy.get(`[id="select-project-${projectId}"`).click()
+      cy.get(`[aria-label="Select ${projectName}"]`).click()
 
       cy.log('add tag to project')
       const tagName = uuid().slice(0, 7) // long tag names are truncated in the UI, which affects selectors

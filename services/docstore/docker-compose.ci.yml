@@ -17,9 +17,6 @@ services:
   test_acceptance:
     build: .
     image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
-    extends:
-      file: docker-compose-config.yml
-      service: ci
     environment:
       ELASTIC_SEARCH_DSN: es:9200
       MONGO_HOST: mongo
@@ -36,7 +33,7 @@ services:
       gcs:
         condition: service_healthy
     user: node
-    command: npm run test:acceptance:_run
+    command: npm run test:acceptance
 
 
   tar:

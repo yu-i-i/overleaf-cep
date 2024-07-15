@@ -1,6 +1,8 @@
-import { startWith } from './helpers/config'
+import { isExcludedBySharding, startWith } from './helpers/config'
+import { createProject } from './helpers/project'
 
 describe('SAML', () => {
+  if (isExcludedBySharding('PRO_CUSTOM_1')) return
   const overleafPublicHost = Cypress.env('OVERLEAF_PUBLIC_HOST') || 'sharelatex'
   const samlPublicHost = Cypress.env('SAML_PUBLIC_HOST') || 'saml'
 
@@ -31,11 +33,12 @@ describe('SAML', () => {
       cy.get('button[type="submit"]').click()
     })
 
-    cy.findByText('Create a new project')
+    createProject('via SAML')
   })
 })
 
 describe('LDAP', () => {
+  if (isExcludedBySharding('PRO_CUSTOM_1')) return
   startWith({
     pro: true,
     vars: {
@@ -60,6 +63,6 @@ describe('LDAP', () => {
     cy.get('input[name="password"]').type('fry')
     cy.get('button[type="submit"]').click()
 
-    cy.findByText('Create a new project')
+    createProject('via LDAP')
   })
 })
