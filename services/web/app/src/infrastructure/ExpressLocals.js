@@ -5,7 +5,7 @@ const _ = require('lodash')
 const { URL } = require('url')
 const Path = require('path')
 const moment = require('moment')
-const request = require('request')
+const { fetchJson } = require('@overleaf/fetch-utils')
 const contentDisposition = require('content-disposition')
 const Features = require('./Features')
 const SessionManager = require('../Features/Authentication/SessionManager')
@@ -51,24 +51,19 @@ switch (process.env.NODE_ENV) {
     webpackManifest = {}
 }
 function loadManifestFromWebpackDevServer(done = function () {}) {
-  request(
-    {
-      uri: `${Settings.apis.webpack.url}/manifest.json`,
-      headers: { Host: 'localhost' },
-      json: true,
+  fetchJson(new URL(`/manifest.json`, Settings.apis.webpack.url), {
+    headers: {
+      Host: 'localhost',
     },
-    (err, res, body) => {
-      if (!err && res.statusCode !== 200) {
-        err = new Error(`webpack responded with statusCode: ${res.statusCode}`)
-      }
-      if (err) {
-        logger.err({ err }, 'cannot fetch webpack manifest')
-        return done(err)
-      }
-      webpackManifest = body
+  })
+    .then(json => {
+      webpackManifest = json
       done()
-    }
-  )
+    })
+    .catch(error => {
+      logger.err({ error }, 'cannot fetch webpack manifest')
+      done(error)
+    })
 }
 const IN_CI = process.env.NODE_ENV === 'test'
 function getWebpackAssets(entrypoint, section) {

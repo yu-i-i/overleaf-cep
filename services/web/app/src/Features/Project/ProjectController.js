@@ -330,7 +330,6 @@ const _ProjectController = {
       'pdf-caching-mode',
       'pdf-caching-prefetch-large',
       'pdf-caching-prefetching',
-      'pdf-controls',
       'pdf-presentation-mode',
       'pdfjs-40',
       'personal-access-token',
@@ -339,6 +338,7 @@ const _ProjectController = {
       'track-pdf-download',
       !anonymous && 'writefull-oauth-promotion',
       'ieee-stylesheet',
+      'write-and-cite',
     ].filter(Boolean)
 
     const getUserValues = async userId =>

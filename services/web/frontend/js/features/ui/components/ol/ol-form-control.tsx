@@ -1,11 +1,12 @@
 import { forwardRef } from 'react'
-import { Form } from 'react-bootstrap-5'
-import { FormControl as BS3FormControl } from 'react-bootstrap'
-import BootstrapVersionSwitcher from '@/features/ui/components/bootstrap-5/bootstrap-version-switcher'
 import { getAriaAndDataProps } from '@/features/utils/bootstrap-5'
+import BS3FormControl from '@/features/ui/components/bootstrap-3/form/form-control'
+import FormControl from '@/features/ui/components/bootstrap-5/form/form-control'
+import BootstrapVersionSwitcher from '@/features/ui/components/bootstrap-5/bootstrap-version-switcher'
 
-type OLFormControlProps = React.ComponentProps<(typeof Form)['Control']> & {
+type OLFormControlProps = React.ComponentProps<typeof FormControl> & {
   bs3Props?: Record<string, unknown>
+  'data-ol-dirty'?: unknown
 }
 
 const OLFormControl = forwardRef<HTMLInputElement, OLFormControlProps>(
@@ -14,6 +15,7 @@ const OLFormControl = forwardRef<HTMLInputElement, OLFormControlProps>(
 
     let bs3FormControlProps: React.ComponentProps<typeof BS3FormControl> = {
       id: rest.id,
+      name: rest.name,
       className: rest.className,
       style: rest.style,
       type: rest.type,
@@ -37,6 +39,8 @@ const OLFormControl = forwardRef<HTMLInputElement, OLFormControlProps>(
           ref.current = inputElement
         }
       },
+      prepend: rest.prepend,
+      append: rest.append,
       ...bs3Props,
     }
 
@@ -49,7 +53,7 @@ const OLFormControl = forwardRef<HTMLInputElement, OLFormControlProps>(
     return (
       <BootstrapVersionSwitcher
         bs3={<BS3FormControl {...bs3FormControlProps} />}
-        bs5={<Form.Control ref={ref} {...rest} />}
+        bs5={<FormControl ref={ref} {...rest} />}
       />
     )
   }

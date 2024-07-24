@@ -5,6 +5,9 @@ const chaiAsPromised = require('chai-as-promised')
 const SandboxedModule = require('sandboxed-module')
 const timersPromises = require('timers/promises')
 
+// ensure every ObjectId has the id string as a property for correct comparisons
+require('mongodb-legacy').ObjectId.cacheHexString = true
+
 process.env.BACKEND = 'gcs'
 
 // Chai configuration
@@ -31,6 +34,8 @@ SandboxedModule.configure({
   requires: {
     '@overleaf/logger': stubs.logger,
     'timers/promises': timersPromises,
+    'mongodb-legacy': require('mongodb-legacy'),
+    bson: require('bson'),
   },
   globals: { Buffer, JSON, Math, console, process },
 })
