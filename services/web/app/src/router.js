@@ -41,6 +41,7 @@ const Modules = require('./infrastructure/Modules')
 const {
   RateLimiter,
   openProjectRateLimiter,
+  overleafLoginRateLimiter,
 } = require('./infrastructure/RateLimiter')
 const RateLimiterMiddleware = require('./Features/Security/RateLimiterMiddleware')
 const InactiveProjectController = require('./Features/InactiveData/InactiveProjectController')
@@ -221,6 +222,8 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.post(
     '/login',
+    RateLimiterMiddleware.rateLimit(overleafLoginRateLimiter), // rate limit IP (20 / 60s)
+    RateLimiterMiddleware.loginRateLimitEmail, // rate limit email (10 / 120s)
     CaptchaMiddleware.validateCaptcha('login'),
     AuthenticationController.passportLogin
   )
@@ -238,6 +241,8 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     webRouter.get('/login/legacy', UserPagesController.loginPage)
     webRouter.post(
       '/login/legacy',
+      RateLimiterMiddleware.rateLimit(overleafLoginRateLimiter), // rate limit IP (20 / 60s)
+      RateLimiterMiddleware.loginRateLimitEmail, // rate limit email (10 / 120s)
       CaptchaMiddleware.validateCaptcha('login'),
       AuthenticationController.passportLogin
     )
@@ -326,6 +331,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     '/user/emails/resend_confirmation',
     AuthenticationController.requireLogin(),
     RateLimiterMiddleware.rateLimit(rateLimiters.resendConfirmation),
+    Modules.middleware('resendConfirmationEmail'),
     UserEmailsController.resendConfirmation
   )
 
@@ -356,6 +362,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
       '/user/emails/delete',
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(rateLimiters.deleteEmail),
+      Modules.middleware('userDeleteEmail'),
       UserEmailsController.remove
     )
     webRouter.post(

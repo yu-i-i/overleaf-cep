@@ -1502,17 +1502,6 @@ function useReviewPanelState(): ReviewPanel.ReviewPanelState {
   }, [reviewPanelOpen])
 
   const canRefreshRanges = useRef(false)
-  useEffect(() => {
-    if (subView === 'overview' && canRefreshRanges.current) {
-      canRefreshRanges.current = false
-
-      setIsOverviewLoading(true)
-      refreshRanges().finally(() => {
-        setIsOverviewLoading(false)
-      })
-    }
-  }, [subView, refreshRanges])
-
   const prevSubView = useRef(subView)
   const initializedPrevSubView = useRef(false)
   useEffect(() => {
@@ -1525,6 +1514,17 @@ function useReviewPanelState(): ReviewPanel.ReviewPanelState {
     // Allow refreshing ranges once for each `subView` change
     canRefreshRanges.current = true
   }, [subView])
+
+  useEffect(() => {
+    if (subView === 'overview' && canRefreshRanges.current) {
+      canRefreshRanges.current = false
+
+      setIsOverviewLoading(true)
+      refreshRanges().finally(() => {
+        setIsOverviewLoading(false)
+      })
+    }
+  }, [subView, refreshRanges])
 
   useEffect(() => {
     if (subView === 'cur_file' && prevSubView.current === 'overview') {

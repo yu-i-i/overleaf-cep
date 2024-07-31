@@ -1,8 +1,8 @@
 // m-a stands for: monthly annual
 @plans-top-switch-item-height: 34px;
 @plans-top-switch-item-border-radius: @plans-top-switch-item-height / 2;
-@plans-m-a-switch-height: 34px;
-@plans-highlighted-text-height-desktop: 30px;
+@plans-m-a-switch-height: 20px;
+@plans-highlighted-text-height-desktop: 32px;
 @plans-highlighted-text-height-mobile: 41px;
 @plans-learn-more-link-color: hsl(206, 100%, 52%);
 @plans-top-switch-group-width-mobile: 46%;
@@ -11,6 +11,7 @@
 @highlighted-border: var(--border-width-base) solid var(--green-50);
 @table-border-size: 2px;
 @table-border: @table-border-size solid var(--neutral-10);
+@plans-table-sticky-header-size: 60px;
 
 .plans-page {
   p {
@@ -188,27 +189,18 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    margin-top: @margin-xl;
+    margin-top: var(--spacing-10);
 
     .underline {
       text-decoration: underline;
     }
 
     &.disabled {
-      span {
-        color: @ol-blue-gray-2;
-      }
-
-      label {
-        input + span {
-          background-color: @ol-blue-gray-2;
-          cursor: not-allowed;
-        }
-      }
+      display: none;
     }
 
     @media (max-width: @screen-xs-max) {
-      margin-top: 25px;
+      margin-top: var(--spacing-08);
 
       &[data-ol-current-view='group'] {
         display: none;
@@ -218,9 +210,9 @@
     label {
       position: relative;
       display: inline-block;
-      width: 60px;
+      width: 34px;
       height: @plans-m-a-switch-height;
-      margin: 0 @margin-lg;
+      margin: 0 var(--spacing-05);
 
       input {
         opacity: 0;
@@ -229,15 +221,15 @@
       }
 
       input + span {
-        background-color: @ol-green;
+        background-color: var(--green-50);
       }
 
       input:checked + span {
-        background-color: @ol-blue-gray-4;
+        background-color: var(--neutral-70);
       }
 
       input:checked + span::before {
-        transform: translateX(26px);
+        transform: translateX(14px);
       }
 
       span {
@@ -253,10 +245,10 @@
         &::before {
           position: absolute;
           content: '';
-          height: 32px;
-          width: 32px;
-          left: 1px;
-          bottom: 1px;
+          height: 16px;
+          width: 16px;
+          left: 2px;
+          bottom: 2px;
           background-color: @white;
           transition: 0.4s;
           border-radius: 50%;
@@ -272,18 +264,20 @@
       position: absolute;
       color: @white;
       width: auto;
-      border-radius: 4px;
-      right: 110%;
+      border-radius: var(--border-radius-base-new);
+      margin-right: var(--spacing-05);
+      right: 100%;
       top: 0;
       z-index: 0;
+      font-weight: 600;
 
       &.tooltip.in.left {
         .tooltip-inner {
-          background-color: @ol-green;
+          background-color: var(--green-50);
         }
 
         .tooltip-arrow {
-          border-left-color: @ol-green;
+          border-left-color: var(--green-50);
         }
       }
 
@@ -297,12 +291,12 @@
 
         &.tooltip.in.bottom {
           .tooltip-inner {
-            background-color: @ol-green;
+            background-color: var(--green-50);
           }
 
           .tooltip-arrow {
             border-left-color: unset;
-            border-bottom-color: @ol-green;
+            border-bottom-color: var(--green-50);
           }
         }
 
@@ -343,90 +337,107 @@
   }
 
   .plans-license-picker-form {
-    margin-top: 25px;
+    margin-top: var(--spacing-08);
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
+    font-size: var(--font-size-03);
+    line-height: var(--line-height-03);
 
-    @media (max-width: @screen-xs-max) {
-      font-size: @font-size-small;
-      margin-top: 15px;
-      flex-direction: column;
+    .plans-license-picker-select-container {
+      span {
+        font-weight: 700;
+      }
     }
-  }
 
-  .plans-v2-license-picker-select {
-    background-color: @white;
-    border: 1px solid #cccccc;
-    width: 64px;
-    height: 30px;
-    margin: 0 @margin-sm;
-    padding-left: @padding-sm;
+    select {
+      background-color: @white;
+      border: 1px solid var(--neutral-60);
+      border-radius: var(--border-radius-base-new);
+      width: 53px;
+      height: 31px;
+      margin-left: var(--spacing-04);
+      padding: 5.5px var(--spacing-04);
+      font-size: var(--font-size-02);
+      line-height: var(--line-height-02);
 
-    @media (max-width: @screen-xs-max) {
-      margin: 0 15px;
+      @media (max-width: @screen-xs-max) {
+        margin: 0 15px;
+      }
     }
-  }
 
-  .plans-v2-license-picker-educational-discount {
-    display: flex;
-    align-items: center;
+    i {
+      margin-left: var(--spacing-04);
 
-    @media (max-width: @screen-xs-max) {
-      margin-top: 15px;
+      @media (max-width: @screen-xs-max) {
+        display: none;
+      }
     }
-  }
 
-  .plans-v2-license-picker-educational-discount-label {
-    margin-bottom: 0;
-    display: flex;
-    align-items: center;
-    font-weight: normal;
+    //- element is selected by shared JS with default variant
+    .plans-v2-license-picker-educational-discount {
+      display: flex;
+      align-items: center;
+      margin-left: var(--spacing-06);
 
-    &.disabled span {
-      color: @ol-blue-gray-2;
+      &.total-licenses-not-eligible-for-discount {
+        display: none;
+      }
+
+      @media (max-width: @screen-xs-max) {
+        margin-top: 15px;
+      }
     }
-  }
 
-  input[type='checkbox'].plans-v2-license-picker-educational-discount-checkbox {
-    margin-top: 0;
-    margin-right: @margin-sm;
+    label {
+      margin-bottom: 0;
+      display: flex;
+      align-items: center;
+      font-weight: normal;
 
-    @media (max-width: @screen-xs-max) {
-      margin-right: 25px;
-      // scale the checkbox to around 30px width and height
-      transform: scale(2.307);
+      &.disabled span {
+        color: var(--neutral-40);
+      }
     }
-  }
 
-  i.plans-v2-license-picker-educational-discount-question-icon {
-    margin-left: @margin-xs;
+    input[type='checkbox'].plans-v2-license-picker-educational-discount-checkbox {
+      margin-top: 0;
+      margin-right: var(--spacing-04);
 
-    @media (max-width: @screen-xs-max) {
+      @media (max-width: @screen-xs-max) {
+        margin-right: 25px;
+        // scale the checkbox to around 30px width and height
+        transform: scale(2.307);
+      }
+    }
+
+    span.plans-v2-license-picker-educational-discount-learn-more-container {
       display: none;
-    }
-  }
 
-  span.plans-v2-license-picker-educational-discount-learn-more-container {
-    display: none;
+      @media (max-width: @screen-xs-max) {
+        margin-left: 5px;
+        display: inline;
+        // this white-space is important to ensure the "learn more" text won't get separated by a newline
+        white-space: nowrap;
+
+        span.plans-v2-license-picker-educational-discount-learn-more-text {
+          color: @plans-learn-more-link-color;
+        }
+
+        .tooltip {
+          // force white-space to have initial value since the `white-space: nowrap` rule
+          // on .plans-v2-license-picker-educational-discount-learn-more-container selector (the current code block) above
+          // will also affect every child inside of it, including the generated tooltip
+          white-space: initial;
+        }
+      }
+    }
 
     @media (max-width: @screen-xs-max) {
-      margin-left: 5px;
-      display: inline;
-      // this white-space is important to ensure the "learn more" text won't get separated by a newline
-      white-space: nowrap;
-
-      span.plans-v2-license-picker-educational-discount-learn-more-text {
-        color: @plans-learn-more-link-color;
-      }
-
-      .tooltip {
-        // force white-space to have initial value since the `white-space: nowrap` rule
-        // on .plans-v2-license-picker-educational-discount-learn-more-container selector (the current code block) above
-        // will also affect every child inside of it, including the generated tooltip
-        white-space: initial;
-      }
+      font-size: var(--font-size-02);
+      margin-top: var(--spacing-06);
+      flex-direction: column;
     }
   }
 
@@ -453,7 +464,11 @@
   }
 
   .plans-table-group {
-    margin-top: 26px + @plans-highlighted-text-height-desktop;
+    margin-top: 40px + @plans-highlighted-text-height-desktop;
+
+    @media (max-width: @screen-xs-max) {
+      margin-top: 40px + @plans-highlighted-text-height-mobile;
+    }
   }
 
   .plans-table {
@@ -464,25 +479,101 @@
 
     .plans-table-th-content,
     .plans-table-price,
-    .plans-table-comments-icon,
-    .plans-table-th-content-benefit {
+    .plans-table-comments-icon {
       color: var(--neutral-90);
     }
 
-    // cannot add border to td,th directly due to highlighted column border
+    .plans-table-short-feature-list ul {
+      color: var(--neutral-70);
+      font-size: var(--font-size-02);
+      line-height: var(--line-height-02);
+      hyphens: auto;
+      padding-left: 15px;
+      text-align: left;
+      margin-bottom: 0;
+    }
+
+    // Table BORDER and PADDING
+    // Cannot add border to td, th directly due to highlighted column border.
+    // The outer div handles the border (see exception below for highlighted column).
+    // The inner div handles the padding.
+    // The 2 layers of divs make the highlighted column border appears
+    // as a solid vertical line across the table.
+    // The highlighted column's border handling is an exception. The inner div (div > div)
+    // of the highlighted column handles the horizontal border (gray) so that it appears as
+    // behind the vertical border (green).
+    // On mobile, there is no vertical border for the highighted column
     td > div,
     th > div {
+      // border
       border-left: @table-border;
       border-top: @table-border;
       border-right: @table-border;
       border-bottom: 0;
-
+      // border adjustments
+      &.plans-table-cell-cta-desktop,
+      &.plans-table-cell-cta-mobile,
+      &.plans-table-cell-short-feature-list,
+      &.plans-table-cell-price,
+      &.plans-table-cell-divider {
+        border-top: 0;
+      }
+      &.plans-table-cell-divider {
+        border-bottom: 0;
+      }
       @media (max-width: @screen-xs-max) {
-        border-left: unset;
-        border-right: unset;
+        border: 0;
+        &.plans-table-th {
+          border-top: @table-border;
+        }
+      }
+
+      // padding
+      > div {
+        padding: var(--spacing-05) var(--spacing-08);
+        @media (max-width: @screen-sm-max) {
+          padding: var(--spacing-05);
+        }
+        @media (max-width: @screen-xs-max) {
+          padding: var(--spacing-03);
+        }
+      }
+      // padding adjustments
+      &.plans-table-th > div {
+        padding-top: var(--spacing-06);
+        padding-bottom: var(--spacing-04);
+      }
+      &.plans-table-cell-price > div {
+        padding-top: 0;
+        padding-bottom: var(--spacing-06);
+        @media (max-width: @screen-xs-max) {
+          padding-top: var(--spacing-05);
+        }
+      }
+      &.plans-table-cell-short-feature-list > div {
+        padding-top: 0;
+        padding-bottom: 0;
+
+        @media (max-width: @screen-xs-max) {
+          padding-bottom: var(--spacing-06);
+        }
+      }
+      &.plans-table-cell-cta-desktop > div {
+        padding-top: var(--spacing-08);
+      }
+      &.plans-table-cell-cta-mobile > div {
+        padding-top: 0;
+        padding-bottom: var(--spacing-06);
+      }
+      &.plans-table-feature-name > div {
+        padding-left: var(--spacing-05);
+      }
+      &.plans-table-cell-divider > div {
+        padding: var(--spacing-05) var(--spacing-08);
       }
     }
 
+    // border adjustments for highlighted column
     // remove left border for all col after highlighted column
     .plans-table-green-highlighted ~ td > div,
     .plans-table-green-highlighted ~ th > div {
@@ -493,7 +584,6 @@
     th:has(~ .plans-table-green-highlighted) > div {
       border-right: 0;
     }
-
     // highlighted column border
     th.plans-table-green-highlighted > div,
     td.plans-table-green-highlighted > div {
@@ -504,94 +594,77 @@
       // and then apply the gray top border to the inner div, .plans-table-cell-content
       border-top: 0;
 
+      &.plans-table-th {
+        border-top: @table-border-size solid var(--green-50);
+      }
+
       .plans-table-cell-content {
         border-top: @table-border;
       }
 
       @media (max-width: @screen-xs-max) {
-        border-left: unset;
-        border-right: unset;
+        // column is not highlighted on mobile
+        border: 0;
+        .plans-table-cell-content {
+          border: 0;
+        }
       }
     }
-
-    th {
-      &:nth-child(2):not(.plans-table-green-highlighted) .plans-table-th {
-        border-top-left-radius: @plans-table-border-radius;
+    tr.plans-table-divider {
+      // highlighted divider will only show if the highlighted column is on the last visible column
+      .plans-table-last-col-highlighted > div {
+        border-right: @highlighted-border;
+      }
+    }
+    // add border for last row
+    tr:last-child {
+      td > div,
+      th > div {
+        border-bottom: @table-border;
+      }
+      td.plans-table-green-highlighted > div {
+        border-bottom: @highlighted-border;
 
         @media (max-width: @screen-xs-max) {
-          border-top-left-radius: 0;
+          // column is not highlighted on mobile, so
+          // match non-highlighted column border on mobile
+          border-bottom: @table-border;
         }
       }
     }
 
-    .plans-table-cta-desktop,
-    .plans-table-cta-mobile,
-    .plans-table-short-feature-list,
-    .plans-table-price-row {
-      td > div {
+    // remove borders
+    tr.plans-table-divider + tr {
+      td > div,
+      th > div {
         border-top: 0;
       }
-    }
-
-    th[scope='col'] > div {
-      padding: var(--spacing-06) var(--spacing-08);
-    }
-    th[scope='row'] > div {
-      padding: var(--spacing-05) var(--spacing-08) var(--spacing-05)
-        var(--spacing-05);
-    }
-    td > div > div {
-      // apply spacing to inner div to not interfere with border
-      padding: var(--spacing-05) var(--spacing-08);
-
-      @media (max-width: @screen-xs-max) {
-        padding: var(--spacing-05);
+      .plans-table-green-highlighted {
+        .plans-table-cell-content {
+          border-top: 0;
+        }
       }
     }
-    tr.plans-table-divider > td > div {
-      // td style above not applied since there is only 1 level of div within divider cells
-      padding: var(--spacing-05) var(--spacing-08);
-    }
-
-    tr.plans-table-price-row > td > div > div {
-      padding-top: 0;
-      padding-bottom: var(--spacing-06);
-    }
-    tr.plans-table-short-feature-list > td > div > div {
-      padding-top: 0;
-      padding-bottom: 0;
-
-      @media (max-width: @screen-xs-max) {
-        padding-bottom: var(--spacing-06);
+    tr.plans-table-cols-2 {
+      th:last-child {
+        div {
+          border: 0;
+        }
       }
     }
-    tr.plans-table-cta-desktop > td > div > div {
-      padding-top: var(--spacing-08);
-    }
-    tr.plans-table-cta-mobile > td > div > div {
-      padding-top: 0;
-      padding-bottom: var(--spacing-06);
-    }
 
-    // We want these `div` inside `th` and `td` to have a 100% height since
-    // white backgrounds are defined here:
-    // 1. `td > div.plans-table-cell`
-    // 2. `th > div.plans-table-th`
-    //
-    // To make both of them have 100% height of their respective `td` and `th`,
-    // we need to have the `table` has an explicit `height` rule.
-    // The value can be arbitrary, since it will be ignored by the browser
-    //
-    // See https://stackoverflow.com/a/56913789 for more details
-    height: 100%;
-
-    th[scope='row'] {
-      font-weight: 500;
-    }
+    // border radius
 
     tr {
-      height: 100%;
+      th {
+        &:nth-child(2):not(.plans-table-green-highlighted) .plans-table-th {
+          border-top-left-radius: @plans-table-border-radius;
 
+          @media (max-width: @screen-xs-max) {
+            border-top-left-radius: 0;
+          }
+        }
+      }
       // top right border radius on desktop only
       &:first-of-type {
         th:last-child > .plans-table-th {
@@ -622,26 +695,34 @@
             }
           }
         }
+      }
 
-        td > div,
-        th > div {
-          border-bottom: @table-border;
-        }
+      // top left border radius on first feature row
+      .plans-table-first-feature-header > .plans-table-feature-name {
+        border-top-left-radius: @plans-table-border-radius;
 
-        .plans-table-green-highlighted > div {
-          border-bottom: @highlighted-border;
-
-          @media (max-width: @screen-xs-max) {
-            // column is not highlighted on mobile, so
-            // match non-highlighted column border on mobile
-            border-top: @table-border;
-            border-bottom: @table-border;
-            .plans-table-cell-content {
-              border-color: transparent;
-            }
-          }
+        @media (max-width: @screen-xs-max) {
+          border-top-left-radius: 0;
         }
       }
+    }
+
+    // We want these `div` inside `th` and `td` to have a 100% height so
+    // that their borders are all the full height of their row.
+    //
+    // To make both of them have 100% height of their respective `td` and `th`,
+    // we need to have the `table` has an explicit `height` rule.
+    // The value can be arbitrary, since it will be ignored by the browser
+    //
+    // See https://stackoverflow.com/a/56913789 for more details
+    height: 100%;
+
+    th[scope='row'] {
+      font-weight: 500;
+    }
+
+    tr {
+      height: 100%;
     }
 
     th[scope='col'],
@@ -656,17 +737,13 @@
       line-height: var(--line-height-04);
       vertical-align: top;
       position: relative;
-
-      &.plans-table-green-highlighted {
-        .plans-table-th {
-          border-top: @table-border-size solid @ol-green;
-        }
-      }
     }
 
     td {
       vertical-align: middle;
-      height: 100%;
+      @media (min-width: @screen-sm-min) {
+        height: 100%;
+      }
     }
 
     tr {
@@ -674,24 +751,15 @@
         // keep the position here, otherwise messes up border on safari
         position: relative;
       }
-
-      .plans-table-first-feature-header {
-        .plans-table-feature-name {
-          border-top-left-radius: @plans-table-border-radius;
-
-          @media (max-width: @screen-xs-max) {
-            border-top-left-radius: 0;
-          }
-        }
-      }
     }
 
     tr.plans-table-divider {
       background-color: var(--neutral-10);
-      th > div,
-      td > div {
-        border-top: 0;
-        border-bottom: 0;
+
+      .plans-table-cell-divider-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       // direct child selector to NOT affect the generated tooltip
@@ -706,11 +774,6 @@
         .plans-table-divider-learn-more-container {
           display: none;
         }
-      }
-
-      // highlighted divider will only show if the highlighted column is on the last visible column
-      .plans-table-last-col-highlighted > div {
-        border-right: @highlighted-border;
       }
 
       @media (max-width: @screen-xs-max) {
@@ -753,26 +816,6 @@
       }
     }
 
-    tr.plans-table-divider + tr {
-      td > div,
-      th > div {
-        border-top: 0;
-      }
-      .plans-table-green-highlighted {
-        .plans-table-cell-content {
-          border-top: 0;
-        }
-      }
-    }
-
-    tr.plans-table-cols-2 {
-      th:last-child {
-        div {
-          border: 0;
-        }
-      }
-    }
-
     .fa-check {
       color: @green;
     }
@@ -800,6 +843,11 @@
         // so, one tr can have multiple "visible" row depending on the total width.
         flex-flow: row wrap;
         justify-content: space-around;
+      }
+
+      td,
+      th {
+        align-self: stretch;
       }
 
       // The forced width below (plans-table-cols-n) is to ensure the table columns have an equal width
@@ -876,14 +924,7 @@
     height: 100%;
 
     .plans-table-th-content {
-      display: flex;
-      flex-direction: column;
       height: 100%;
-
-      @media (max-width: @screen-sm-max) {
-        padding-left: @padding-xs;
-        padding-right: @padding-xs;
-      }
     }
   }
 
@@ -906,27 +947,26 @@
     @media (max-width: @screen-xs-max) {
       display: flex;
       flex-direction: column;
+
+      .btn {
+        .btn-xs;
+      }
     }
   }
 
-  @media (min-width: (@screen-xs-max+1)) {
-    .hidden-desktop {
-      display: none;
+  .visible-desktop,
+  .visible-mobile-and-tablet {
+    display: none;
+  }
+  @media (min-width: (@screen-lg-min)) {
+    .visible-desktop {
+      display: inline-block;
     }
   }
-  @media (max-width: @screen-xs-max) {
-    .hidden-mobile {
-      display: none;
+  @media (max-width: @screen-md-max) {
+    .visible-mobile-and-tablet {
+      display: inline-block;
     }
-  }
-
-  ul.plans-table-th-content-benefit {
-    font-size: var(--font-size-02);
-    line-height: var(--line-height-02);
-    hyphens: auto;
-    padding-left: 15px;
-    text-align: left;
-    margin-bottom: 0;
   }
 
   // this class should only appear on the group table
@@ -965,7 +1005,7 @@
     }
   }
 
-  .plans-table-feature-name {
+  .plans-table-feature-name-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1010,17 +1050,17 @@
   }
 
   p.plans-table-green-highlighted-text {
-    border: 2px solid @ol-green;
+    border: 2px solid var(--green-50);
     position: absolute;
     top: -1 * @plans-highlighted-text-height-desktop;
     left: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: @font-size-small;
-    line-height: 19px;
-    font-weight: 700;
-    background-color: @ol-green;
+    font-size: var(--font-size-03);
+    line-height: var(--line-height-02);
+    font-weight: 600;
+    background-color: var(--green-50);
     border-radius: var(--border-radius-large-new) var(--border-radius-large-new)
       0 0;
     color: @white;
@@ -1031,16 +1071,17 @@
     @media (max-width: @screen-sm-max) {
       top: -1 * @plans-highlighted-text-height-mobile;
       height: @plans-highlighted-text-height-mobile;
-    }
-
-    @media (max-width: @screen-xs-max) {
-      padding-left: 5px;
-      padding-right: 5px;
-      font-size: @font-size-extra-small;
-      line-height: 15px;
+      font-size: var(--font-size-01);
+      line-height: var(--line-height-01);
     }
   }
 
+  .plans-table-th-content {
+    @media (max-width: @screen-xs-max) {
+      height: @plans-table-sticky-header-size!important;
+      overflow: hidden;
+    }
+  }
   .plans-table-sticky-header-container {
     @media (max-width: @screen-xs-max) {
       // `height: 60%` is just an arbitrary percentage
@@ -1051,49 +1092,48 @@
       width: 100%;
       position: absolute;
     }
-  }
 
-  .plans-table-sticky-header-without-switch {
-    margin-bottom: -107px;
-    margin-top: 67px;
-  }
-
-  .plans-table-sticky-header-with-switch {
-    margin-bottom: -140px;
-    margin-top: 100px;
-  }
-
-  .plans-table-sticky-header {
-    display: none;
-
-    @media (max-width: @screen-xs-max) {
-      display: flex;
-      width: 100%;
-      top: 0;
-      left: 0;
-      z-index: @z-index-plans-page-table-header-mobile;
-      height: 42px;
-      border-bottom: @table-border;
-
-      // separate sticky class because we want to remove the class (to visually remove the sticky header)
-      // with javascript whenever the table is not visible anymore
-      &.sticky {
-        position: sticky;
-      }
+    .plans-table-sticky-header-without-switch {
+      margin-bottom: -107px;
+      margin-top: @plans-highlighted-text-height-mobile + 40px +
+        @table-border-size;
     }
-  }
 
-  .plans-table-sticky-header-item {
-    background-color: @white;
-    flex: 1 1 0px;
+    .plans-table-sticky-header-with-switch {
+      margin-bottom: -140px;
+      margin-top: @plans-table-sticky-header-size + 34px;
+    }
 
-    span {
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .plans-table-sticky-header {
+      display: none;
 
       @media (max-width: @screen-xs-max) {
+        display: flex;
+        width: 100%;
+        top: 0;
+        left: 0;
+        z-index: @z-index-plans-page-table-header-mobile;
+        height: @plans-table-sticky-header-size;
+        border-bottom: @table-border;
+
+        // separate sticky class because we want to remove the class (to visually remove the sticky header)
+        // with javascript whenever the table is not visible anymore
+        &.sticky {
+          position: sticky;
+        }
+      }
+    }
+
+    .plans-table-sticky-header-item {
+      background-color: @white;
+      flex: 1 1 0px;
+
+      span {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 var(--spacing-01);
         color: var(--neutral-90);
         font-size: var(--font-size-03);
         font-weight: 600;
@@ -1101,10 +1141,10 @@
         line-height: var(--line-height-02);
       }
     }
-  }
 
-  .plans-table-sticky-header-item-green-highlighted span {
-    color: @ol-green;
+    .plans-table-sticky-header-item-green-highlighted span {
+      color: var(--green-50);
+    }
   }
 
   .plans-v2-faq {
