@@ -5,6 +5,7 @@ const SandboxedModule = require('sandboxed-module')
 const tk = require('timekeeper')
 const Errors = require('../../../../app/src/Features/Errors/Errors')
 const SubscriptionErrors = require('../../../../app/src/Features/Subscription/Errors')
+const { RequestFailedError } = require('@overleaf/fetch-utils')
 
 const fixtures = {
   'subscriptions/44f83d7cba354d5b84812419f923ea96':
@@ -94,13 +95,12 @@ const mockApiRequest = function (options) {
   if (fixtures[options.url]) {
     return {
       err: null,
-      response: { statusCode: 200 },
+      response: { status: 200 },
       body: fixtures[options.url],
     }
   } else {
     return {
       err: new Error('Not found'),
-      response: { statusCode: 404 },
     }
   }
 }
@@ -130,11 +130,15 @@ describe('RecurlyWrapper', function () {
       },
     }
 
+    this.fetchUtils = {
+      fetchStringWithResponse: sinon.stub(),
+      RequestFailedError,
+    }
     tk.freeze(Date.now()) // freeze the time for these tests
     this.RecurlyWrapper = SandboxedModule.require(modulePath, {
       requires: {
         '@overleaf/settings': this.settings,
-        request: sinon.stub(),
+        '@overleaf/fetch-utils': this.fetchUtils,
         './Errors': SubscriptionErrors,
       },
     })
@@ -192,7 +196,7 @@ describe('RecurlyWrapper', function () {
           })
         })
 
-        describe('with ReculyJS token', function () {
+        describe('with RecurlyJS token', function () {
           beforeEach(async function () {
             this.apiRequest = sinon
               .stub(this.RecurlyWrapper.promises, 'apiRequest')
@@ -357,7 +361,7 @@ describe('RecurlyWrapper', function () {
       this.requestOptions.url.should.equal(
         `subscriptions/${this.recurlySubscriptionId}`
       )
-      this.requestOptions.method.should.equal('put')
+      this.requestOptions.method.should.equal('PUT')
     })
 
     it('should return the updated subscription', function () {
@@ -374,7 +378,7 @@ describe('RecurlyWrapper', function () {
         .stub(this.RecurlyWrapper.promises, 'apiRequest')
         .callsFake(options => {
           options.url.should.equal(`coupons/${this.coupon_code}/redeem`)
-          options.method.should.equal('post')
+          options.method.should.equal('POST')
           return {}
         })
       await this.RecurlyWrapper.promises.redeemCoupon(
@@ -399,7 +403,7 @@ describe('RecurlyWrapper', function () {
     })
   })
 
-  describe('createFixedAmmountCoupon', function () {
+  describe('createFixedAmountCoupon', function () {
     beforeEach(async function () {
       this.couponCode = 'a-coupon-code'
       this.couponName = 'a-coupon-name'
@@ -409,7 +413,7 @@ describe('RecurlyWrapper', function () {
       this.apiRequest = sinon
         .stub(this.RecurlyWrapper.promises, 'apiRequest')
         .resolves()
-      await this.RecurlyWrapper.promises.createFixedAmmountCoupon(
+      await this.RecurlyWrapper.promises.createFixedAmountCoupon(
         this.couponCode,
         this.couponName,
         this.currencyCode,
@@ -585,7 +589,7 @@ describe('RecurlyWrapper', function () {
         threeDSecureActionResult: 'a-3d-token-id',
       }
       this.apiRequest = sinon.stub(this.RecurlyWrapper.promises, 'apiRequest')
-      this.response = { statusCode: 200 }
+      this.response = { status: 200 }
       this.body = '<xml>is_bad</xml>'
       this.apiRequest.resolves({
         response: this.response,
@@ -684,7 +688,7 @@ describe('RecurlyWrapper', function () {
         `
         // this.apiRequest.yields(null, { statusCode: 422 }, body)
         this.apiRequest.resolves({
-          response: { statusCode: 422 },
+          response: { status: 422 },
           body,
         })
       })
@@ -948,7 +952,7 @@ describe('RecurlyWrapper', function () {
           const resultXml =
             '<account><account_code>abc</account_code></account>'
           this.apiRequest.resolves({
-            response: { statusCode: 200 },
+            response: { status: 200 },
             body: resultXml,
           })
         })
@@ -987,7 +991,7 @@ describe('RecurlyWrapper', function () {
       describe('when the account does not exist', function () {
         beforeEach(function () {
           this.apiRequest.resolves({
-            response: { statusCode: 404 },
+            response: { status: 404 },
             body: '',
           })
         })
@@ -1095,7 +1099,7 @@ describe('RecurlyWrapper', function () {
           const resultXml =
             '<account><account_code>abc</account_code></account>'
           this.apiRequest.resolves({
-            response: { statusCode: 200 },
+            response: { status: 200 },
             body: resultXml,
           })
         })
@@ -1174,7 +1178,7 @@ describe('RecurlyWrapper', function () {
         beforeEach(function () {
           const resultXml = '<billing_info><a>1</a></billing_info>'
           this.apiRequest.resolves({
-            response: { statusCode: 200 },
+            response: { status: 200 },
             body: resultXml,
           })
         })
@@ -1260,7 +1264,7 @@ describe('RecurlyWrapper', function () {
         beforeEach(function () {
           const resultXml = '<billing_info><city>London</city></billing_info>'
           this.apiRequest.resolves({
-            response: { statusCode: 200 },
+            response: { status: 200 },
             body: resultXml,
           })
         })
@@ -1328,7 +1332,7 @@ describe('RecurlyWrapper', function () {
         beforeEach(function () {
           const resultXml = '<subscription><a>1</a></subscription>'
           this.apiRequest.resolves({
-            response: { statusCode: 200 },
+            response: { status: 200 },
             body: resultXml,
           })
         })
@@ -1437,7 +1441,7 @@ describe('RecurlyWrapper', function () {
 
     describe('without an account', function () {
       beforeEach(async function () {
-        this.response.statusCode = 404
+        this.response.status = 404
         this.accountActiveSubscriptions =
           await this.RecurlyWrapper.promises.listAccountActiveSubscriptions(
             this.user_id
