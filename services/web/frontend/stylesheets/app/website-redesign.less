@@ -775,7 +775,7 @@
     }
 
     .quote-card-link {
-      color: var(--mint-green);
+      color: var(--green-30);
     }
 
     @media (max-width: @screen-sm-max) {
@@ -834,7 +834,7 @@
     }
 
     &.green-bg {
-      background-color: var(--mint-green);
+      background-color: var(--green-30);
     }
   }
 
@@ -940,50 +940,45 @@
 
   .link-with-arrow {
     .dm-mono;
-    font-size: 1.125rem;
-    line-height: 1.333;
+    font-size: var(--font-size-04);
+    line-height: var(--line-height-03);
     font-weight: 500;
+    color: var(--green-50);
 
     i.material-symbols {
       vertical-align: middle;
       padding-bottom: 3px;
       font-size: 24px;
+      line-height: inherit;
+      margin-left: var(--spacing-02);
+    }
+
+    &:hover {
+      color: var(--green-60);
     }
   }
 
   .green-link {
     .link-with-arrow;
-    color: var(--emerald-green);
-
-    &:hover {
-      color: var(--emerald-green-dark);
-      .right-arrow {
-        color: var(--emerald-green-dark);
-      }
-    }
+    // TODO: replace .green-link uses with .link-with-arrow
   }
 
   .inline-green-link {
-    color: var(--emerald-green);
+    color: var(--green-50);
     text-decoration: underline;
     // text-decoration-;skip-ink is for letter with descender (like 'g' and 'y')
     // this will force underline to not skip the descender
     text-decoration-skip-ink: none;
 
     &:hover {
-      color: var(--emerald-green-dark);
+      color: var(--green-60);
     }
 
     // for accessibility with keyboard navigation
     &:focus {
-      outline: 2px solid var(--emerald-green);
+      outline: 2px solid var(--green-50);
       outline-offset: 1px;
     }
-  }
-
-  .white-link {
-    .link-with-arrow;
-    color: white;
   }
 
   .btn-blue {
@@ -997,11 +992,11 @@
 
   .btn-primary {
     &:not([disabled]) {
-      background: var(--emerald-green);
+      background: var(--green-50);
       color: var(--white);
 
       &:hover {
-        background: var(--emerald-green-dark);
+        background: var(--green-60);
       }
     }
   }
@@ -1018,7 +1013,7 @@
 
   .green-round-background {
     .round-background;
-    background: var(--mint-green);
+    background: var(--green-30);
   }
 
   .blue-round-background {

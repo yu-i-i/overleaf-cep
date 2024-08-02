@@ -41,6 +41,7 @@ const ProjectAuditLogHandler = require('./ProjectAuditLogHandler')
 const PublicAccessLevels = require('../Authorization/PublicAccessLevels')
 const TagsHandler = require('../Tags/TagsHandler')
 const TutorialHandler = require('../Tutorial/TutorialHandler')
+const OnboardingDataCollectionManager = require('../OnboardingDataCollection/OnboardingDataCollectionManager')
 const UserUpdater = require('../User/UserUpdater')
 const Modules = require('../../infrastructure/Modules')
 const UserGetter = require('../User/UserGetter')
@@ -339,6 +340,7 @@ const _ProjectController = {
       !anonymous && 'writefull-oauth-promotion',
       'ieee-stylesheet',
       'write-and-cite',
+      'default-visual-for-beginners',
     ].filter(Boolean)
 
     const getUserValues = async userId =>
@@ -381,6 +383,13 @@ const _ProjectController = {
               userId,
               projectId
             ),
+          usedLatex: OnboardingDataCollectionManager.getOnboardingDataValue(
+            userId,
+            'usedLatex'
+          ).catch(err => {
+            logger.error({ err, userId })
+            return null
+          }),
         })
       )
     const splitTestAssignments = {}
@@ -428,6 +437,7 @@ const _ProjectController = {
         subscription,
         isTokenMember,
         isInvitedMember,
+        usedLatex,
       } = userValues
 
       // check if a user is not in the writefull-oauth-promotion, in which case they may be part of the auto trial group
@@ -724,6 +734,12 @@ const _ProjectController = {
         hasTrackChangesFeature: Features.hasFeature('track-changes'),
         projectTags,
         linkSharingWarning: linkSharingChanges.variant === 'active',
+        usedLatex:
+          // only use the usedLatex value if the split test is enabled
+          splitTestAssignments['default-visual-for-beginners']?.variant ===
+          'enabled'
+            ? usedLatex
+            : null,
       })
       timer.done()
     } catch (err) {

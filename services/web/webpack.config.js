@@ -110,6 +110,10 @@ module.exports = {
     splitChunks: {
       chunks: 'all', // allow non-async chunks to be analysed for shared modules
     },
+    // https://webpack.js.org/configuration/optimization/#optimizationruntimechunk
+    runtimeChunk: {
+      name: 'runtime',
+    },
   },
 
   // Define how file types are handled by webpack
@@ -255,18 +259,6 @@ module.exports = {
           },
         ],
       },
-      {
-        // Expose jQuery and $ global variables
-        test: require.resolve('jquery'),
-        use: [
-          {
-            loader: 'expose-loader',
-            options: {
-              exposes: ['$', 'jQuery'],
-            },
-          },
-        ],
-      },
     ],
   },
   resolve: {
@@ -307,6 +299,12 @@ module.exports = {
     new webpack.IgnorePlugin({
       resourceRegExp: /^\.\/locale$/,
       contextRegExp: /moment$/,
+    }),
+
+    // Set window.$ and window.jQuery
+    new webpack.ProvidePlugin({
+      $: 'jquery',
+      jQuery: 'jquery',
     }),
 
     // Copy the required files for loading MathJax from MathJax NPM package
