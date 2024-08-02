@@ -4,3 +4,5 @@
 # user defined files
 .env
 docker-compose.override.yml
+server-ce/config
+server-ce/config/MyCACert.pem
