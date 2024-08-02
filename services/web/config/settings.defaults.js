@@ -934,9 +934,10 @@ module.exports = {
 
   enableRegistrationPage: false,
 
-//  splitTestOverrides: {
-//    'history-ranges-support': 'enabled',
-//  },
+  splitTestOverrides: {
+//  'history-ranges-support': 'enabled',
+    'math-preview': 'enabled',
+  },
 }
 
 module.exports.mergeWith = function (overrides) {
