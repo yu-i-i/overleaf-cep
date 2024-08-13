@@ -18,7 +18,7 @@ import * as LocalFileWriter from './LocalFileWriter.js'
 import * as HashManager from './HashManager.js'
 import * as HistoryBlobTranslator from './HistoryBlobTranslator.js'
 
-const HTTP_REQUEST_TIMEOUT = Settings.apis.history_v1.requestTimeout
+const HTTP_REQUEST_TIMEOUT = Settings.overleaf.history.requestTimeout
 
 /**
  * Container for functions that need to be mocked in tests
@@ -316,6 +316,12 @@ export function createBlobForUpdate(projectId, historyId, update, callback) {
           (err, fileHash) => {
             if (err) {
               return callback(err)
+            }
+            if (update.hash && update.hash !== fileHash) {
+              logger.warn(
+                { projectId, fileId, webHash: update.hash, fileHash },
+                'hash mismatch between web and project-history'
+              )
             }
             logger.debug({ fileHash }, 'created blob for file')
             callback(null, { file: fileHash })

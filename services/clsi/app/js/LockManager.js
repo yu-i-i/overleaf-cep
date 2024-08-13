@@ -2,6 +2,7 @@ const logger = require('@overleaf/logger')
 const Errors = require('./Errors')
 const RequestParser = require('./RequestParser')
 const Metrics = require('@overleaf/metrics')
+const Settings = require('@overleaf/settings')
 
 // The lock timeout should be higher than the maximum end-to-end compile time.
 // Here, we use the maximum compile timeout plus 2 minutes.
@@ -20,11 +21,25 @@ function acquire(key) {
     }
   }
 
-  Metrics.gauge('concurrent_compile_requests', LOCKS.size)
+  checkConcurrencyLimit()
 
   const lock = new Lock(key)
   LOCKS.set(key, lock)
   return lock
+}
+
+function checkConcurrencyLimit() {
+  Metrics.gauge('concurrent_compile_requests', LOCKS.size)
+
+  if (LOCKS.size <= Settings.compileConcurrencyLimit) {
+    return
+  }
+
+  Metrics.inc('exceeded-compilier-concurrency-limit')
+
+  throw new Errors.TooManyCompileRequestsError(
+    'too many concurrent compile requests'
+  )
 }
 
 class Lock {

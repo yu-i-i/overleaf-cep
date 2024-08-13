@@ -53,6 +53,15 @@ function _getGroupPlanModalDefaults(req, currency) {
   }
 }
 
+function _plansBanners({ geoPricingLATAMTestVariant, countryCode }) {
+  const showLATAMBanner =
+    geoPricingLATAMTestVariant === 'latam' &&
+    ['MX', 'CO', 'CL', 'PE'].includes(countryCode)
+  const showInrGeoBanner = countryCode === 'IN'
+  const showBrlGeoBanner = countryCode === 'BR'
+  return { showLATAMBanner, showInrGeoBanner, showBrlGeoBanner }
+}
+
 async function plansPage(req, res) {
   const websiteRedesignPlansAssignment =
     await SplitTestHandler.promises.getAssignment(
@@ -95,9 +104,12 @@ async function plansPage(req, res) {
     plansPageViewSegmentation
   )
 
-  const showLATAMBanner =
-    geoPricingLATAMTestVariant === 'latam' &&
-    ['MX', 'CO', 'CL', 'PE'].includes(countryCode)
+  const { showLATAMBanner, showInrGeoBanner, showBrlGeoBanner } = _plansBanners(
+    {
+      geoPricingLATAMTestVariant,
+      countryCode,
+    }
+  )
 
   const localCcyAssignment = await SplitTestHandler.promises.getAssignment(
     req,
@@ -129,8 +141,8 @@ async function plansPage(req, res) {
         language,
         formatCurrency
       ),
-    showInrGeoBanner: countryCode === 'IN',
-    showBrlGeoBanner: countryCode === 'BR',
+    showInrGeoBanner,
+    showBrlGeoBanner,
     showLATAMBanner,
     latamCountryBannerDetails,
   })
@@ -144,8 +156,12 @@ async function plansPageLightDesign(req, res) {
   if (!splitTestActive && req.query.preview !== 'true') {
     return res.redirect(302, '/user/subscription/plans')
   }
-
-  const { currency } = await _getRecommendedCurrency(req, res)
+  const {
+    currency,
+    countryCode,
+    geoPricingLATAMTestVariant,
+    recommendedCurrency,
+  } = await _getRecommendedCurrency(req, res)
 
   const language = req.i18n.language || 'en'
   const currentView = 'annual'
@@ -153,7 +169,27 @@ async function plansPageLightDesign(req, res) {
   const groupPlanModalDefaults = _getGroupPlanModalDefaults(req, currency)
   const formatCurrency = SubscriptionHelper.formatCurrencyDefault
 
-  // TODO: add page view analytics?
+  const { showLATAMBanner, showInrGeoBanner, showBrlGeoBanner } = _plansBanners(
+    {
+      geoPricingLATAMTestVariant,
+      countryCode,
+    }
+  )
+
+  const latamCountryBannerDetails = await getLatamCountryBannerDetails(req, res)
+
+  const plansPageViewSegmentation = {
+    currency: recommendedCurrency,
+    countryCode,
+    'geo-pricing-latam-v2': geoPricingLATAMTestVariant,
+  }
+
+  AnalyticsManager.recordEventForSession(
+    req.session,
+    'plans-page-view',
+    plansPageViewSegmentation
+  )
+
   res.render('subscriptions/plans-light-design', {
     title: 'plans_and_pricing',
     currentView,
@@ -174,6 +210,10 @@ async function plansPageLightDesign(req, res) {
         language,
         formatCurrency
       ),
+    showLATAMBanner,
+    showInrGeoBanner,
+    showBrlGeoBanner,
+    latamCountryBannerDetails,
   })
 }
 
@@ -218,6 +258,10 @@ async function userSubscriptionPage(req, res) {
   } = results
   const hasSubscription =
     await LimitationsManager.promises.userHasV1OrV2Subscription(user)
+
+  const userCanExtendTrial = (
+    await Modules.promises.hooks.fire('userCanExtendTrial', user)
+  )?.[0]
   const fromPlansPage = req.query.hasSubscription
   const plansData =
     SubscriptionViewModelBuilder.buildPlansListForSubscriptionDash(
@@ -270,6 +314,7 @@ async function userSubscriptionPage(req, res) {
     hasSubscription,
     fromPlansPage,
     personalSubscription,
+    userCanExtendTrial,
     memberGroupSubscriptions,
     managedGroupSubscriptions,
     managedInstitutions,
@@ -327,9 +372,11 @@ async function interstitialPaymentPage(req, res) {
       paywallPlansPageViewSegmentation
     )
 
-    const showLATAMBanner =
-      geoPricingLATAMTestVariant === 'latam' &&
-      ['MX', 'CO', 'CL', 'PE'].includes(countryCode)
+    const { showLATAMBanner, showInrGeoBanner, showBrlGeoBanner } =
+      _plansBanners({
+        geoPricingLATAMTestVariant,
+        countryCode,
+      })
 
     const localCcyAssignment = await SplitTestHandler.promises.getAssignment(
       req,
@@ -350,8 +397,8 @@ async function interstitialPaymentPage(req, res) {
           ? formatCurrencyLocalized
           : SubscriptionHelper.formatCurrencyDefault,
       showCurrencyAndPaymentMethods: localCcyAssignment.variant === 'enabled',
-      showInrGeoBanner: countryCode === 'IN',
-      showBrlGeoBanner: countryCode === 'BR',
+      showInrGeoBanner,
+      showBrlGeoBanner,
       showLATAMBanner,
       latamCountryBannerDetails,
       skipLinkTarget: req.session?.postCheckoutRedirect || '/project',
@@ -565,6 +612,14 @@ async function extendTrial(req, res) {
   const user = SessionManager.getSessionUser(req.session)
   const { subscription } =
     await LimitationsManager.promises.userHasV2Subscription(user)
+
+  const allowed = (
+    await Modules.promises.hooks.fire('userCanExtendTrial', user)
+  )?.[0]
+  if (!allowed) {
+    logger.warn({ userId: user._id }, 'user can not extend trial')
+    return res.sendStatus(403)
+  }
 
   try {
     await SubscriptionHandler.promises.extendTrial(subscription, 14)

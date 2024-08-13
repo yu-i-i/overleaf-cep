@@ -29,6 +29,7 @@ const IMAGES = {
   PRO: process.env.IMAGE_TAG_PRO.replace(/:.+/, ''),
 }
 
+let previousConfig = ''
 let mongoIsInitialized = false
 
 function readDockerComposeOverride() {
@@ -159,6 +160,7 @@ const allowedVars = Joi.object(
       'OVERLEAF_LDAP_LAST_NAME_ATT',
       'OVERLEAF_LDAP_UPDATE_USER_DETAILS_ON_LOGIN',
       // Old branding, used for upgrade tests
+      'SHARELATEX_SITE_URL',
       'SHARELATEX_MONGO_URL',
       'SHARELATEX_REDIS_HOST',
     ].map(name => [name, Joi.string()])
@@ -294,6 +296,7 @@ function maybeResetData(resetData, callback) {
         return callback(error)
       }
 
+      previousConfig = ''
       mongoIsInitialized = false
       runDockerCompose(
         'down',
@@ -335,7 +338,9 @@ app.post(
           'up',
           ['--detach', '--wait', 'sharelatex'],
           (error, stdout, stderr) => {
-            res.json({ error, stdout, stderr })
+            const previousConfigServer = previousConfig
+            previousConfig = JSON.stringify(req.body)
+            res.json({ error, stdout, stderr, previousConfigServer })
           }
         )
       })
