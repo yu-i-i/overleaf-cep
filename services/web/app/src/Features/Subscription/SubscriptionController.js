@@ -167,7 +167,16 @@ async function plansPageLightDesign(req, res) {
   const currentView = 'annual'
   const plans = SubscriptionViewModelBuilder.buildPlansList()
   const groupPlanModalDefaults = _getGroupPlanModalDefaults(req, currency)
-  const formatCurrency = SubscriptionHelper.formatCurrencyDefault
+
+  const localCcyAssignment = await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'local-ccy-format-v2'
+  )
+  const formatCurrency =
+    localCcyAssignment.variant === 'enabled'
+      ? formatCurrencyLocalized
+      : SubscriptionHelper.formatCurrencyDefault
 
   const { showLATAMBanner, showInrGeoBanner, showBrlGeoBanner } = _plansBanners(
     {
@@ -768,7 +777,9 @@ module.exports = {
   recurlyNotificationParser,
   refreshUserFeatures: expressify(refreshUserFeatures),
   redirectToHostedPage: expressify(redirectToHostedPage),
+  plansBanners: _plansBanners,
   promises: {
     getRecommendedCurrency: _getRecommendedCurrency,
+    getLatamCountryBannerDetails,
   },
 }

@@ -16,10 +16,7 @@ import {
   DeleteOperation,
   EditOperation,
 } from '../../../../../types/change'
-import {
-  editorOverflowPadding,
-  editorVerticalTopPadding,
-} from '@/features/source-editor/extensions/vertical-overflow'
+import { editorVerticalTopPadding } from '@/features/source-editor/extensions/vertical-overflow'
 import {
   useCodeMirrorStateContext,
   useCodeMirrorViewContext,
@@ -32,6 +29,7 @@ import { positionItems } from '../utils/position-items'
 import { canAggregate } from '../utils/can-aggregate'
 import { isInViewport } from '../utils/is-in-viewport'
 import ReviewPanelEmptyState from './review-panel-empty-state'
+import useEventListener from '@/shared/hooks/use-event-listener'
 
 type Positions = Map<string, number>
 type Aggregates = Map<string, Change<DeleteOperation>>
@@ -77,55 +75,30 @@ const ReviewPanelCurrentFile: FC = () => {
   )
 
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const ignoreNextUpdateRef = useRef(false)
   const previousFocusedItem = useRef(0)
 
   const updatePositions = useCallback(() => {
-    if (ignoreNextUpdateRef.current) {
-      ignoreNextUpdateRef.current = false
-      return
-    }
-
     if (containerRef.current) {
       const extents = positionItems(
         containerRef.current,
-        view.scrollDOM as HTMLDivElement,
         previousFocusedItem.current
       )
 
       if (extents) {
         previousFocusedItem.current = extents.focusedItemIndex
-
-        window.setTimeout(() => {
-          const top = extents.min < 0 ? -extents.min : 0
-          const bottom =
-            extents.max > contentRect.bottom
-              ? extents.max - contentRect.bottom
-              : 0
-
-          const currentPadding = editorOverflowPadding(view)
-
-          if (
-            currentPadding?.top !== top ||
-            currentPadding?.bottom !== bottom
-          ) {
-            // ignoreNextUpdateRef.current = true
-            // view.dispatch(setVerticalOverflow({ top, bottom }))
-          }
-        })
       }
     }
-  }, [contentRect.bottom, view])
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       updatePositions()
-    }, 100)
+    }, 50)
 
     return () => {
       window.clearTimeout(timer)
     }
-  }, [state, updatePositions, view.viewport.from, view.viewport.to])
+  }, [state, updatePositions])
 
   useEffect(() => {
     const element = containerRef.current
@@ -139,7 +112,7 @@ const ReviewPanelCurrentFile: FC = () => {
     }
   }, [view, updatePositions])
 
-  useEffect(() => {
+  const buildEntries = useCallback(() => {
     if (ranges) {
       view.requestMeasure({
         key: 'review-panel-position',
@@ -203,7 +176,13 @@ const ReviewPanelCurrentFile: FC = () => {
         },
       })
     }
-  }, [view, threads, ranges, screenPosition, containerRef])
+  }, [screenPosition, threads, view, ranges])
+
+  useEffect(() => {
+    buildEntries()
+  }, [buildEntries])
+
+  useEventListener('editor:viewport-changed', buildEntries)
 
   if (!rangesWithPositions) {
     return null

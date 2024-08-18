@@ -8,24 +8,28 @@
   @highlighted-heading-line-height + (2 * @highlighted-heading-padding-vertical)
 );
 
-@switcher-container-width: 270px;
-@switcher-container-height: 44px;
-@switcher-container-border-radius: @switcher-container-height / 2;
-@switcher-container-padding: 6px;
 @switcher-container-margin-bottom: @highlighted-heading-height + @spacing-10;
-@switcher-padding-vertical: 2px;
-@switcher-height: @switcher-container-height - 2 * @switcher-container-padding;
-@switcher-border-radius: @switcher-height / 2;
 
 @nondiscounted-price-element-height: var(--line-height-02);
 
 @group-member-picker-height: 24px;
 
+@table-4-column-width: 25%;
+@table-5-column-width: 20%;
+
 .plans-new-design {
-  padding-top: calc(var(--spacing-16) + var(--header-height));
+  padding-top: var(--header-height);
 
   .container {
     padding: 0 var(--spacing-06);
+
+    .geo-banner-container {
+      margin-top: var(--spacing-08);
+    }
+
+    .plans-new-design-content-spacing {
+      margin-top: var(--spacing-16);
+    }
   }
   .main-heading-section {
     text-align: center;
@@ -128,7 +132,7 @@
 
         &:focus {
           background-color: unset;
-          border: 1px solid var(--green-50);
+          outline: 0;
         }
 
         &:hover {
@@ -137,8 +141,8 @@
 
         // tab navigation focus style
         &:focus-visible {
-          &:extend(.input-focus-style);
-          background-color: white;
+          .box-shadow-button-input();
+          outline: 0;
         }
 
         @media (max-width: @screen-xs-max) {
@@ -209,21 +213,19 @@
     display: flex;
     justify-content: center;
     background-color: var(--neutral-10);
-    width: @switcher-container-width;
-    height: @switcher-container-height;
-    border-radius: @switcher-container-border-radius;
-    padding: @switcher-container-padding;
-    margin-top: @spacing-09;
+    border-radius: var(--border-radius-full-new);
+    padding: var(--spacing-03);
+    margin-top: var(--spacing-09);
     margin-bottom: @switcher-container-margin-bottom;
+    gap: var(--spacing-04);
 
     .plans-new-period-switcher {
       font-size: var(--font-size-05);
       font-weight: 600;
       line-height: var(--line-height-04);
       text-align: center;
-      padding: 2px 8px;
-      height: @switcher-height;
-      border-radius: @switcher-border-radius;
+      padding: var(--spacing-01) var(--spacing-04);
+      border-radius: var(--border-radius-full-new);
       display: flex;
       align-items: center;
       border: unset;
@@ -242,6 +244,15 @@
           background-color: #eaf6ef;
           color: var(--green-50);
         }
+      }
+
+      &:focus,
+      &:focus-visible {
+        outline: 0;
+      }
+
+      &:focus-visible {
+        .box-shadow-button-input();
       }
 
       .plans-new-discount-badge {
@@ -292,130 +303,111 @@
   .plans-new-table {
     width: 100%;
 
-    // overrides
-    th {
-      font-weight: normal;
-    }
-
-    // the following rules are used to make every .plans-new-table-header-content
-    // occupy the whole height dynamically
-    height: fit-content;
-    thead tr {
-      height: 100%;
-
-      .plans-new-table-header-content {
-        height: 100%;
-      }
-    }
-  }
-
-  @table-4-column-width: 25%;
-
-  // TODO: review the usage of this class
-  // and check whether we can move the rule directly in the .plans-new-table
-  .plans-new-table-4-column {
     th,
     td {
       width: @table-4-column-width;
     }
   }
 
-  .plans-new-table-4-column.plans-new-table-student {
+  .plans-new-table-student {
     margin-left: @table-4-column-width / 2;
   }
 
   .plans-new-table-group {
     margin-top: @spacing-11 + @highlighted-heading-height;
-
-    .plans-new-table-header-grid-container {
-      min-height: 85px;
-    }
-
-    // css specificity issue
-    thead tr th .plans-new-table-header-title {
-      @media (max-width: @screen-md-max) {
-        font-size: var(--font-size-03);
-      }
-    }
   }
 
-  .plans-new-table-header {
+  thead th {
     position: relative;
-    padding: @spacing-06 @spacing-08;
+    padding: var(--spacing-06) var(--spacing-08) var(--spacing-04)
+      var(--spacing-08);
+    font-size: var(--font-size-05);
+    font-weight: 600;
+    line-height: var(--line-height-04);
+    color: var(--neutral-90);
+    text-align: center;
 
     @media (max-width: @screen-md-max) {
-      padding: var(--spacing-05);
+      padding: var(--spacing-05) var(--spacing-05) 0 var(--spacing-05);
     }
   }
 
-  .plans-new-table-header-content {
+  .plans-new-table-subheader {
+    vertical-align: top;
+    padding: 0 var(--spacing-08);
+    @media (max-width: @screen-md-max) {
+      padding: 0 var(--spacing-05);
+    }
+
+    &.plans-new-table-icon-cta-cell {
+      vertical-align: bottom;
+    }
+  }
+
+  .plans-new-table-cta-row {
+    td {
+      padding-bottom: var(--spacing-06);
+      @media (max-width: @screen-md-max) {
+        padding-bottom: var(--spacing-05);
+      }
+    }
+
+    .btn-block + .btn-block {
+      margin-top: var(--spacing-04);
+    }
+  }
+
+  .plans-new-table-header-grid-container {
     display: flex;
     flex-direction: column;
-    position: relative;
+    align-items: center;
 
-    .plans-new-table-header-title {
-      font-size: var(--font-size-05);
+    s,
+    .match-original-price-height {
+      font-size: var(--font-size-02);
+      line-height: @nondiscounted-price-element-height;
+      color: var(--neutral-60);
       font-weight: 600;
-      line-height: var(--line-height-04);
-      margin-bottom: var(--spacing-04);
+    }
+
+    .plans-new-table-header-price {
+      font-size: var(--font-size-08);
+      font-weight: 600;
+      line-height: var(--line-height-07);
       color: var(--neutral-90);
-      text-align: center;
     }
 
-    .plans-new-table-header-grid-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-
-      s {
-        font-size: var(--font-size-02);
-        line-height: @nondiscounted-price-element-height;
-        color: var(--neutral-60);
-        font-weight: 600;
-      }
-
-      .plans-new-table-header-price {
-        font-size: var(--font-size-08);
-        font-weight: 600;
-        line-height: var(--line-height-07);
-        color: var(--neutral-90);
-
-        // will affect the element if header does not have nondiscounted price
-        &:first-child {
-          margin-top: @nondiscounted-price-element-height;
-        }
-      }
-
-      .plans-new-table-header-price-unit {
-        font-size: var(--font-size-02);
-        line-height: var(--line-height-02);
-      }
-
-      .plans-new-table-header-price-unit-total {
-        font-size: var(--font-size-01);
-        line-height: var(--line-height-01);
-      }
-
-      .plans-new-table-header-icon {
-        font-size: 56px;
-        color: var(--neutral-90);
-        margin-top: @nondiscounted-price-element-height;
-      }
-    }
-
-    .plans-new-table-header-desc {
-      margin-top: var(--spacing-05);
-      margin-bottom: var(--spacing-08);
+    .plans-new-table-header-price-unit {
       font-size: var(--font-size-02);
       line-height: var(--line-height-02);
     }
 
     .plans-new-table-cta {
       margin-top: auto;
+      a:nth-child(2) {
+        margin-top: var(--spacing-04);
+      }
+    }
+
+    .plans-new-table-header-icon {
+      font-size: 56px;
+      color: var(--neutral-90);
     }
   }
 
-  .plans-new-group-member-picker-container {
+  .plans-new-table-header-price-unit-total {
+    font-size: var(--font-size-01);
+    line-height: var(--line-height-01);
+  }
+
+  .plans-new-table-header-desc {
+    margin-top: var(--spacing-05);
+    margin-bottom: var(--spacing-08);
+    font-size: var(--font-size-02);
+    line-height: var(--line-height-02);
+  }
+
+  .plans-new-group-member-picker {
     .plans-new-group-member-picker-text {
       font-size: var(--font-size-02);
       line-height: var(--line-height-02);
@@ -423,7 +415,7 @@
       margin-bottom: var(--spacing-02);
     }
 
-    .plans-new-group-member-picker {
+    .plans-new-group-member-picker-form {
       position: relative;
 
       .plans-new-group-member-picker-button {
@@ -473,6 +465,10 @@
         line-height: var(--line-height-02);
         padding: var(--spacing-05) var(--spacing-04);
 
+        span {
+          display: block;
+        }
+
         button {
           font-weight: 400;
           padding: 0;
@@ -483,14 +479,15 @@
 
       li {
         position: relative;
-        border-radius: var(--border-radius-base-new);
 
         &:not(:last-child) {
           margin-bottom: var(--spacing-02);
         }
 
         &:not(.plans-new-group-member-picker-footer):hover {
-          background-color: var(--neutral-10);
+          input[type='radio']:not(:checked) + p {
+            background-color: var(--neutral-10);
+          }
         }
 
         input[type='radio'] {
@@ -498,12 +495,19 @@
           opacity: 0;
           cursor: pointer;
 
-          &:focus + label {
+          &:focus + p {
             &:extend(.input-focus-style);
+          }
+
+          + p {
+            padding: var(--spacing-05) var(--spacing-08) var(--spacing-05)
+              var(--spacing-04);
+            margin-bottom: 0;
+            border-radius: var(--border-radius-base-new);
           }
         }
 
-        input[type='radio']:checked + label {
+        input[type='radio']:checked + p {
           background-color: var(--green-10);
           color: var(--green-70);
           position: relative;
@@ -526,14 +530,57 @@
           width: 100%;
           font-size: var(--font-size-02);
           line-height: var(--line-height-02);
-          padding: var(--spacing-05) var(--spacing-08) var(--spacing-05)
-            var(--spacing-04);
           margin-bottom: var(--spacing-00);
           font-weight: 400;
           cursor: pointer;
           border-radius: var(--border-radius-base-new);
 
           .list-item-footer {
+            font-size: var(--font-size-01);
+            line-height: var(--line-height-01);
+          }
+        }
+      }
+
+      .plans-new-edu-discount {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-04);
+        margin-bottom: var(--spacing-06);
+        font-weight: 400;
+
+        @media (max-width: @screen-xs-max) {
+          &.invisible-desktop {
+            display: none;
+          }
+        }
+
+        @media (min-width: @screen-sm-min) {
+          &.invisible-desktop {
+            visibility: hidden;
+          }
+        }
+
+        input[type='checkbox'] {
+          margin: var(--spacing-02);
+          accent-color: var(--green-50);
+
+          &:focus-visible {
+            .box-shadow-button-input();
+          }
+        }
+
+        .plans-new-edu-discount-content {
+          display: flex;
+          flex-direction: column;
+
+          span {
+            line-height: var(--line-height-03);
+            color: var(--neutral-90);
+          }
+
+          small {
+            color: var(--neutral-70);
             font-size: var(--font-size-01);
             line-height: var(--line-height-01);
           }
@@ -581,6 +628,7 @@
   }
 
   .plans-new-table-feature-th {
+    font-weight: normal;
     padding: var(--spacing-05) var(--spacing-08) var(--spacing-05)
       var(--spacing-05);
 
@@ -636,6 +684,7 @@
     line-height: @highlighted-heading-line-height;
     background-color: var(--green-50);
     color: var(--white);
+    font-size: var(--font-size-03);
   }
 
   .plans-new-table-highlighted-cell {
@@ -674,12 +723,6 @@
 
     .mt-spacing-06 {
       margin-top: var(--spacing-06);
-    }
-
-    .additional-link-buy-btn-container {
-      text-align: center;
-      width: 100%;
-      padding-top: var(--spacing-04);
     }
 
     .highlighted-plans-card {
@@ -758,6 +801,15 @@
           }
         }
 
+        .plans-card-cta-container-monthly-annual {
+          margin-top: var(--spacing-08);
+          .plans-card-cta-buttons-container {
+            a:nth-child(2) {
+              margin-top: var(--spacing-04);
+            }
+          }
+        }
+
         .group-members-picker-container-mobile {
           margin-top: var(--spacing-08);
         }
@@ -765,11 +817,6 @@
         .plans-card-cta-buy-now-mobile {
           width: 100%;
           margin-top: var(--spacing-08);
-          line-height: var(--line-height-03);
-        }
-        .group-plans-card-cta-buy-now-mobile {
-          width: 100%;
-          margin-top: var(--spacing-04);
           line-height: var(--line-height-03);
         }
       }
@@ -812,6 +859,7 @@
         .plans-features-table-header-item-mobile {
           width: 33%;
           min-width: 114px;
+          padding: unset;
 
           .plans-features-table-header-item-content-mobile {
             margin-bottom: var(--spacing-08);
@@ -832,6 +880,7 @@
             .plans-features-table-header-item-title-mobile {
               display: flex;
               flex-direction: column;
+              font-size: var(--font-size-03);
             }
           }
 
@@ -839,6 +888,7 @@
             color: var(--neutral-90);
             line-height: var(--line-height-03);
             font-weight: 600;
+            font-size: var(--font-size-03);
           }
 
           .plans-features-table-header-item-price-mobile {
@@ -1044,17 +1094,26 @@
       font-size: var(--font-size-04);
       background-color: var(--white);
       border: unset;
-      width: 200px;
+      display: flex;
+      align-items: center;
     }
   }
 }
 
 .plans-new-design.plans-interstitial-new-design {
   padding-top: calc(var(--spacing-13) + var(--header-height));
+  padding-bottom: var(--spacing-09);
 
   .plans-interstitial-new-content {
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+
+  .plans-new-table {
+    th,
+    td {
+      width: @table-5-column-width;
+    }
   }
 }
