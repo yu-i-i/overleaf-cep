@@ -5,7 +5,7 @@ const { setTimeout } = require('timers/promises')
 const pProps = require('p-props')
 const logger = require('@overleaf/logger')
 const { expressify } = require('@overleaf/promise-utils')
-const { ObjectId } = require('mongodb')
+const { ObjectId } = require('mongodb-legacy')
 const ProjectDeleter = require('./ProjectDeleter')
 const ProjectDuplicator = require('./ProjectDuplicator')
 const ProjectCreationHandler = require('./ProjectCreationHandler')
@@ -335,7 +335,9 @@ const _ProjectController = {
       'pdfjs-40',
       'personal-access-token',
       'revert-file',
+      'revert-project',
       'review-panel-redesign',
+      !anonymous && 'ro-mirror-on-client',
       'track-pdf-download',
       !anonymous && 'writefull-oauth-promotion',
       'ieee-stylesheet',
@@ -413,6 +415,7 @@ const _ProjectController = {
           tokens: 1,
           tokenAccessReadAndWrite_refs: 1, // used for link sharing analytics
           collaberator_refs: 1, // used for link sharing analytics
+          pendingEditor_refs: 1, // used for link sharing analytics
         }),
         userIsMemberOfGroupSubscription: sessionUser
           ? (async () =>
@@ -486,12 +489,24 @@ const _ProjectController = {
           anonRequestToken
         )
 
-      const linkSharingChanges =
-        await SplitTestHandler.promises.getAssignmentForUser(
+      const [linkSharingChanges, linkSharingEnforcement] = await Promise.all([
+        SplitTestHandler.promises.getAssignmentForUser(
           project.owner_ref,
           'link-sharing-warning'
-        )
+        ),
+        SplitTestHandler.promises.getAssignmentForUser(
+          project.owner_ref,
+          'link-sharing-enforcement'
+        ),
+      ])
+
       if (linkSharingChanges?.variant === 'active') {
+        if (linkSharingEnforcement?.variant === 'active') {
+          await Modules.promises.hooks.fire(
+            'enforceCollaboratorLimit',
+            projectId
+          )
+        }
         if (isTokenMember) {
           // Check explicitly that the user is in read write token refs, while this could be inferred
           // from the privilege level, the privilege level of token members might later be restricted
@@ -568,12 +583,14 @@ const _ProjectController = {
         )
         const planLimit = ownerFeatures?.collaborators || 0
         const namedEditors = project.collaberator_refs?.length || 0
+        const pendingEditors = project.pendingEditor_refs?.length || 0
         const exceedAtLimit = planLimit > -1 && namedEditors >= planLimit
         const projectOpenedSegmentation = {
           projectId: project._id,
           // temporary link sharing segmentation:
           linkSharingWarning: linkSharingChanges?.variant,
           namedEditors,
+          pendingEditors,
           tokenEditors: project.tokenAccessReadAndWrite_refs?.length || 0,
           planLimit,
           exceedAtLimit,
@@ -710,6 +727,8 @@ const _ProjectController = {
           isTokenMember,
           isInvitedMember
         ),
+        roMirrorOnClientNoLocalStorage:
+          Settings.adminOnlyLogin || project.name.startsWith('Debug: '),
         languages: Settings.languages,
         learnedWords,
         editorThemes: THEME_LIST,
@@ -1032,7 +1051,6 @@ const ProjectController = {
   ),
   updateProjectSettings: expressify(_ProjectController.updateProjectSettings),
   userProjectsJson: expressify(_ProjectController.userProjectsJson),
-
   _buildProjectList: _ProjectController._buildProjectList,
   _buildProjectViewModel: _ProjectController._buildProjectViewModel,
   _injectProjectUsers: _ProjectController._injectProjectUsers,

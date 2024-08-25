@@ -47,7 +47,11 @@ function FileTreeItemMenuItems() {
         <MenuItem onClick={startRenaming}>{t('rename')}</MenuItem>
       ) : null}
       {downloadPath ? (
-        <MenuItem href={downloadPath} onClick={downloadWithAnalytics} download>
+        <MenuItem
+          href={downloadPath}
+          onClick={downloadWithAnalytics}
+          download={selectedFileName}
+        >
           {t('download')}
         </MenuItem>
       ) : null}
@@ -56,7 +60,7 @@ function FileTreeItemMenuItems() {
       ) : null}
       {canCreate ? (
         <>
-          <MenuItem divider />
+          <li role="none" className="divider" />
           <MenuItem onClick={createWithAnalytics}>{t('new_file')}</MenuItem>
           <MenuItem onClick={startCreatingFolder}>{t('new_folder')}</MenuItem>
           <MenuItem onClick={uploadWithAnalytics}>{t('upload')}</MenuItem>

@@ -49,6 +49,7 @@ async function removeUserFromProject(projectId, userId) {
           $pull: {
             collaberator_refs: userId,
             readOnly_refs: userId,
+            pendingEditor_refs: userId,
             tokenAccessReadOnly_refs: userId,
             tokenAccessReadAndWrite_refs: userId,
             trashed: userId,
@@ -62,6 +63,7 @@ async function removeUserFromProject(projectId, userId) {
           $pull: {
             collaberator_refs: userId,
             readOnly_refs: userId,
+            pendingEditor_refs: userId,
             tokenAccessReadOnly_refs: userId,
             tokenAccessReadAndWrite_refs: userId,
             archived: userId,
@@ -99,7 +101,8 @@ async function addUserIdToProject(
   projectId,
   addingUserId,
   userId,
-  privilegeLevel
+  privilegeLevel,
+  { pendingEditor } = {}
 ) {
   const project = await ProjectGetter.promises.getProject(projectId, {
     owner_ref: 1,
@@ -122,7 +125,13 @@ async function addUserIdToProject(
     )
   } else if (privilegeLevel === PrivilegeLevels.READ_ONLY) {
     level = { readOnly_refs: userId }
-    logger.debug({ privileges: 'readOnly', userId, projectId }, 'adding user')
+    if (pendingEditor) {
+      level.pendingEditor_refs = userId
+    }
+    logger.debug(
+      { privileges: 'readOnly', userId, projectId, pendingEditor },
+      'adding user'
+    )
   } else {
     throw new Error(`unknown privilegeLevel: ${privilegeLevel}`)
   }
@@ -196,6 +205,19 @@ async function transferProjects(fromUserId, toUserId) {
     }
   ).exec()
 
+  await Project.updateMany(
+    { pendingEditor_refs: fromUserId },
+    {
+      $addToSet: { pendingEditor_refs: toUserId },
+    }
+  ).exec()
+  await Project.updateMany(
+    { pendingEditor_refs: fromUserId },
+    {
+      $pull: { pendingEditor_refs: fromUserId },
+    }
+  ).exec()
+
   // Flush in background, no need to block on this
   _flushProjects(projectIds).catch(err => {
     logger.err(
@@ -208,7 +230,8 @@ async function transferProjects(fromUserId, toUserId) {
 async function setCollaboratorPrivilegeLevel(
   projectId,
   userId,
-  privilegeLevel
+  privilegeLevel,
+  { pendingEditor } = {}
 ) {
   // Make sure we're only updating the project if the user is already a
   // collaborator
@@ -220,7 +243,7 @@ async function setCollaboratorPrivilegeLevel(
   switch (privilegeLevel) {
     case PrivilegeLevels.READ_AND_WRITE: {
       update = {
-        $pull: { readOnly_refs: userId },
+        $pull: { readOnly_refs: userId, pendingEditor_refs: userId },
         $addToSet: { collaberator_refs: userId },
       }
       break
@@ -229,6 +252,11 @@ async function setCollaboratorPrivilegeLevel(
       update = {
         $pull: { collaberator_refs: userId },
         $addToSet: { readOnly_refs: userId },
+      }
+      if (pendingEditor) {
+        update.$addToSet.pendingEditor_refs = userId
+      } else {
+        update.$pull.pendingEditor_refs = userId
       }
       break
     }

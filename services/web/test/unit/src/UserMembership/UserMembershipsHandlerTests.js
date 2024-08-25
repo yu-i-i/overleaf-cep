@@ -12,7 +12,7 @@
  */
 const sinon = require('sinon')
 const assertCalledWith = sinon.assert.calledWith
-const { ObjectId } = require('mongodb')
+const { ObjectId } = require('mongodb-legacy')
 const modulePath =
   '../../../../app/src/Features/UserMembership/UserMembershipsHandler'
 const SandboxedModule = require('sandboxed-module')
@@ -21,9 +21,9 @@ describe('UserMembershipsHandler', function () {
   beforeEach(function () {
     this.user = { _id: new ObjectId() }
 
-    this.Institution = { updateMany: sinon.stub().yields(null) }
-    this.Subscription = { updateMany: sinon.stub().yields(null) }
-    this.Publisher = { updateMany: sinon.stub().yields(null) }
+    this.Institution = { updateMany: sinon.stub().resolves(null) }
+    this.Subscription = { updateMany: sinon.stub().resolves(null) }
+    this.Publisher = { updateMany: sinon.stub().resolves(null) }
     return (this.UserMembershipsHandler = SandboxedModule.require(modulePath, {
       requires: {
         '../../models/Institution': {

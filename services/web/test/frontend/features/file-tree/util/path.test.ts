@@ -34,6 +34,7 @@ describe('Path utils', function () {
             {
               _id: 'test-file-in-folder',
               name: 'example.png',
+              hash: '42',
             },
           ],
           folders: [
@@ -50,6 +51,7 @@ describe('Path utils', function () {
                 {
                   _id: 'test-file-in-subfolder',
                   name: 'nested-example.png',
+                  hash: '43',
                 },
               ],
               folders: [],
@@ -61,10 +63,12 @@ describe('Path utils', function () {
         {
           _id: 'test-image-file',
           name: 'frog.jpg',
+          hash: '21',
         },
         {
           _id: 'uppercase-extension-image-file',
           name: 'frog.JPG',
+          hash: '22',
         },
       ],
     }
@@ -147,10 +151,23 @@ describe('Path utils', function () {
       const preview = previewByPath(
         rootFolder,
         'test-project-id',
-        'test-folder/example.png'
+        'test-folder/example.png',
+        false
       )
       expect(preview).to.deep.equal({
         url: '/project/test-project-id/file/test-file-in-folder',
+        extension: 'png',
+      })
+    })
+    it('returns handles history file-tree', function () {
+      const preview = previewByPath(
+        rootFolder,
+        'test-project-id',
+        'test-folder/example.png',
+        true
+      )
+      expect(preview).to.deep.equal({
+        url: '/project/test-project-id/blob/42',
         extension: 'png',
       })
     })

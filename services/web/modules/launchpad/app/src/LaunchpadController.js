@@ -137,10 +137,16 @@ const _LaunchpadController = {
       }
 
       try {
+        const reversedHostname = user.email
+          .split('@')[1]
+          .split('')
+          .reverse()
+          .join('')
         await User.updateOne(
           { _id: user._id },
           {
-            $set: { isAdmin: true, 'emails.0.confirmedAt' : Date.now() }, // no email confirmation is required
+            $set: { isAdmin: true, emails: [{ email, reversedHostname }], 
+                    'emails.0.confirmedAt' : Date.now() }, // no email confirmation is required
             $unset: { 'hashedPassword': "" }, // external-auth user must not have a hashedPassword
           }
         ).exec()
@@ -206,11 +212,17 @@ const _LaunchpadController = {
     logger.debug({ userId: user._id }, 'making user an admin')
 
     try {
+      const reversedHostname = user.email
+        .split('@')[1]
+        .split('')
+        .reverse()
+        .join('')
       await User.updateOne(
         { _id: user._id },
         {
           $set: {
             isAdmin: true,
+            emails: [{ email, reversedHostname }],
           },
         }
       ).exec()

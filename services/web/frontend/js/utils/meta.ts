@@ -46,6 +46,7 @@ import { PasswordStrengthOptions } from '../../../types/password-strength-option
 import { Subscription as ProjectDashboardSubscription } from '../../../types/project/dashboard/subscription'
 import { ThirdPartyIds } from '../../../types/third-party-ids'
 import { Publisher } from '../../../types/subscription/dashboard/publisher'
+import { DefaultNavbarMetadata } from '@/features/ui/components/types/default-navbar-metadata'
 
 export interface Meta {
   'ol-ExposedSettings': ExposedSettings
@@ -135,6 +136,7 @@ export interface Meta {
   'ol-memberGroupSubscriptions': MemberGroupSubscription[]
   'ol-memberOfSSOEnabledGroups': GroupSSOLinkingStatus[]
   'ol-members': MinimalUser[]
+  'ol-navbar': DefaultNavbarMetadata
   'ol-no-single-dollar': boolean
   'ol-notifications': NotificationType[]
   'ol-notificationsInstitution': InstitutionType[]
@@ -161,6 +163,7 @@ export interface Meta {
   'ol-reconfirmedViaSAML': string
   'ol-recurlyApiKey': string
   'ol-recurlySubdomain': string
+  'ol-ro-mirror-on-client-no-local-storage': boolean
   'ol-samlError': SAMLError | undefined
   'ol-settingsGroupSSO': { enabled: boolean } | undefined
   'ol-settingsPlans': Plan[]
@@ -206,6 +209,7 @@ export interface Meta {
   'ol-usersBestSubscription': ProjectDashboardSubscription | undefined
   'ol-usersEmail': string | undefined
   'ol-validationStatus': ValidationStatus
+  'ol-websiteRedesignPlansVariant': 'default' | 'light-design' | 'new-design'
   'ol-wikiEnabled': boolean
   'ol-writefullCssUrl': string
   'ol-writefullEnabled': boolean

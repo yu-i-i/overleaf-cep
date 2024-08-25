@@ -3,7 +3,7 @@ import { Trans, useTranslation } from 'react-i18next'
 
 import Icon from '../../../shared/components/icon'
 import { formatTime, relativeDate } from '../../utils/format-date'
-import { useEditorContext } from '../../../shared/context/editor-context'
+import { useFileTreeData } from '@/shared/context/file-tree-data-context'
 import { useProjectContext } from '../../../shared/context/project-context'
 
 import { Nullable } from '../../../../../types/utils'
@@ -12,6 +12,7 @@ import { LinkedFileIcon } from './file-view-icons'
 import { BinaryFile, hasProvider, LinkedFile } from '../types/binary-file'
 import FileViewRefreshButton from './file-view-refresh-button'
 import FileViewRefreshError from './file-view-refresh-error'
+import { useSnapshotContext } from '@/features/ide-react/context/snapshot-context'
 
 const tprFileViewInfo = importOverleafModules('tprFileViewInfo') as {
   import: { TPRFileViewInfo: ElementType }
@@ -48,7 +49,8 @@ type FileViewHeaderProps = {
 
 export default function FileViewHeader({ file }: FileViewHeaderProps) {
   const { _id: projectId } = useProjectContext()
-  const { permissionsLevel } = useEditorContext()
+  const { fileTreeReadOnly } = useFileTreeData()
+  const { fileTreeFromHistory } = useSnapshotContext()
   const { t } = useTranslation()
 
   const [refreshError, setRefreshError] = useState<Nullable<string>>(null)
@@ -83,13 +85,17 @@ export default function FileViewHeader({ file }: FileViewHeaderProps) {
         tprFileViewInfo.map(({ import: { TPRFileViewInfo }, path }) => (
           <TPRFileViewInfo key={path} file={file} />
         ))}
-      {file.linkedFileData && permissionsLevel !== 'readOnly' && (
+      {file.linkedFileData && !fileTreeReadOnly && (
         <FileViewRefreshButton file={file} setRefreshError={setRefreshError} />
       )}
       &nbsp;
       <a
-        download
-        href={`/project/${projectId}/file/${file.id}`}
+        download={file.name}
+        href={
+          fileTreeFromHistory
+            ? `/project/${projectId}/blob/${file.hash}`
+            : `/project/${projectId}/file/${file.id}`
+        }
         className="btn btn-secondary-info btn-secondary"
       >
         <Icon type="download" fw />

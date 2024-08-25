@@ -1,19 +1,19 @@
-const mongodb = require('mongodb')
+const mongodb = require('mongodb-legacy')
 const OError = require('@overleaf/o-error')
 const Settings = require('@overleaf/settings')
 const Mongoose = require('./Mongoose')
+const { addConnectionDrainer } = require('./GracefulShutdown')
 
 // Ensure Mongoose is using the same mongodb instance as the mongodb module,
 // otherwise we will get multiple versions of the ObjectId class. Mongoose
 // patches ObjectId, so loading multiple versions of the mongodb module can
 // cause problems with ObjectId comparisons.
-if (Mongoose.mongo !== mongodb) {
+if (Mongoose.mongo.ObjectId !== mongodb.ObjectId) {
   throw new OError(
     'FATAL ERROR: Mongoose is using a different mongodb instance'
   )
 }
 
-const { getNativeDb } = Mongoose
 const { ObjectId, ReadPreference } = mongodb
 
 if (
@@ -39,8 +39,18 @@ async function waitForDb() {
 }
 
 const db = {}
+
+const mongoClient = new mongodb.MongoClient(
+  Settings.mongo.url,
+  Settings.mongo.options
+)
+
+addConnectionDrainer('mongodb', async () => {
+  await mongoClient.close()
+})
+
 async function setupDb() {
-  const internalDb = await getNativeDb()
+  const internalDb = mongoClient.db()
 
   db.contacts = internalDb.collection('contacts')
   db.deletedFiles = internalDb.collection('deletedFiles')
@@ -98,17 +108,19 @@ async function setupDb() {
   db.onboardingDataCollection = internalDb.collection(
     'onboardingDataCollection'
   )
+
+  await mongoClient.connect()
 }
 
 async function getCollectionNames() {
-  const internalDb = await getNativeDb()
+  const internalDb = mongoClient.db()
 
   const collections = await internalDb.collections()
   return collections.map(collection => collection.collectionName)
 }
 
 async function dropTestDatabase() {
-  const internalDb = await getNativeDb()
+  const internalDb = mongoClient.db()
   const dbName = internalDb.databaseName
   const env = process.env.NODE_ENV
 
@@ -125,7 +137,7 @@ async function dropTestDatabase() {
  * WARNING: Consider using a pre-populated collection from `db` to avoid typos!
  */
 async function getCollectionInternal(name) {
-  const internalDb = await getNativeDb()
+  const internalDb = mongoClient.db()
   return internalDb.collection(name)
 }
 

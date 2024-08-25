@@ -21,6 +21,8 @@ export function initialize(app) {
 
   app.delete('/project/:project_id', HttpController.deleteProject)
 
+  app.get('/project/:project_id/snapshot', HttpController.getLatestSnapshot)
+
   app.get(
     '/project/:project_id/diff',
     validate({
@@ -53,6 +55,16 @@ export function initialize(app) {
       },
     }),
     HttpController.getUpdates
+  )
+
+  app.get(
+    '/project/:project_id/changes',
+    validate({
+      query: {
+        since: Joi.number().integer(),
+      },
+    }),
+    HttpController.getChangesSince
   )
 
   app.get('/project/:project_id/version', HttpController.latestVersion)
@@ -156,6 +168,11 @@ export function initialize(app) {
     HttpController.getProjectSnapshot
   )
 
+  app.get(
+    '/project/:project_id/paths/version/:version',
+    HttpController.getPathsAtVersion
+  )
+
   app.post(
     '/project/:project_id/force',
     validate({
@@ -166,7 +183,7 @@ export function initialize(app) {
     HttpController.forceDebugProject
   )
 
-  app.get('/project/:project_id/blob/:hash', HttpController.getProjectBlob)
+  app.get('/project/:history_id/blob/:hash', HttpController.getProjectBlob)
 
   app.get('/status/failures', HttpController.getFailures)
 
