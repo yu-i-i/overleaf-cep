@@ -333,7 +333,6 @@ const _ProjectController = {
       'pdf-caching-prefetching',
       'pdf-presentation-mode',
       'pdfjs-40',
-      'personal-access-token',
       'revert-file',
       'revert-project',
       'review-panel-redesign',
@@ -343,6 +342,7 @@ const _ProjectController = {
       'ieee-stylesheet',
       'write-and-cite',
       'default-visual-for-beginners',
+      'password-authentication-removal',
     ].filter(Boolean)
 
     const getUserValues = async userId =>
@@ -589,6 +589,7 @@ const _ProjectController = {
           projectId: project._id,
           // temporary link sharing segmentation:
           linkSharingWarning: linkSharingChanges?.variant,
+          linkSharingEnforcement: linkSharingEnforcement?.variant,
           namedEditors,
           pendingEditors,
           tokenEditors: project.tokenAccessReadAndWrite_refs?.length || 0,
@@ -635,16 +636,6 @@ const _ProjectController = {
         !userIsMemberOfGroupSubscription &&
         !userHasInstitutionLicence
 
-      const showPersonalAccessToken =
-        userId &&
-        (!Features.hasFeature('saas') ||
-          req.query?.personal_access_token === 'true')
-
-      const optionalPersonalAccessToken =
-        userId &&
-        !showPersonalAccessToken &&
-        splitTestAssignments['personal-access-token'].variant === 'enabled' // `?personal-access-token=enabled`
-
       let showAiErrorAssistant = false
       if (userId && Features.hasFeature('saas')) {
         try {
@@ -678,6 +669,11 @@ const _ProjectController = {
         detachRole === 'detached'
           ? 'project/ide-react-detached'
           : 'project/ide-react'
+
+      // Get the user's assignment for this page's Bootstrap 5 split test, which
+      // populates splitTestVariants with a value for the split test name and allows
+      // Pug to read it
+      await SplitTestHandler.promises.getAssignment(req, res, 'bootstrap-5-ide')
 
       res.render(template, {
         title: project.name,
@@ -751,17 +747,17 @@ const _ProjectController = {
         showUpgradePrompt,
         fixedSizeDocument: true,
         useOpenTelemetry: Settings.useOpenTelemetryClient,
-        showPersonalAccessToken,
-        optionalPersonalAccessToken,
         hasTrackChangesFeature: Features.hasFeature('track-changes'),
         projectTags,
-        linkSharingWarning: linkSharingChanges.variant === 'active',
+        linkSharingWarning: linkSharingChanges?.variant === 'active',
+        linkSharingEnforcement: linkSharingEnforcement?.variant === 'active',
         usedLatex:
           // only use the usedLatex value if the split test is enabled
           splitTestAssignments['default-visual-for-beginners']?.variant ===
           'enabled'
             ? usedLatex
             : null,
+        isSaas: Features.hasFeature('saas'),
       })
       timer.done()
     } catch (err) {

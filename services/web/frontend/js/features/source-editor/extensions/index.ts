@@ -49,6 +49,9 @@ import { geometryChangeEvent } from './geometry-change-event'
 import { docName } from './doc-name'
 import { fileTreeItemDrop } from './file-tree-item-drop'
 import { mathPreview } from './math-preview'
+import { isSplitTestEnabled } from '@/utils/splitTestUtils'
+import { ranges } from './ranges'
+import { trackDetachedComments } from './track-detached-comments'
 
 const moduleExtensions: Array<() => Extension> = importOverleafModules(
   'sourceEditorExtensions'
@@ -124,7 +127,10 @@ export const createExtensions = (options: Record<string, any>): Extension[] => [
   // NOTE: `emptyLineFiller` needs to be before `trackChanges`,
   // so the decorations are added in the correct order.
   emptyLineFiller(),
-  trackChanges(options.currentDoc, options.changeManager),
+  isSplitTestEnabled('review-panel-redesign')
+    ? ranges(options.currentDoc)
+    : trackChanges(options.currentDoc, options.changeManager),
+  trackDetachedComments(options.currentDoc),
   visual(options.visual),
   mathPreview(options.settings.mathPreview),
   toolbarPanel(),

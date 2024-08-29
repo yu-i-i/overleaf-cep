@@ -123,6 +123,7 @@ export interface Meta {
   'ol-languages': SpellCheckLanguage[]
   'ol-learnedWords': string[]
   'ol-legacyEditorThemes': string[]
+  'ol-linkSharingEnforcement': boolean
   'ol-linkSharingWarning': boolean
   'ol-loadingText': string
   'ol-managedGroupSubscriptions': ManagedGroupSubscription[]
@@ -141,7 +142,6 @@ export interface Meta {
   'ol-notifications': NotificationType[]
   'ol-notificationsInstitution': InstitutionType[]
   'ol-oauthProviders': OAuthProviders
-  'ol-optionalPersonalAccessToken': boolean
   'ol-overallThemes': OverallThemeMeta[]
   'ol-passwordStrengthOptions': PasswordStrengthOptions
   'ol-personalAccessTokens': AccessToken[] | undefined
@@ -174,7 +174,6 @@ export interface Meta {
   'ol-showGroupsAndEnterpriseBanner': boolean
   'ol-showInrGeoBanner': boolean
   'ol-showLATAMBanner': boolean
-  'ol-showPersonalAccessToken': boolean
   'ol-showSupport': boolean
   'ol-showSymbolPalette': boolean
   'ol-showTemplatesServerPro': boolean
