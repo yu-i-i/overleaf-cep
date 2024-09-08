@@ -54,9 +54,9 @@ function setUpSubscriptionTracking(linkEl) {
       button: plan,
       location,
       'billing-period': period,
+      currency: currentCurrencyCode,
     }
 
-    eventTracking.sendMB('plans-page-start-trial') // deprecated by plans-page-click
     eventTracking.sendMB(eventTrackingKey, eventTrackingSegmentation)
   })
 }

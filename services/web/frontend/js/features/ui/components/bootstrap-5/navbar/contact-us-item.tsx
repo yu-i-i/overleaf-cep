@@ -1,25 +1,27 @@
-import NavDropdownLinkItem from '@/features/ui/components/bootstrap-5/navbar/nav-dropdown-link-item'
 import { sendMB } from '@/infrastructure/event-tracking'
 import { useTranslation } from 'react-i18next'
-import { useContactUsModal } from '@/shared/hooks/use-contact-us-modal'
-import { UserProvider } from '@/shared/context/user-context'
+import { DropdownItem } from 'react-bootstrap-5'
+import NavDropdownItem from '@/features/ui/components/bootstrap-5/navbar/nav-dropdown-item'
 
-export default function ContactUsItem() {
+export default function ContactUsItem({
+  showModal,
+}: {
+  showModal: (event?: Event) => void
+}) {
   const { t } = useTranslation()
-  const { modal, showModal } = useContactUsModal({ autofillProjectUrl: false })
 
   return (
-    <>
-      <NavDropdownLinkItem
-        href="#"
+    <NavDropdownItem>
+      <DropdownItem
+        as="button"
+        role="menuitem"
         onClick={() => {
           sendMB('menu-clicked-contact')
           showModal()
         }}
       >
         {t('contact_us')}
-      </NavDropdownLinkItem>
-      <UserProvider>{modal}</UserProvider>
-    </>
+      </DropdownItem>
+    </NavDropdownItem>
   )
 }

@@ -214,6 +214,7 @@ describe('admin panel', function () {
         cy.get('[role="tab"]').each((el, index) => {
           cy.wrap(el).findByText(tabs[index]).click()
         })
+        cy.get('[role="tab"]').should('have.length', tabs.length)
       })
 
       describe('user info tab', () => {
@@ -258,8 +259,22 @@ describe('admin panel', function () {
       })
     })
 
-    // eslint-disable-next-line mocha/no-skipped-tests
-    it.skip('restore deleted projects', () => {
+    describe('project page', () => {
+      beforeEach(() => {
+        login(admin)
+        cy.visit(`/admin/project/${testProjectId}`)
+      })
+
+      it('displays expected tabs', () => {
+        const tabs = ['Project Info', 'Deleted Docs', 'Audit Log']
+        cy.get('[role="tab"]').each((el, index) => {
+          cy.wrap(el).findByText(tabs[index]).click()
+        })
+        cy.get('[role="tab"]').should('have.length', tabs.length)
+      })
+    })
+
+    it('restore deleted projects', () => {
       login(user1)
       cy.visit('/project')
 
@@ -270,7 +285,7 @@ describe('admin panel', function () {
 
       cy.log('delete project')
       findProjectRow(deletedProjectName).within(() =>
-        cy.contains('Trash').click()
+        cy.findByRole('button', { name: 'Trash' }).click()
       )
       cy.get('button').contains('Confirm').click()
       cy.findByText(deletedProjectName).should('not.exist')
@@ -280,7 +295,7 @@ describe('admin panel', function () {
         cy.findByText('Trashed Projects').click()
       })
       findProjectRow(deletedProjectName).within(() =>
-        cy.contains('Delete').click()
+        cy.findByRole('button', { name: 'Delete' }).click()
       )
       cy.get('button').contains('Confirm').click()
       cy.findByText(deletedProjectName).should('not.exist')
@@ -294,8 +309,8 @@ describe('admin panel', function () {
       cy.get('a').contains(deletedProjectName).click()
 
       cy.log('undelete the project')
-      cy.findByText('undelete').click()
-      cy.findByText('undelete').should('not.exist')
+      cy.findByText('Undelete').click()
+      cy.findByText('Undelete').should('not.exist')
       cy.url().should('contain', `/admin/project/${projectToDeleteId}`)
 
       cy.log('login as the user and verify the project is restored')

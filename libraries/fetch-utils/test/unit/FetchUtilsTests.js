@@ -1,5 +1,5 @@
 const { expect } = require('chai')
-const { FetchError, AbortError } = require('node-fetch')
+const { FetchError } = require('node-fetch')
 const { Readable } = require('stream')
 const { once } = require('events')
 const { TestServer } = require('./helpers/TestServer')
@@ -14,6 +14,8 @@ const {
   CustomHttpAgent,
   CustomHttpsAgent,
 } = require('../..')
+
+const abortErrorMessage = 'The user aborted a request'
 
 const HTTP_PORT = 30001
 const HTTPS_PORT = 30002
@@ -46,6 +48,10 @@ describe('fetch-utils', function () {
     })
     this.url = path => `http://example.com:${HTTP_PORT}${path}`
     this.httpsUrl = path => `https://example.com:${HTTPS_PORT}${path}`
+  })
+
+  beforeEach(function () {
+    this.server.lastReq = undefined
   })
 
   after(async function () {
@@ -101,7 +107,7 @@ describe('fetch-utils', function () {
     it('supports abort signals', async function () {
       await expect(
         fetchJson(this.url('/hang'), { signal: AbortSignal.timeout(10) })
-      ).to.be.rejectedWith(AbortError)
+      ).to.be.rejectedWith(abortErrorMessage)
       await expectRequestAborted(this.server.lastReq)
     })
 
@@ -135,14 +141,28 @@ describe('fetch-utils', function () {
       await expectRequestAborted(this.server.lastReq)
     })
 
-    it('aborts the request when the request body is destroyed', async function () {
+    it('aborts the request when the request body is destroyed before transfer', async function () {
       const stream = Readable.from(infiniteIterator())
       const promise = fetchStream(this.url('/hang'), {
         method: 'POST',
         body: stream,
       })
       stream.destroy()
-      await expect(promise).to.be.rejectedWith(AbortError)
+      await expect(promise).to.be.rejectedWith(abortErrorMessage)
+      await wait(80)
+      expect(this.server.lastReq).to.be.undefined
+    })
+
+    it('aborts the request when the request body is destroyed during transfer', async function () {
+      const stream = Readable.from(infiniteIterator())
+      // Note: this test won't work on `/hang`
+      const promise = fetchStream(this.url('/sink'), {
+        method: 'POST',
+        body: stream,
+      })
+      await once(this.server.events, 'request-received')
+      stream.destroy()
+      await expect(promise).to.be.rejectedWith(abortErrorMessage)
       await expectRequestAborted(this.server.lastReq)
     })
 
@@ -156,7 +176,7 @@ describe('fetch-utils', function () {
     it('supports abort signals', async function () {
       await expect(
         fetchStream(this.url('/hang'), { signal: AbortSignal.timeout(10) })
-      ).to.be.rejectedWith(AbortError)
+      ).to.be.rejectedWith(abortErrorMessage)
       await expectRequestAborted(this.server.lastReq)
     })
 
@@ -164,10 +184,11 @@ describe('fetch-utils', function () {
       const stream = Readable.from(infiniteIterator())
       await expect(
         fetchStream(this.url('/hang'), {
+          method: 'POST',
           body: stream,
           signal: AbortSignal.timeout(10),
         })
-      ).to.be.rejectedWith(AbortError)
+      ).to.be.rejectedWith(abortErrorMessage)
       expect(stream.destroyed).to.be.true
     })
   })
@@ -178,14 +199,28 @@ describe('fetch-utils', function () {
       await expectRequestAborted(this.server.lastReq)
     })
 
-    it('aborts the request when the request body is destroyed', async function () {
+    it('aborts the request when the request body is destroyed before transfer', async function () {
       const stream = Readable.from(infiniteIterator())
       const promise = fetchNothing(this.url('/hang'), {
         method: 'POST',
         body: stream,
       })
       stream.destroy()
-      await expect(promise).to.be.rejectedWith(AbortError)
+      await expect(promise).to.be.rejectedWith(abortErrorMessage)
+      expect(this.server.lastReq).to.be.undefined
+    })
+
+    it('aborts the request when the request body is destroyed during transfer', async function () {
+      const stream = Readable.from(infiniteIterator())
+      // Note: this test won't work on `/hang`
+      const promise = fetchNothing(this.url('/sink'), {
+        method: 'POST',
+        body: stream,
+      })
+      await once(this.server.events, 'request-received')
+      stream.destroy()
+      await expect(promise).to.be.rejectedWith(abortErrorMessage)
+      await wait(80)
       await expectRequestAborted(this.server.lastReq)
     })
 
@@ -204,7 +239,7 @@ describe('fetch-utils', function () {
     it('supports abort signals', async function () {
       await expect(
         fetchNothing(this.url('/hang'), { signal: AbortSignal.timeout(10) })
-      ).to.be.rejectedWith(AbortError)
+      ).to.be.rejectedWith(abortErrorMessage)
       await expectRequestAborted(this.server.lastReq)
     })
 
@@ -212,10 +247,11 @@ describe('fetch-utils', function () {
       const stream = Readable.from(infiniteIterator())
       await expect(
         fetchNothing(this.url('/hang'), {
+          method: 'POST',
           body: stream,
           signal: AbortSignal.timeout(10),
         })
-      ).to.be.rejectedWith(AbortError)
+      ).to.be.rejectedWith(abortErrorMessage)
       expect(stream.destroyed).to.be.true
     })
   })
@@ -331,7 +367,17 @@ async function* infiniteIterator() {
 
 async function expectRequestAborted(req) {
   if (!req.destroyed) {
-    await once(req, 'close')
+    try {
+      await once(req, 'close')
+    } catch (err) {
+      // `once` throws if req emits an 'error' event.
+      // We ignore `Error: aborted` when the request is aborted.
+      if (err.message !== 'aborted') {
+        throw err
+      }
+    }
     expect(req.destroyed).to.be.true
   }
 }
+
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms))

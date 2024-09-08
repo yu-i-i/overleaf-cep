@@ -206,15 +206,15 @@
         }
 
         .plans-new-discount-badge {
-          background-color: #eaf6ef;
-          color: var(--green-50);
+          background-color: var(--green-10);
+          color: var(--green-60);
         }
       }
     }
   }
 
   .plans-new-period-switcher-container {
-    display: flex;
+    display: inline-flex;
     justify-content: center;
     background-color: var(--neutral-10);
     border-radius: var(--border-radius-full-new);
@@ -222,6 +222,10 @@
     margin-top: var(--spacing-09);
     margin-bottom: @switcher-container-margin-bottom;
     gap: var(--spacing-04);
+
+    @media (max-width: @screen-xs-max) {
+      margin-bottom: var(--spacing-09);
+    }
 
     .plans-new-period-switcher {
       font-size: var(--font-size-05);
@@ -245,8 +249,8 @@
         box-shadow: 0px 2px 4px 0px rgba(30, 37, 48, 0.16);
 
         .plans-new-discount-badge {
-          background-color: #eaf6ef;
-          color: var(--green-50);
+          background-color: var(--green-10);
+          color: var(--green-60);
         }
       }
 
@@ -276,6 +280,7 @@
     display: flex;
     align-items: center;
     font-weight: 500;
+    line-height: var(--line-height-01);
   }
 
   .plans-new-tab-content {
@@ -807,6 +812,7 @@
 
         .plans-card-cta-container {
           margin-top: var(--spacing-08);
+          width: 100%;
 
           .btn-block + .btn-block {
             margin-top: var(--spacing-04);
@@ -855,14 +861,12 @@
           padding: unset;
 
           .plans-features-table-header-item-content-mobile {
-            margin-bottom: var(--spacing-08);
             padding: var(--spacing-04);
             text-align: center;
             background-color: var(--neutral-10);
           }
 
           .plans-group-features-table-header-item-content-mobile {
-            margin-bottom: var(--spacing-08);
             padding: var(--spacing-04);
             text-align: center;
             background-color: var(--neutral-10);
@@ -900,6 +904,10 @@
         .plans-group-features-table-header-item-content-mobile.highlighted {
           .highlighted-styles;
         }
+      }
+
+      tr.plans-features-table-row-for-margin {
+        height: var(--spacing-08);
       }
 
       .plans-features-table-body-container-mobile {
@@ -1027,6 +1035,39 @@
       display: flex;
       justify-content: center;
       gap: var(--spacing-04);
+    }
+  }
+
+  .only-show-for-specific-plan-type {
+    display: none;
+  }
+  &[data-ol-current-plan-type='group'] {
+    .show-for-plan-type-group {
+      display: block;
+    }
+  }
+  &[data-ol-current-plan-type='individual'] {
+    .show-for-plan-type-individual {
+      display: block;
+    }
+  }
+  &[data-ol-current-plan-type='student'] {
+    .show-for-plan-type-student {
+      display: block;
+    }
+  }
+
+  .only-show-for-specific-plan-period {
+    display: none;
+  }
+  &[data-ol-current-plan-period='annual'] {
+    .show-for-plan-period-annual {
+      display: block;
+    }
+  }
+  &[data-ol-current-plan-period='monthly'] {
+    .show-for-plan-period-monthly {
+      display: block;
     }
   }
 }
