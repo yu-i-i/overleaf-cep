@@ -145,8 +145,7 @@ const _LaunchpadController = {
         await User.updateOne(
           { _id: user._id },
           {
-            $set: { isAdmin: true, emails: [{ email, reversedHostname }], 
-                    'emails.0.confirmedAt' : Date.now() }, // no email confirmation is required
+            $set: { isAdmin: true, emails: [{ email, reversedHostname, 'confirmedAt' : Date.now() }] }, // no email confirmation is required
             $unset: { 'hashedPassword': "" }, // external-auth user must not have a hashedPassword
           }
         ).exec()
