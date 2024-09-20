@@ -25,8 +25,8 @@ function initLdapAuthentication() {
     updateAdminOnLogin: process.env.OVERLEAF_LDAP_UPDATE_ADMIN_ON_LOGIN === 'true',
     server: {
       url: process.env.OVERLEAF_LDAP_URL,
-      bindDN: process.env.OVERLEAF_LDAP_BIND_DN,
-      bindCredentials: process.env.OVERLEAF_LDAP_BIND_CREDENTIALS,
+      bindDN: process.env.OVERLEAF_LDAP_BIND_DN || "",
+      bindCredentials: process.env.OVERLEAF_LDAP_BIND_CREDENTIALS || "",
       bindProperty: process.env.OVERLEAF_LDAP_BIND_PROPERTY,
       searchBase: process.env.OVERLEAF_LDAP_SEARCH_BASE,
       searchFilter: process.env.OVERLEAF_LDAP_SEARCH_FILTER,

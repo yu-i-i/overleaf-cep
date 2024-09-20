@@ -15,8 +15,8 @@ async function fetchLdapContacts(userId, contacts) {
     connectTimeout,
     tlsOptions,
     starttls,
-    bindDN = "",
-    bindCredentials = "",
+    bindDN,
+    bindCredentials,
   } = Settings.ldap.server
   const searchBase = process.env.OVERLEAF_LDAP_CONTACTS_SEARCH_BASE || Settings.ldap.server.searchBase
   const searchScope = process.env.OVERLEAF_LDAP_CONTACTS_SEARCH_SCOPE || 'sub'
@@ -25,7 +25,9 @@ async function fetchLdapContacts(userId, contacts) {
   let ldapUsers
   const client = ldapjs.createClient(ldapConfig)
   try {
-    await _upgradeToTLS(client, starttls, tlsOptions)
+    if (starttls) {
+      await _upgradeToTLS(client, tlsOptions)
+    }
     await _bindLdap(client, bindDN, bindCredentials)
 
     const filter = await _formContactsSearchFilter(client, userId, process.env.OVERLEAF_LDAP_CONTACTS_FILTER)
@@ -62,19 +64,17 @@ async function fetchLdapContacts(userId, contacts) {
   )
 }
 
-function _upgradeToTLS(client, starttls, tlsOptions) {
+function _upgradeToTLS(client, tlsOptions) {
   return new Promise((resolve, reject) => {
     client.on('error', error => reject(new Error(`LDAP client error: ${error}`)))
     client.on('connect', () => {
-      if (starttls) {
-        client.starttls(tlsOptions, null, error => {
-          if (error) {
-            reject(new Error(`StartTLS error: ${error}`))
-          } else {
-            resolve()
-          }
-        })
-      }
+      client.starttls(tlsOptions, null, error => {
+        if (error) {
+          reject(new Error(`StartTLS error: ${error}`))
+        } else {
+          resolve()
+        }
+      })
     })
   })
 }
