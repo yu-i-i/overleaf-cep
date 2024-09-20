@@ -3,84 +3,79 @@
   /about/*, /contact, /legal, /blog/*, /for/*, /events/*
 */
 .cms-page {
-  &.website-redesign {
-    h1 {
-      font-size: 2rem; // 32px
+  h1 {
+    font-size: 2rem; // 32px
+    line-height: 1.333;
+  }
+
+  h2 {
+    font-size: 1.5rem; // 24px
+  }
+
+  .sales-contact-form-left-column {
+    .sales-contact-form-heading-title {
+      font-size: 2.25rem;
+      font-family: var(-font-family-san-serif);
+      font-style: normal;
+      font-weight: 600;
       line-height: 1.333;
+      padding-top: 8px;
+      padding-right: 50px;
     }
 
-    h2 {
-      font-size: 1.5rem; // 24px
-    }
-
-    .sales-contact-form-left-column {
-      .sales-contact-form-heading-title {
-        font-size: 2.25rem;
-        font-family: var(-font-family-san-serif);
-        font-style: normal;
-        font-weight: 600;
-        line-height: 1.333;
-        padding-top: 8px;
-        padding-right: 50px;
-      }
-
-      @include media-breakpoint-up(sm) {
-        .names-container {
-          display: flex;
-          gap: 21px;
-        }
-      }
-
-      .checkbox-label {
-        font-size: 16px;
-        font-weight: 400;
+    @include media-breakpoint-up(sm) {
+      .names-container {
+        display: flex;
+        gap: 21px;
       }
     }
 
-    /* Buttons */
-    // correct color property set on <a> above:
-    // TODO: check if reset needed
-    //   .reset-btns;
-    //   .alert {
-    //     .alert;
-    //   }
-    //   .alert-info {
-    //     .btn-info {
-    //       .btn-alert-info;
-    //     }
-    //   }
+    .checkbox-label {
+      font-size: 16px;
+      font-weight: 400;
+    }
+  }
 
-    .p-no-text-nodes:has(.btn) {
-      margin-top: var(--spacing-09);
+  /* Buttons */
+  // correct color property set on <a> above:
+  // TODO: check if reset needed
+  //   .reset-btns;
+  //   .alert {
+  //     .alert;
+  //   }
+  //   .alert-info {
+  //     .btn-info {
+  //       .btn-alert-info;
+  //     }
+  //   }
 
-      @include media-breakpoint-down(md) {
-        .btn {
-          width: 100%;
-          margin-left: 0;
-          margin-top: var(--spacing-05);
-        }
+  .p-no-text-nodes:has(.btn) {
+    margin-top: var(--spacing-09);
 
-        .btn:first-child {
-          margin-top: 0;
-        }
+    @include media-breakpoint-down(md) {
+      .btn {
+        width: 100%;
+        margin-left: 0;
+        margin-top: var(--spacing-05);
+      }
+
+      .btn:first-child {
+        margin-top: 0;
       }
     }
+  }
 
-    .btn + .btn {
-      margin-left: var(--spacing-06);
-    }
+  .btn + .btn {
+    margin-left: var(--spacing-06);
+  }
 
-    .optional-text {
-      font-size: 14px;
-    }
+  .optional-text {
+    font-size: 14px;
   }
 
   .section-row {
     margin: 0 auto;
-
-    // TODO: check max-widths with UX team for new design
-    // used to have different sizes for different breakpoints but probably not needed
-    max-width: 1344px;
+    max-width: 1440px;
   }
 
   padding-bottom: 0;
@@ -355,18 +350,6 @@
   bottom: 1px;
 }
 
-// `Layout | Grid` display options
-.row-equal-column-heights {
-  @include media-breakpoint-down(md) {
-    div[class*='col-'] {
-      .card,
-      .no-card {
-        height: 100%;
-      }
-    }
-  }
-}
-
 .vertically-center-col {
   // remove margin to better vertically align
   // some elements need to be nested within a container, and others are directly within .no-card/.card
@@ -394,20 +377,6 @@
     > *:last-child:not(.cms-element-container) {
       margin-bottom: 0;
     }
-  }
-
-  @include media-breakpoint-up(md) {
-    display: flex;
-
-    div[class*='col-'] {
-      align-self: center;
-    }
-  }
-}
-
-.reverse-col-order-mobile {
-  @include media-breakpoint-down(md) {
-    flex-direction: column-reverse;
   }
 }
 
@@ -467,7 +436,41 @@
   padding-bottom: var(--spacing-11);
 }
 
-@include media-breakpoint-up(md) {
+// Desktop layout options depdendent on mobile breakpoint
+@include media-breakpoint-up(lg) {
+  .row-equal-column-heights {
+    div[class*='col-'] {
+      .card,
+      .no-card {
+        height: 100%;
+      }
+    }
+  }
+
+  .vertically-center-col {
+    div[class*='col-'] {
+      align-self: center;
+    }
+  }
+}
+
+// Mobile layout options depdendent on mobile breakpoint
+@include media-breakpoint-down(lg) {
+  .cms-page {
+    div[class*='col-'] {
+      &:not(:first-child) {
+        padding-top: var(--spacing-13);
+      }
+    }
+
+    .reverse-col-order-mobile {
+      flex-direction: column-reverse;
+    }
+  }
+}
+
+// TODO: will be deprecated and gap option used instead
+@include media-breakpoint-up(lg) {
   .desktop-left-margin-sm {
     margin-left: var(--spacing-05);
   }
@@ -527,63 +530,6 @@
 
 .top-margin-xxl {
   margin-top: var(--spacing-11);
-}
-
-@include media-breakpoint-down(md) {
-  .mobile-bottom-margin-sm {
-    margin-bottom: var(--spacing-05);
-  }
-
-  .mobile-bottom-margin-md {
-    margin-bottom: var(--spacing-07);
-  }
-
-  .mobile-bottom-margin-lg {
-    margin-bottom: var(--spacing-09);
-  }
-
-  .mobile-bottom-margin-xl {
-    margin-bottom: var(--spacing-10);
-  }
-
-  .mobile-bottom-margin-xxl {
-    margin-bottom: var(--spacing-11);
-  }
-}
-
-// TODO: static newly designed pages used 992px for breakpoint
-// need to confirm whether or not CMS should as well
-// CMS currently uses 767px for breakpoint
-@include media-breakpoint-down(sm) {
-  .col-xs-padding-sm {
-    .col-xs-12:not(:first-child) {
-      padding-top: var(--spacing-05);
-    }
-  }
-
-  .col-xs-padding-md {
-    .col-xs-12:not(:first-child) {
-      padding-top: var(--spacing-07);
-    }
-  }
-
-  .col-xs-padding-lg {
-    .col-xs-12:not(:first-child) {
-      padding-top: var(--spacing-09);
-    }
-  }
-
-  .col-xs-padding-xl {
-    .col-xs-12:not(:first-child) {
-      padding-top: var(--spacing-10);
-    }
-  }
-
-  .col-xs-padding-xxl {
-    .col-xs-12:not(:first-child) {
-      padding-top: var(--spacing-11);
-    }
-  }
 }
 
 .bottom-align-last-entry {

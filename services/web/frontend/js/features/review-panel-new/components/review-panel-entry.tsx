@@ -8,6 +8,7 @@ import { isSelectionWithinOp } from '../utils/is-selection-within-op'
 import { EditorSelection } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import classNames from 'classnames'
+import { highlightRanges } from '@/features/source-editor/extensions/ranges'
 
 export const ReviewPanelEntry: FC<{
   position: number
@@ -15,7 +16,7 @@ export const ReviewPanelEntry: FC<{
   top?: number
   className?: string
   selectLineOnFocus?: boolean
-}> = ({ children, position, top, op, className, selectLineOnFocus }) => {
+}> = ({ children, position, top, op, className, selectLineOnFocus = true }) => {
   const state = useCodeMirrorStateContext()
   const view = useCodeMirrorViewContext()
   const [focused, setFocused] = useState(false)
@@ -40,6 +41,8 @@ export const ReviewPanelEntry: FC<{
     <div
       onFocus={focusHandler}
       onBlur={() => setFocused(false)}
+      onMouseEnter={() => view.dispatch(highlightRanges(op))}
+      onMouseLeave={() => view.dispatch(highlightRanges())}
       role="button"
       tabIndex={position + 1}
       className={classNames(

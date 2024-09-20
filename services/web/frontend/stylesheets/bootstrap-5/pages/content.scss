@@ -1,11 +1,15 @@
 /*
   Styling for content pages
-  Including: about, home, blog, /for/__, legal, contact, portals, wiki, gallery, plans, and interstitial payment page
+  Including: about, blog, /for/__, legal, contact, portals, wiki, gallery, plans, and interstitial payment page
 */
 
 // TODO: consolidate cms.scss and content.scss
 
 .content-page {
+  &.content {
+    padding-top: $header-height; // remove extra padding added by .content. Keep .content selector to increase specificity
+  }
+
   word-break: break-word;
 
   /*
@@ -41,9 +45,7 @@
       section
     */
   section {
-    // TODO: static pages look to use --spacing-16 (96px) for total vertical padding
-    // should that be the default going forward?
-    padding: var(--spacing-08) var(--spacing-05);
+    padding: var(--spacing-16) var(--spacing-05) 0 var(--spacing-05);
 
     // TODO: confirm if we will still support this and if so what colors to use
     // &.color-block {
@@ -90,16 +92,12 @@
     // }
 
     .section-row {
-      // TODO: check max-widths with UX team for new design
-      // used to have different sizes for different breakpoints but probably not needed
-      max-width: 1344px;
+      max-width: 1440px;
     }
   }
 
   .content-container > section:first-child {
-    /* header */
-    padding-bottom: 0;
-    padding-top: 0;
+    padding-top: var(--spacing-15);
   }
 
   section.no-top-padding {

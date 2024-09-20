@@ -45,20 +45,26 @@ const ReviewPanelCurrentFile: FC = () => {
   const [aggregatedRanges, setAggregatedRanges] = useState<AggregatedRanges>()
 
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const previousFocusedItem = useRef(0)
+  const previousFocusedItem = useRef(new Map<string, number>())
 
   const updatePositions = useCallback(() => {
-    if (containerRef.current) {
-      const extents = positionItems(
+    const docId = ranges?.docId
+
+    if (containerRef.current && docId) {
+      const positioningRes = positionItems(
         containerRef.current,
-        previousFocusedItem.current
+        previousFocusedItem.current.get(docId) || 0,
+        docId
       )
 
-      if (extents) {
-        previousFocusedItem.current = extents.activeItemIndex
+      if (positioningRes) {
+        previousFocusedItem.current.set(
+          positioningRes.docId,
+          positioningRes.activeItemIndex
+        )
       }
     }
-  }, [])
+  }, [ranges?.docId])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -237,45 +243,47 @@ const ReviewPanelCurrentFile: FC = () => {
   }
 
   return (
-    <div ref={handleContainer}>
-      {addCommentEntries.map(entry => {
-        const { id, from, to, value, top } = entry
-        return (
-          <ReviewPanelAddComment
-            key={id}
-            from={from}
-            to={to}
-            value={value}
-            top={top}
-          />
-        )
-      })}
-
+    <>
       {showEmptyState && <ReviewPanelEmptyState />}
 
-      {aggregatedRanges.changes.map(
-        change =>
-          positions.has(change.id) && (
-            <ReviewPanelChange
-              key={change.id}
-              change={change}
-              top={positions.get(change.id)}
-              aggregate={aggregatedRanges.aggregates.get(change.id)}
+      <div ref={handleContainer}>
+        {addCommentEntries.map(entry => {
+          const { id, from, to, value, top } = entry
+          return (
+            <ReviewPanelAddComment
+              key={id}
+              from={from}
+              to={to}
+              value={value}
+              top={top}
             />
           )
-      )}
+        })}
 
-      {aggregatedRanges.comments.map(
-        comment =>
-          positions.has(comment.id) && (
-            <ReviewPanelComment
-              key={comment.id}
-              comment={comment}
-              top={positions.get(comment.id)}
-            />
-          )
-      )}
-    </div>
+        {aggregatedRanges.changes.map(
+          change =>
+            positions.has(change.id) && (
+              <ReviewPanelChange
+                key={change.id}
+                change={change}
+                top={positions.get(change.id)}
+                aggregate={aggregatedRanges.aggregates.get(change.id)}
+              />
+            )
+        )}
+
+        {aggregatedRanges.comments.map(
+          comment =>
+            positions.has(comment.id) && (
+              <ReviewPanelComment
+                key={comment.id}
+                comment={comment}
+                top={positions.get(comment.id)}
+              />
+            )
+        )}
+      </div>
+    </>
   )
 }
 
