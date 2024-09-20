@@ -16,7 +16,7 @@
 
 <img src="doc/screenshot.png" alt="A screenshot of a project being edited in Overleaf Community Edition">
 <p align="center">
-  Figure 1: A screenshot of a project being edited in Overleaf Community Edition.
+  Figure 1: A screenshot of a project being edited in extended Overleaf Community Edition.
 </p>
 
 ## Community Edition
@@ -34,7 +34,7 @@ If you want help installing and maintaining Overleaf in your lab or workplace, O
 ## Installation
 
 Detailed installation instructions can be found in the [Overleaf Toolkit](https://github.com/overleaf/toolkit/).
-To run a custom image, add a file named docker-compose.override.yml with the following or similar content into the ./overleaf-toolkit/config directory:
+To run a custom image, add a file named docker-compose.override.yml with the following or similar content into the ./toolkit/config directory:
 
 ```
 ---
@@ -85,7 +85,7 @@ Internally, Overleaf LDAP uses the [passport-ldapauth](https://github.com/vesse/
 - `OVERLEAF_LDAP_BIND_PROPERTY` =
     Optional, default 'dn'. Property of the user to bind against the client.
 
-- `OVERLEAF_LDAP_SEARCH_BASE` =
+- `OVERLEAF_LDAP_SEARCH_BASE` **(required)** =
     The base DN from which to search for users.
      E.g., 'ou=people,dc=example,dc=com'
 
@@ -169,7 +169,7 @@ The next 5 variables are used to configure how user contacts are retrieved from 
 
 - `OVERLEAF_LDAP_CONTACTS_FILTER` =
     Optional. The filter used to search for users in the LDAP server to be loaded into contacts. The placeholder '{{userProperty}}' within the filter is replaced with the value of
-    the property specified by `OVERLEAF_LDAP_CONTACTS_PROPERTY` from the LDAP user initiating the search.
+    the property specified by `OVERLEAF_LDAP_CONTACTS_PROPERTY` from the LDAP user initiating the search. If not defined, no users are retrieved from the LDAP server into contacts.
 
 - `OVERLEAF_LDAP_CONTACTS_PROPERTY` =
     Optional. Specifies the property of the user object that will replace the '{{userProperty}}' placeholder in the `OVERLEAF_LDAP_CONTACTS_FILTER`.
