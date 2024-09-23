@@ -42,7 +42,11 @@ async function fetchLdapContacts(userId, contacts) {
   }
 
   const newLdapContacts = ldapUsers.reduce((acc, ldapUser) => {
-    if (!contacts.some(contact => contact.email === ldapUser[attEmail]?.toLowerCase())) {
+    const email = Array.isArray(ldapUser[attEmail])
+                    ? ldapUser[attEmail][0]?.toLowerCase()
+                    : ldapUser[attEmail]?.toLowerCase()
+    if (!email) return acc
+    if (!contacts.some(contact => contact.email === email)) {
       const [firstName, lastName] = (!attFirstName || !attLastName) && attName
         ? splitFullName(ldapUser[attName])
         : [ldapUser[attFirstName], ldapUser[attLastName]]
@@ -50,7 +54,7 @@ async function fetchLdapContacts(userId, contacts) {
       acc.push({
         first_name: firstName || "",
         last_name: lastName || "",
-        email: ldapUser[attEmail]?.toLowerCase(),
+        email: email,
         type: 'user',
       })
     }

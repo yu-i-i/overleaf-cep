@@ -55,7 +55,8 @@ Internally, Overleaf LDAP uses the [passport-ldapauth](https://github.com/vesse/
     E.g., 'ldaps://ldap.example.com:636' (LDAP over SSL), 'ldap://ldap.example.com:389' (unencrypted, or LDAP over TLS).
 
 - `OVERLEAF_LDAP_EMAIL_ATT` =
-  The email attribute the LDAP server will return, defaults to 'mail'
+   The email attribute returned by the LDAP server, defaults to 'mail'. Each LDAP user must have at least one email address. 
+   If multiple addresses are provided, only the first one will be used.
 
 - `OVERLEAF_LDAP_FIRST_NAME_ATT` =
   The property name holding the first name of the user which is used in the application, usually 'givenName'

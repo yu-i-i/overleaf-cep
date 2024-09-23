@@ -19,7 +19,6 @@ const AuthenticationControllerLdap = {
     return done(undefined, user, info)
   },
   async _doPassportLdapLogin(req, ldapUser) {
-    const email = ldapUser.mail.toLowerCase()
     const { fromKnownDevice } = AuthenticationController.getAuditInfo(req)
     const auditLog = {
       ipAddress: req.ip,
@@ -49,7 +48,7 @@ const AuthenticationControllerLdap = {
       // async actions
       return { user, info: undefined }
     } else { //something wrong
-      logger.debug({ email }, 'failed LDAP log in')
+      logger.debug({ email : ldapUser.mail }, 'failed LDAP log in')
       return {
         user: false,
         info: {

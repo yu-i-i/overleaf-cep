@@ -28,7 +28,9 @@ const AuthenticationManagerLdap = {
     }
     const firstName = attFirstName ? ldapUser[attFirstName] : nameParts[0]
     const lastName  = attLastName  ? ldapUser[attLastName]  : nameParts[1]
-    const email = ldapUser[attEmail].toLowerCase()
+    const email = Array.isArray(ldapUser[attEmail])
+                    ? ldapUser[attEmail][0].toLowerCase()
+                    : ldapUser[attEmail].toLowerCase()
     const isAdmin = ldapUser._groups?.length > 0
 
     var user = await User.findOne({ 'email': email }).exec()
