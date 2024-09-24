@@ -7,6 +7,7 @@ if (https.globalAgent.maxSockets < 300) {
   https.globalAgent.maxSockets = 300
 }
 
+const Metrics = require('@overleaf/metrics')
 const AbstractPersistor = require('./AbstractPersistor')
 const PersistorHelper = require('./PersistorHelper')
 
@@ -29,10 +30,9 @@ module.exports = class S3Persistor extends AbstractPersistor {
 
   async sendStream(bucketName, key, readStream, opts = {}) {
     try {
-      // egress from us to S3
       const observeOptions = {
-        metric: 's3.egress',
-        Metrics: this.settings.Metrics,
+        metric: 's3.egress', // egress from us to S3
+        bucket: bucketName,
       }
 
       const observer = new PersistorHelper.ObserverStream(observeOptions)
@@ -85,6 +85,10 @@ module.exports = class S3Persistor extends AbstractPersistor {
     if (opts.start != null && opts.end != null) {
       params.Range = `bytes=${opts.start}-${opts.end}`
     }
+    const observer = new PersistorHelper.ObserverStream({
+      metric: 's3.ingress', // ingress from S3 to us
+      bucket: bucketName,
+    })
 
     const req = this._getClientForBucket(bucketName).getObject(params)
     const stream = req.createReadStream()
@@ -116,13 +120,7 @@ module.exports = class S3Persistor extends AbstractPersistor {
         ReadError
       )
     }
-
-    // ingress from S3 to us
-    const observer = new PersistorHelper.ObserverStream({
-      metric: 's3.ingress',
-      Metrics: this.settings.Metrics,
-    })
-
+    // Return a PassThrough stream with a minimal interface. It will buffer until the caller starts reading. It will emit errors from the source stream (Stream.pipeline passes errors along).
     const pass = new PassThrough()
     pipeline(stream, observer, pass, err => {
       if (err) req.abort()
@@ -228,9 +226,7 @@ module.exports = class S3Persistor extends AbstractPersistor {
         return md5
       }
       // etag is not in md5 format
-      if (this.settings.Metrics) {
-        this.settings.Metrics.inc('s3.md5Download')
-      }
+      Metrics.inc('s3.md5Download')
       return await PersistorHelper.calculateStreamMd5(
         await this.getObjectStream(bucketName, key)
       )

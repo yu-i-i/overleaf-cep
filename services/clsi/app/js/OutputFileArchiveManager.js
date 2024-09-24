@@ -1,11 +1,14 @@
-let OutputFileArchiveManager
 const archiver = require('archiver')
 const OutputCacheManager = require('./OutputCacheManager')
 const OutputFileFinder = require('./OutputFileFinder')
 const Settings = require('@overleaf/settings')
 const { open } = require('node:fs/promises')
-const path = require('node:path')
 const { NotFoundError } = require('./Errors')
+const logger = require('@overleaf/logger')
+
+// NOTE: Updating this list requires a corresponding change in
+// * services/web/frontend/js/features/pdf-preview/util/file-list.js
+const ignoreFiles = ['output.fls', 'output.fdb_latexmk']
 
 function getContentDir(projectId, userId) {
   let subDir
@@ -17,30 +20,53 @@ function getContentDir(projectId, userId) {
   return `${Settings.path.outputDir}/${subDir}/`
 }
 
-module.exports = OutputFileArchiveManager = {
-  async archiveFilesForBuild(projectId, userId, build, files = []) {
+module.exports = {
+  async archiveFilesForBuild(projectId, userId, build) {
+    logger.debug({ projectId, userId, build }, 'Will create zip file')
+
     const contentDir = getContentDir(projectId, userId)
 
-    const validFiles = await (files.length > 0
-      ? this._getRequestedOutputFiles(projectId, userId, build, files)
-      : this._getAllOutputFiles(projectId, userId, build))
+    const outputFiles = await this._getAllOutputFiles(
+      contentDir,
+      projectId,
+      userId,
+      build
+    )
 
     const archive = archiver('zip')
 
-    const missingFiles = files.filter(
-      file => !validFiles.includes(path.basename(file))
-    )
+    archive.on('error', err => {
+      logger.warn(
+        { err, projectId, userId, build },
+        'error emitted when creating output files archive'
+      )
+    })
 
-    for (const file of validFiles) {
+    archive.on('warning', err => {
+      logger.warn(
+        { err, projectId, userId, build },
+        'warning emitted when creating output files archive'
+      )
+    })
+
+    const missingFiles = []
+
+    for (const { path } of outputFiles) {
+      let fileHandle
       try {
-        const fileHandle = await open(
-          `${contentDir}${OutputCacheManager.path(build, file)}`
+        fileHandle = await open(
+          `${contentDir}${OutputCacheManager.path(build, path)}`
         )
-        const fileStream = fileHandle.createReadStream()
-        archive.append(fileStream, { name: file })
       } catch (error) {
-        missingFiles.push(file)
+        logger.warn(
+          { path, error, projectId, userId, build },
+          'error opening file to add to output files archive'
+        )
+        missingFiles.push(path)
+        continue
       }
+      const fileStream = fileHandle.createReadStream()
+      archive.append(fileStream, { name: path })
     }
 
     if (missingFiles.length > 0) {
@@ -49,21 +75,27 @@ module.exports = OutputFileArchiveManager = {
       })
     }
 
-    await archive.finalize()
+    archive.finalize().catch(error => {
+      logger.error(
+        { error, projectId, userId, build },
+        'error finalizing output files archive'
+      )
+    })
 
     return archive
   },
 
-  async _getAllOutputFiles(projectId, userId, build) {
-    const contentDir = getContentDir(projectId, userId)
-
+  async _getAllOutputFiles(contentDir, projectId, userId, build) {
     try {
       const { outputFiles } = await OutputFileFinder.promises.findOutputFiles(
         [],
         `${contentDir}${OutputCacheManager.path(build, '.')}`
       )
 
-      return outputFiles.map(({ path }) => path)
+      return outputFiles.filter(
+        // Ignore the pdf and also ignore the files ignored by the frontend.
+        ({ path }) => path !== 'output.pdf' && !ignoreFiles.includes(path)
+      )
     } catch (error) {
       if (
         error.code === 'ENOENT' ||
@@ -74,17 +106,5 @@ module.exports = OutputFileArchiveManager = {
       }
       throw error
     }
-  },
-
-  async _getRequestedOutputFiles(projectId, userId, build, files) {
-    const outputFiles = new Set(
-      await OutputFileArchiveManager._getAllOutputFiles(
-        projectId,
-        userId,
-        build
-      )
-    )
-
-    return files.filter(file => outputFiles.has(file))
   },
 }

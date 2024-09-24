@@ -3,6 +3,7 @@ const fs = require('fs')
 const fsPromises = require('fs/promises')
 const globCallbacks = require('glob')
 const Path = require('path')
+const { PassThrough } = require('stream')
 const { pipeline } = require('stream/promises')
 const { promisify } = require('util')
 
@@ -16,7 +17,6 @@ module.exports = class FSPersistor extends AbstractPersistor {
   constructor(settings = {}) {
     super()
     this.useSubdirectories = Boolean(settings.useSubdirectories)
-    this.metrics = settings.Metrics
   }
 
   async sendFile(location, target, source) {
@@ -63,6 +63,10 @@ module.exports = class FSPersistor extends AbstractPersistor {
 
   // opts may be {start: Number, end: Number}
   async getObjectStream(location, name, opts = {}) {
+    const observer = new PersistorHelper.ObserverStream({
+      metric: 'fs.ingress', // ingress to us from disk
+      bucket: location,
+    })
     const fsPath = this._getFsPath(location, name)
 
     try {
@@ -76,7 +80,11 @@ module.exports = class FSPersistor extends AbstractPersistor {
       )
     }
 
-    return fs.createReadStream(null, opts)
+    const stream = fs.createReadStream(null, opts)
+    // Return a PassThrough stream with a minimal interface. It will buffer until the caller starts reading. It will emit errors from the source stream (Stream.pipeline passes errors along).
+    const pass = new PassThrough()
+    pipeline(stream, observer, pass).catch(() => {})
+    return pass
   }
 
   async getRedirectUrl() {
@@ -221,27 +229,25 @@ module.exports = class FSPersistor extends AbstractPersistor {
   }
 
   async _writeStreamToTempFile(location, stream, opts = {}) {
+    const observerOptions = {
+      metric: 'fs.egress', // egress from us to disk
+      bucket: location,
+    }
+    const observer = new PersistorHelper.ObserverStream(observerOptions)
+
     const tempDirPath = await fsPromises.mkdtemp(Path.join(location, 'tmp-'))
     const tempFilePath = Path.join(tempDirPath, 'uploaded-file')
 
-    const transforms = []
+    const transforms = [observer]
     let md5Observer
     if (opts.sourceMd5) {
       md5Observer = createMd5Observer()
       transforms.push(md5Observer.transform)
     }
 
-    let timer
-    if (this.metrics) {
-      timer = new this.metrics.Timer('writingFile')
-    }
-
     try {
       const writeStream = fs.createWriteStream(tempFilePath)
       await pipeline(stream, ...transforms, writeStream)
-      if (timer) {
-        timer.done()
-      }
     } catch (err) {
       await this._cleanupTempFile(tempFilePath)
       throw new WriteError(
