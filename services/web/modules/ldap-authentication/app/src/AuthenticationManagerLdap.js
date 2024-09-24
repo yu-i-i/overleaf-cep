@@ -24,10 +24,10 @@ const AuthenticationManagerLdap = {
 
     let nameParts = ["",""]
     if ((!attFirstName || !attLastName) && attName) {
-      nameParts = this.splitFullName(ldapUser[attName])
+      nameParts = this.splitFullName(ldapUser[attName] || "")
     }
-    const firstName = attFirstName ? ldapUser[attFirstName] : nameParts[0]
-    const lastName  = attLastName  ? ldapUser[attLastName]  : nameParts[1]
+    const firstName = attFirstName ? (ldapUser[attFirstName] || "") : nameParts[0]
+    const lastName  = attLastName  ? (ldapUser[attLastName]  || "") : nameParts[1]
     const email = Array.isArray(ldapUser[attEmail])
                     ? ldapUser[attEmail][0].toLowerCase()
                     : ldapUser[attEmail].toLowerCase()

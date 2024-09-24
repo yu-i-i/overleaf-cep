@@ -47,13 +47,15 @@ async function fetchLdapContacts(userId, contacts) {
                     : ldapUser[attEmail]?.toLowerCase()
     if (!email) return acc
     if (!contacts.some(contact => contact.email === email)) {
-      const [firstName, lastName] = (!attFirstName || !attLastName) && attName
-        ? splitFullName(ldapUser[attName])
-        : [ldapUser[attFirstName], ldapUser[attLastName]]
-
+      let nameParts = ["",""]
+      if ((!attFirstName || !attLastName) && attName) {
+        nameParts = splitFullName(ldapUser[attName] || "")
+      }
+      const firstName = attFirstName ? (ldapUser[attFirstName] || "") : nameParts[0]
+      const lastName  = attLastName  ? (ldapUser[attLastName]  || "") : nameParts[1]
       acc.push({
-        first_name: firstName || "",
-        last_name: lastName || "",
+        first_name: firstName,
+        last_name: lastName,
         email: email,
         type: 'user',
       })
