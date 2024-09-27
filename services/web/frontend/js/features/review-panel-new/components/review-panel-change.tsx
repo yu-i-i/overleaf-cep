@@ -20,7 +20,10 @@ export const ReviewPanelChange = memo<{
   change: Change<EditOperation>
   aggregate?: Change<DeleteOperation>
   top?: number
-}>(({ change, aggregate, top }) => {
+  editable?: boolean
+  docId: string
+  hoverRanges?: boolean
+}>(({ change, aggregate, top, docId, hoverRanges, editable = true }) => {
   const { t } = useTranslation()
   const { acceptChanges, rejectChanges } = useRangesActionsContext()
   const permissions = usePermissionsContext()
@@ -41,6 +44,8 @@ export const ReviewPanelChange = memo<{
       top={top}
       op={change.op}
       position={change.op.p}
+      docId={docId}
+      hoverRanges={hoverRanges}
     >
       <div className="review-panel-entry-indicator">
         <MaterialIcon type="edit" className="review-panel-entry-icon" />
@@ -56,7 +61,7 @@ export const ReviewPanelChange = memo<{
               {formatTimeBasedOnYear(change.metadata?.ts)}
             </div>
           </div>
-          {permissions.write && (
+          {editable && permissions.write && (
             <div className="review-panel-entry-actions">
               <Tooltip
                 id="accept-change"

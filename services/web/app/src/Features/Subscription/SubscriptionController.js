@@ -232,6 +232,14 @@ async function userSubscriptionPage(req, res) {
     'local-ccy-format-v2'
   )
 
+  // Populates splitTestVariants with a value for the split test name and allows
+  // Pug to read it
+  await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'bootstrap-5-subscription'
+  )
+
   const results =
     await SubscriptionViewModelBuilder.promises.buildUsersSubscriptionViewModel(
       user,
@@ -414,6 +422,12 @@ async function successfulSubscription(req, res) {
   if (!personalSubscription) {
     res.redirect('/user/subscription/plans')
   } else {
+    await SplitTestHandler.promises.getAssignment(
+      req,
+      res,
+      'bootstrap-5-subscription'
+    )
+
     res.render('subscriptions/successful-subscription-react', {
       title: 'thank_you',
       personalSubscription,
@@ -444,7 +458,12 @@ function cancelSubscription(req, res, next) {
  * @param {import('express').NextFunction} next
  * @returns {Promise<void>}
  */
-function canceledSubscription(req, res, next) {
+async function canceledSubscription(req, res, next) {
+  await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'bootstrap-5-subscription'
+  )
   return res.render('subscriptions/canceled-subscription-react', {
     title: 'subscription_canceled',
   })
@@ -739,7 +758,7 @@ module.exports = {
   interstitialPaymentPage: expressify(interstitialPaymentPage),
   successfulSubscription: expressify(successfulSubscription),
   cancelSubscription,
-  canceledSubscription,
+  canceledSubscription: expressify(canceledSubscription),
   cancelV1Subscription,
   updateSubscription,
   cancelPendingSubscriptionChange,

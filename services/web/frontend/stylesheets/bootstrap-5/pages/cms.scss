@@ -3,15 +3,6 @@
   /about/*, /contact, /legal, /blog/*, /for/*, /events/*
 */
 .cms-page {
-  h1 {
-    font-size: 2rem; // 32px
-    line-height: 1.333;
-  }
-
-  h2 {
-    font-size: 1.5rem; // 24px
-  }
-
   .sales-contact-form-left-column {
     .sales-contact-form-heading-title {
       font-size: 2.25rem;
@@ -35,19 +26,6 @@
       font-weight: 400;
     }
   }
-
-  /* Buttons */
-  // correct color property set on <a> above:
-  // TODO: check if reset needed
-  //   .reset-btns;
-  //   .alert {
-  //     .alert;
-  //   }
-  //   .alert-info {
-  //     .btn-info {
-  //       .btn-alert-info;
-  //     }
-  //   }
 
   .p-no-text-nodes:has(.btn) {
     margin-top: var(--spacing-09);
@@ -74,8 +52,9 @@
   }
 
   .section-row {
+    @extend .container;
+
     margin: 0 auto;
-    max-width: 1440px;
   }
 
   padding-bottom: 0;
@@ -308,6 +287,25 @@
     height: auto;
     max-width: 100%;
   }
+
+  /*
+    cards
+  */
+  .card-body {
+    // card-body all have div before the actual content
+    // due to option to override font size
+    > :first-child {
+      > :first-child {
+        margin-top: 0;
+      }
+    }
+
+    > :last-child {
+      > :last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
 }
 
 .icon-with-content {
@@ -465,6 +463,17 @@
 
     .reverse-col-order-mobile {
       flex-direction: column-reverse;
+
+      // 1st column is displayed as 2nd column on mobile when reversed
+      div[class*='col-'] {
+        &:not(:last-child) {
+          padding-top: var(--spacing-13);
+        }
+
+        &:last-child {
+          padding-top: 0; // unset padding from default rows above
+        }
+      }
     }
   }
 }
@@ -533,13 +542,29 @@
 }
 
 .bottom-align-last-entry {
-  display: flex;
-  flex-direction: column;
+  &.no-card {
+    display: flex;
+    flex-direction: column;
 
-  * {
-    &:last-child {
-      flex: 1;
-      align-content: end;
+    * {
+      &:last-child {
+        flex: 1;
+        align-content: end;
+      }
+    }
+  }
+
+  &.card {
+    .card-body {
+      display: flex;
+      flex-direction: column;
+
+      * {
+        &:last-child {
+          flex: 1;
+          align-content: end;
+        }
+      }
     }
   }
 }

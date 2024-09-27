@@ -4,6 +4,7 @@ import { NodeIntersectsChangeFn, ProjectionItem } from './projection'
 import * as tokens from '../../lezer-latex/latex.terms.mjs'
 import { getEnvironmentArguments, getEnvironmentName } from './environments'
 import { PartialFlatOutline } from '@/features/ide-react/context/outline-context'
+import { texOrPdfString } from './commands'
 
 export type Outline = {
   line: number
@@ -86,6 +87,15 @@ const getEntryText = (state: EditorState, node: SyntaxNodeRef): string => {
     // Hide label definitions within the sectioning command
     if (token.type.is('Label')) {
       return false
+    }
+
+    // Handle the texorpdfstring command
+    if (token.type.is('UnknownCommand')) {
+      const pdfString = texOrPdfString(state, token.node, 'pdf')
+      if (pdfString) {
+        titleParts.push(pdfString)
+        return false
+      }
     }
 
     // Only add text from leaf nodes

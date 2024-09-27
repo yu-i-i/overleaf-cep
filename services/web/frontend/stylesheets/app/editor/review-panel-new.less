@@ -35,6 +35,7 @@
   .review-panel-entry-content {
     display: flex;
     flex-direction: column;
+    font-size: @font-size-01;
     gap: @spacing-04;
   }
 
@@ -121,7 +122,7 @@
 
   .review-panel-header {
     position: fixed;
-    top: calc(var(--review-panel-top) - 40px);
+    top: var(--review-panel-top);
     width: var(--review-panel-width);
     z-index: 2;
     display: flex;
@@ -395,7 +396,7 @@
     padding: 4px;
     position: absolute;
     top: 69px;
-    bottom: 30px;
+    bottom: 59px;
     width: 100%;
     overflow: auto;
     overscroll-behavior-block: none;
@@ -438,12 +439,38 @@
 
   .review-panel-footer {
     position: fixed;
-    top: calc(var(--review-panel-bottom) - 66px);
+    height: 60px;
+    bottom: 0;
     width: var(--review-panel-width);
     z-index: 2;
-    background: @rp-bg-dim-blue;
+    background-color: white;
     border-top: 1px solid #d9d9d9;
     display: flex;
+
+    .review-panel-tab {
+      flex: 0 0 50%;
+      padding: 6px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      border: 0;
+      border-top: solid 3px transparent;
+      background: none;
+      color: @content-secondary;
+      font-size: @font-size-02;
+
+      &:hover,
+      &:focus {
+        text-decoration: none;
+        color: @content-primary;
+      }
+
+      &-active {
+        color: @content-primary;
+        border-top: solid 3px @green-50;
+      }
+    }
   }
 
   .review-panel-add-comment-textarea {
@@ -490,8 +517,12 @@
   &.review-panel-mini {
     overflow: visible !important;
 
+    .review-panel-inner {
+      width: 24px;
+    }
+
     .review-panel-entry {
-      margin-left: 2px;
+      margin-left: 0;
       background-color: transparent;
       border: none;
     }
