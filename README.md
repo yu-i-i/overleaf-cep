@@ -123,7 +123,7 @@ Internally, Overleaf LDAP uses the [passport-ldapauth](https://github.com/vesse/
     Optional, default is up to the OS. How long the client should wait
     before timing out on TCP connections.
 
-The next 5 variables are used to determine if the user has admin rights.
+The next 5 variables are used to determine if the user has admin rights. **Please, note: the user gains admin status if the search result is not empty, not when the user is explicitly included in the search results.**
 
 - `OVERLEAF_LDAP_ADMIN_SEARCH_BASE` =
     Optional. Specifies the base DN from which to start searching for the admin group. If this variable is defined,
@@ -143,6 +143,7 @@ The next 5 variables are used to determine if the user has admin rights.
 - `OVERLEAF_LDAP_UPDATE_ADMIN_ON_LOGIN` =
     Optional, default 'false'. If 'true', the user's admin status is updated on each login. Otherwise, the admin status is set only on the first login.
 
+
 #### Example:
 
 In the following example admins are members of a group 'admins', the objectClass of the entry 'admins' is 'groupOfNames':
@@ -159,6 +160,19 @@ In the following example admins are users with UNIX gid=1234:
 
     OVERLEAF_LDAP_ADMIN_SEARCH_BASE='ou=people,dc=example,dc=com'
     OVERLEAF_LDAP_ADMIN_SEARCH_FILTER='(&(gidNumber=1234)(uid={{username}}))'
+
+In the following example admin is the user with uid=someuser:
+
+    OVERLEAF_LDAP_ADMIN_SEARCH_BASE='ou=people,dc=example,dc=com'
+    OVERLEAF_LDAP_ADMIN_SEARCH_FILTER='(&(uid=someuser)(uid={{username}}))'
+
+The filter
+
+    OVERLEAF_LDAP_ADMIN_SEARCH_FILTER='(uid=someuser)'
+
+where 'someuser' is the uid of an existing user, will always produce a non-empty search result. 
+As a result, **every user will be granted admin rights**, not just 'someuser', as one might expect.
+
 
 The next 5 variables are used to configure how user contacts are retrieved from the LDAP server.
 
