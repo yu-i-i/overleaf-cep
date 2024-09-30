@@ -31,7 +31,7 @@ function initLdapAuthentication() {
       searchBase: process.env.OVERLEAF_LDAP_SEARCH_BASE,
       searchFilter: process.env.OVERLEAF_LDAP_SEARCH_FILTER,
       searchScope: process.env.OVERLEAF_LDAP_SEARCH_SCOPE || 'sub',
-      searchAttributes: JSON.parse(process.env.LDAP_SEARCH_ATTRIBUTES || '[]'),
+      searchAttributes: JSON.parse(process.env.OVERLEAF_LDAP_SEARCH_ATTRIBUTES || '[]'),
       groupSearchBase: process.env.OVERLEAF_LDAP_ADMIN_SEARCH_BASE,
       groupSearchFilter: process.env.OVERLEAF_LDAP_ADMIN_SEARCH_FILTER,
       groupSearchScope: process.env.OVERLEAF_LDAP_ADMIN_SEARCH_SCOPE || 'sub',
