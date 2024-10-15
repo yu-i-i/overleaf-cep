@@ -1,0 +1,22 @@
+.error-boundary-alert {
+  padding: var(--spacing-05);
+}
+
+.error-boundary-container {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-06);
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  .error-message {
+    align-items: center;
+    color: var(--content-primary);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-02);
+  }
+}

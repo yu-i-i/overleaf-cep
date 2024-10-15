@@ -1,6 +1,5 @@
 /* eslint-disable
     max-len,
-    no-unused-vars,
 */
 // TODO: This file was created by bulk-decaffeinate.
 // Fix any style issues and re-enable lint.
@@ -13,10 +12,7 @@
  */
 let LinkedFilesController
 const SessionManager = require('../Authentication/SessionManager')
-const EditorController = require('../Editor/EditorController')
-const ProjectLocator = require('../Project/ProjectLocator')
 const Settings = require('@overleaf/settings')
-const logger = require('@overleaf/logger')
 const _ = require('lodash')
 const AnalyticsManager = require('../../../../app/src/Features/Analytics/AnalyticsManager')
 const LinkedFilesHandler = require('./LinkedFilesHandler')
@@ -45,18 +41,129 @@ const Modules = require('../../infrastructure/Modules')
 const { plainTextResponse } = require('../../infrastructure/Response')
 const ReferencesHandler = require('../References/ReferencesHandler')
 const EditorRealTimeController = require('../Editor/EditorRealTimeController')
+const { expressify } = require('@overleaf/promise-utils')
+const ProjectOutputFileAgent = require('./ProjectOutputFileAgent')
+const ProjectFileAgent = require('./ProjectFileAgent')
+const UrlAgent = require('./UrlAgent')
+
+async function createLinkedFile(req, res, next) {
+  const { project_id: projectId } = req.params
+  const { name, provider, data, parent_folder_id: parentFolderId } = req.body
+  const userId = SessionManager.getLoggedInUserId(req.session)
+
+  const Agent = await LinkedFilesController._getAgent(provider)
+  if (Agent == null) {
+    return res.sendStatus(400)
+  }
+
+  data.provider = provider
+  data.importedAt = new Date().toISOString()
+
+  try {
+    const newFileId = await Agent.promises.createLinkedFile(
+      projectId,
+      data,
+      name,
+      parentFolderId,
+      userId
+    )
+    if (name.endsWith('.bib')) {
+      AnalyticsManager.recordEventForUserInBackground(
+        userId,
+        'linked-bib-file',
+        {
+          integration: provider,
+        }
+      )
+    }
+    return res.json({ new_file_id: newFileId })
+  } catch (err) {
+    return LinkedFilesController.handleError(err, req, res, next)
+  }
+}
+
+async function refreshLinkedFile(req, res, next) {
+  const { project_id: projectId, file_id: fileId } = req.params
+  const userId = SessionManager.getLoggedInUserId(req.session)
+
+  const { file, parentFolder } = await LinkedFilesHandler.promises.getFileById(
+    projectId,
+    fileId
+  )
+
+  if (file == null) {
+    return res.sendStatus(404)
+  }
+  const { name } = file
+  const { linkedFileData } = file
+  if (
+    linkedFileData == null ||
+    (linkedFileData != null ? linkedFileData.provider : undefined) == null
+  ) {
+    return res.sendStatus(409)
+  }
+
+  const { provider } = linkedFileData
+  const parentFolderId = parentFolder._id
+  const Agent = await LinkedFilesController._getAgent(provider)
+  if (Agent == null) {
+    return res.sendStatus(400)
+  }
+
+  linkedFileData.importedAt = new Date().toISOString()
+  let newFileId
+  try {
+    newFileId = await Agent.promises.refreshLinkedFile(
+      projectId,
+      linkedFileData,
+      name,
+      parentFolderId,
+      userId
+    )
+  } catch (err) {
+    return LinkedFilesController.handleError(err, req, res, next)
+  }
+
+  if (req.body.shouldReindexReferences) {
+    let data
+    try {
+      data = await ReferencesHandler.promises.indexAll(projectId)
+    } catch (error) {
+      OError.tag(error, 'failed to index references', {
+        projectId,
+      })
+      return next(error)
+    }
+    EditorRealTimeController.emitToRoom(
+      projectId,
+      'references:keys:updated',
+      data.keys,
+      true
+    )
+    res.json({ new_file_id: newFileId })
+  } else {
+    res.json({ new_file_id: newFileId })
+  }
+}
 
 module.exports = LinkedFilesController = {
-  Agents: _.extend(
-    {
-      url: require('./UrlAgent'),
-      project_file: require('./ProjectFileAgent'),
-      project_output_file: require('./ProjectOutputFileAgent'),
-    },
-    Modules.linkedFileAgentsIncludes()
-  ),
+  Agents: null,
 
-  _getAgent(provider) {
+  async _cacheAgents() {
+    if (!LinkedFilesController.Agents) {
+      LinkedFilesController.Agents = _.extend(
+        {
+          url: UrlAgent,
+          project_file: ProjectFileAgent,
+          project_output_file: ProjectOutputFileAgent,
+        },
+        await Modules.linkedFileAgentsIncludes()
+      )
+    }
+  },
+
+  async _getAgent(provider) {
+    await LinkedFilesController._cacheAgents()
     if (
       !Object.prototype.hasOwnProperty.call(
         LinkedFilesController.Agents,
@@ -71,108 +178,9 @@ module.exports = LinkedFilesController = {
     return LinkedFilesController.Agents[provider]
   },
 
-  createLinkedFile(req, res, next) {
-    const { project_id: projectId } = req.params
-    const { name, provider, data, parent_folder_id: parentFolderId } = req.body
-    const userId = SessionManager.getLoggedInUserId(req.session)
+  createLinkedFile: expressify(createLinkedFile),
 
-    const Agent = LinkedFilesController._getAgent(provider)
-    if (Agent == null) {
-      return res.sendStatus(400)
-    }
-
-    data.provider = provider
-    data.importedAt = new Date().toISOString()
-
-    return Agent.createLinkedFile(
-      projectId,
-      data,
-      name,
-      parentFolderId,
-      userId,
-      function (err, newFileId) {
-        if (err != null) {
-          return LinkedFilesController.handleError(err, req, res, next)
-        }
-        if (name.endsWith('.bib')) {
-          AnalyticsManager.recordEventForUserInBackground(
-            userId,
-            'linked-bib-file',
-            {
-              integration: provider,
-            }
-          )
-        }
-        return res.json({ new_file_id: newFileId })
-      }
-    )
-  },
-
-  refreshLinkedFile(req, res, next) {
-    const { project_id: projectId, file_id: fileId } = req.params
-    const userId = SessionManager.getLoggedInUserId(req.session)
-
-    return LinkedFilesHandler.getFileById(
-      projectId,
-      fileId,
-      function (err, file, path, parentFolder) {
-        if (err != null) {
-          return next(err)
-        }
-        if (file == null) {
-          return res.sendStatus(404)
-        }
-        const { name } = file
-        const { linkedFileData } = file
-        if (
-          linkedFileData == null ||
-          (linkedFileData != null ? linkedFileData.provider : undefined) == null
-        ) {
-          return res.sendStatus(409)
-        }
-        const { provider } = linkedFileData
-        const parentFolderId = parentFolder._id
-        const Agent = LinkedFilesController._getAgent(provider)
-        if (Agent == null) {
-          return res.sendStatus(400)
-        }
-
-        linkedFileData.importedAt = new Date().toISOString()
-
-        Agent.refreshLinkedFile(
-          projectId,
-          linkedFileData,
-          name,
-          parentFolderId,
-          userId,
-          function (err, newFileId) {
-            if (err != null) {
-              return LinkedFilesController.handleError(err, req, res, next)
-            }
-            if (req.body.shouldReindexReferences) {
-              ReferencesHandler.indexAll(projectId, function (error, data) {
-                if (error) {
-                  OError.tag(error, 'failed to index references', {
-                    projectId,
-                  })
-                  return next(error)
-                }
-                EditorRealTimeController.emitToRoom(
-                  projectId,
-                  'references:keys:updated',
-                  data.keys,
-                  true
-                )
-                res.json({ new_file_id: newFileId })
-              })
-            } else {
-              res.json({ new_file_id: newFileId })
-            }
-          }
-        )
-      }
-    )
-  },
+  refreshLinkedFile: expressify(refreshLinkedFile),
 
   handleError(error, req, res, next) {
     if (error instanceof AccessDeniedError) {

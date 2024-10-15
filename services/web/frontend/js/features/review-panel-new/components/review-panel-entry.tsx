@@ -1,13 +1,17 @@
-import { FC, useCallback, useState } from 'react'
+import { FC, useCallback, useEffect, useState } from 'react'
 import { AnyOperation } from '../../../../../types/change'
 import {
   useCodeMirrorStateContext,
   useCodeMirrorViewContext,
-} from '@/features/source-editor/components/codemirror-editor'
+} from '@/features/source-editor/components/codemirror-context'
 import { isSelectionWithinOp } from '../utils/is-selection-within-op'
 import classNames from 'classnames'
-import { highlightRanges } from '@/features/source-editor/extensions/ranges'
+import {
+  clearHighlightRanges,
+  highlightRanges,
+} from '@/features/source-editor/extensions/ranges'
 import { useEditorManagerContext } from '@/features/ide-react/context/editor-manager-context'
+import { useLayoutContext } from '@/shared/context/layout-context'
 
 export const ReviewPanelEntry: FC<{
   position: number
@@ -17,6 +21,7 @@ export const ReviewPanelEntry: FC<{
   className?: string
   selectLineOnFocus?: boolean
   hoverRanges?: boolean
+  disabled?: boolean
 }> = ({
   children,
   position,
@@ -26,23 +31,55 @@ export const ReviewPanelEntry: FC<{
   selectLineOnFocus = true,
   docId,
   hoverRanges = true,
+  disabled,
 }) => {
   const state = useCodeMirrorStateContext()
   const view = useCodeMirrorViewContext()
   const { openDocId } = useEditorManagerContext()
   const [focused, setFocused] = useState(false)
+  const { setReviewPanelOpen } = useLayoutContext()
 
   const highlighted = isSelectionWithinOp(op, state.selection.main)
 
-  const focusHandler = useCallback(() => {
-    if (selectLineOnFocus) {
-      openDocId(docId, { gotoOffset: position, keepCurrentView: true })
+  const openReviewPanel = useCallback(() => {
+    setReviewPanelOpen(true)
+  }, [setReviewPanelOpen])
+
+  const focusHandler = useCallback(
+    event => {
+      if (
+        event.target instanceof HTMLButtonElement ||
+        event.target instanceof HTMLLinkElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLAnchorElement
+      ) {
+        // Don't focus if the click was on a button/link/textarea/anchor as we
+        // don't want to affect the behaviour of the button/link/textarea/anchor
+        return
+      }
+
+      if (selectLineOnFocus) {
+        openDocId(docId, { gotoOffset: position, keepCurrentView: true })
+      }
+      setFocused(true)
+    },
+    [selectLineOnFocus, docId, openDocId, position]
+  )
+
+  // Clear op highlight on dismount
+  useEffect(() => {
+    return () => {
+      if (hoverRanges) {
+        setTimeout(() => {
+          view.dispatch(clearHighlightRanges(op))
+        })
+      }
     }
-    setFocused(true)
-  }, [selectLineOnFocus, docId, openDocId, position])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
+      onMouseDown={openReviewPanel} // Using onMouseDown rather than onClick to guarantee that it fires before onFocus
       onFocus={focusHandler}
       onBlur={() => setFocused(false)}
       onMouseEnter={() => {
@@ -52,7 +89,7 @@ export const ReviewPanelEntry: FC<{
       }}
       onMouseLeave={() => {
         if (hoverRanges) {
-          view.dispatch(highlightRanges())
+          view.dispatch(clearHighlightRanges(op))
         }
       }}
       role="button"
@@ -62,6 +99,7 @@ export const ReviewPanelEntry: FC<{
         {
           'review-panel-entry-focused': focused,
           'review-panel-entry-highlighted': highlighted,
+          'review-panel-entry-disabled': disabled,
         },
         className
       )}

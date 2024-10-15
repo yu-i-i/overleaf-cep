@@ -6,6 +6,7 @@ module.exports = function ({
   reportPercentage,
   reportOnly = false,
   exclude = [],
+  viewDirectives = {},
 }) {
   const header = reportOnly
     ? 'Content-Security-Policy-Report-Only'
@@ -16,6 +17,9 @@ module.exports = function ({
   return function (req, res, next) {
     // set the default policy
     res.set(header, defaultPolicy)
+    if (reportUri) {
+      res.set('Reporting-Endpoints', `csp-endpoint="${reportUri}"`)
+    }
 
     const originalRender = res.render
 
@@ -25,6 +29,7 @@ module.exports = function ({
       if (exclude.includes(view)) {
         // remove the default policy
         res.removeHeader(header)
+        res.removeHeader('Reporting-Endpoints')
       } else {
         // set the view policy
         res.locals.cspEnabled = true
@@ -33,7 +38,12 @@ module.exports = function ({
 
         res.locals.scriptNonce = scriptNonce
 
-        const policy = buildViewPolicy(scriptNonce, reportPercentage, reportUri)
+        const policy = buildViewPolicy(
+          scriptNonce,
+          reportPercentage,
+          reportUri,
+          viewDirectives[view]
+        )
 
         // Note: https://csp-evaluator.withgoogle.com/ is useful for checking the policy
 
@@ -58,7 +68,7 @@ const buildDefaultPolicy = (reportUri, styleSrc) => {
 
   if (reportUri) {
     directives.push(`report-uri ${reportUri}`)
-    // NOTE: implement report-to once it's more widely supported
+    directives.push(`report-to csp-endpoint`)
   }
 
   if (styleSrc) {
@@ -68,11 +78,17 @@ const buildDefaultPolicy = (reportUri, styleSrc) => {
   return directives.join('; ')
 }
 
-const buildViewPolicy = (scriptNonce, reportPercentage, reportUri) => {
+const buildViewPolicy = (
+  scriptNonce,
+  reportPercentage,
+  reportUri,
+  viewDirectives
+) => {
   const directives = [
     `script-src 'nonce-${scriptNonce}' 'unsafe-inline' 'strict-dynamic' https: 'report-sample'`, // only allow scripts from certain sources
     `object-src 'none'`, // forbid loading an "object" element
     `base-uri 'none'`, // forbid setting a "base" element
+    ...(viewDirectives ?? []),
   ]
 
   if (reportUri) {
@@ -81,7 +97,7 @@ const buildViewPolicy = (scriptNonce, reportPercentage, reportUri) => {
 
     if (belowReportCutoff) {
       directives.push(`report-uri ${reportUri}`)
-      // NOTE: implement report-to once it's more widely supported
+      directives.push(`report-to csp-endpoint`)
     }
   }
 

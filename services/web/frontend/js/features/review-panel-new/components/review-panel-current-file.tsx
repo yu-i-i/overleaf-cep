@@ -19,7 +19,7 @@ import {
 import {
   useCodeMirrorStateContext,
   useCodeMirrorViewContext,
-} from '@/features/source-editor/components/codemirror-editor'
+} from '@/features/source-editor/components/codemirror-context'
 import { useRangesContext } from '../context/ranges-context'
 import { useThreadsContext } from '../context/threads-context'
 import { isDeleteChange, isInsertChange } from '@/utils/operations'
@@ -29,6 +29,9 @@ import ReviewPanelEmptyState from './review-panel-empty-state'
 import useEventListener from '@/shared/hooks/use-event-listener'
 import { hasActiveRange } from '@/features/review-panel-new/utils/has-active-range'
 import { addCommentStateField } from '@/features/source-editor/extensions/add-comment'
+import ReviewPanelMoreCommentsButton from './review-panel-more-comments-button'
+import useMoreCommments from '../hooks/use-more-comments'
+import { Decoration } from '@codemirror/view'
 
 type AggregatedRanges = {
   changes: Change<EditOperation>[]
@@ -41,64 +44,25 @@ const ReviewPanelCurrentFile: FC = () => {
   const ranges = useRangesContext()
   const threads = useThreadsContext()
   const state = useCodeMirrorStateContext()
+  const [hoveredEntry, setHoveredEntry] = useState<string | null>(null)
+
+  const hoverTimeout = useRef<number>(0)
+  const handleEntryEnter = useCallback((id: string) => {
+    clearTimeout(hoverTimeout.current)
+    setHoveredEntry(id)
+  }, [])
+
+  const handleEntryLeave = useCallback((id: string) => {
+    clearTimeout(hoverTimeout.current)
+    hoverTimeout.current = window.setTimeout(() => {
+      setHoveredEntry(null)
+    }, 100)
+  }, [])
 
   const [aggregatedRanges, setAggregatedRanges] = useState<AggregatedRanges>()
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const previousFocusedItem = useRef(new Map<string, number>())
-
-  const updatePositions = useCallback(() => {
-    const docId = ranges?.docId
-
-    if (containerRef.current && docId) {
-      const positioningRes = positionItems(
-        containerRef.current,
-        previousFocusedItem.current.get(docId) || 0,
-        docId
-      )
-
-      if (positioningRes) {
-        previousFocusedItem.current.set(
-          positioningRes.docId,
-          positioningRes.activeItemIndex
-        )
-      }
-    }
-  }, [ranges?.docId])
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      updatePositions()
-    }, 50)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [state, updatePositions])
-
-  const handleContainer = useCallback(
-    (element: HTMLDivElement | null) => {
-      containerRef.current = element
-      if (containerRef.current) {
-        containerRef.current.addEventListener(
-          'review-panel:position',
-          updatePositions
-        )
-      }
-    },
-    [updatePositions]
-  )
-
-  useEffect(() => {
-    return () => {
-      if (containerRef.current) {
-        containerRef.current.removeEventListener(
-          'review-panel:position',
-          updatePositions
-        )
-      }
-    }
-  }, [updatePositions])
 
   const buildAggregatedRanges = useCallback(() => {
     if (ranges) {
@@ -127,7 +91,7 @@ const ReviewPanelCurrentFile: FC = () => {
 
       if (threads) {
         for (const comment of ranges.comments) {
-          if (!threads[comment.op.t]?.resolved) {
+          if (threads[comment.op.t] && !threads[comment.op.t]?.resolved) {
             output.comments.push(comment)
           }
         }
@@ -147,7 +111,7 @@ const ReviewPanelCurrentFile: FC = () => {
 
   const positionsRef = useRef<Map<string, number>>(new Map())
 
-  const addCommentRanges = state.field(addCommentStateField).ranges
+  const addCommentRanges = state.field(addCommentStateField, false)?.ranges
 
   useEffect(() => {
     if (aggregatedRanges) {
@@ -176,6 +140,10 @@ const ReviewPanelCurrentFile: FC = () => {
             if (position) {
               positionsRef.current.set(comment.id, position)
             }
+          }
+
+          if (!addCommentRanges) {
+            return
           }
 
           const cursor = addCommentRanges.iter()
@@ -212,6 +180,10 @@ const ReviewPanelCurrentFile: FC = () => {
   )
 
   const addCommentEntries = useMemo(() => {
+    if (!addCommentRanges) {
+      return []
+    }
+
     const cursor = addCommentRanges.iter()
 
     const entries = []
@@ -238,6 +210,71 @@ const ReviewPanelCurrentFile: FC = () => {
     return entries
   }, [addCommentRanges, positions])
 
+  const {
+    onEntriesPositioned,
+    onMoreCommentsAboveClick,
+    onMoreCommentsBelowClick,
+  } = useMoreCommments(
+    aggregatedRanges?.changes ?? [],
+    aggregatedRanges?.comments ?? [],
+    addCommentRanges ?? Decoration.none
+  )
+
+  const updatePositions = useCallback(() => {
+    const docId = ranges?.docId
+
+    if (containerRef.current && docId) {
+      const positioningRes = positionItems(
+        containerRef.current,
+        previousFocusedItem.current.get(docId) || 0,
+        docId
+      )
+
+      onEntriesPositioned()
+
+      if (positioningRes) {
+        previousFocusedItem.current.set(
+          positioningRes.docId,
+          positioningRes.activeItemIndex
+        )
+      }
+    }
+  }, [ranges?.docId, onEntriesPositioned])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      updatePositions()
+    }, 50)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [state, updatePositions])
+
+  const handleContainer = useCallback(
+    (element: HTMLDivElement | null) => {
+      containerRef.current = element
+      if (containerRef.current) {
+        containerRef.current.addEventListener(
+          'review-panel:position',
+          updatePositions
+        )
+      }
+    },
+    [updatePositions]
+  )
+
+  useEffect(() => {
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.removeEventListener(
+          'review-panel:position',
+          updatePositions
+        )
+      }
+    }
+  }, [updatePositions])
+
   if (!aggregatedRanges) {
     return null
   }
@@ -245,6 +282,12 @@ const ReviewPanelCurrentFile: FC = () => {
   return (
     <>
       {showEmptyState && <ReviewPanelEmptyState />}
+      {onMoreCommentsAboveClick && (
+        <ReviewPanelMoreCommentsButton
+          onClick={onMoreCommentsAboveClick}
+          direction="upward"
+        />
+      )}
 
       <div ref={handleContainer}>
         {addCommentEntries.map(entry => {
@@ -270,6 +313,9 @@ const ReviewPanelCurrentFile: FC = () => {
                 change={change}
                 top={positions.get(change.id)}
                 aggregate={aggregatedRanges.aggregates.get(change.id)}
+                hovered={hoveredEntry === change.id}
+                onEnter={() => handleEntryEnter(change.id)}
+                onLeave={() => handleEntryLeave(change.id)}
               />
             )
         )}
@@ -282,10 +328,19 @@ const ReviewPanelCurrentFile: FC = () => {
                 key={comment.id}
                 comment={comment}
                 top={positions.get(comment.id)}
+                hovered={hoveredEntry === comment.id}
+                onEnter={() => handleEntryEnter(comment.id)}
+                onLeave={() => handleEntryLeave(comment.id)}
               />
             )
         )}
       </div>
+      {onMoreCommentsBelowClick && (
+        <ReviewPanelMoreCommentsButton
+          onClick={onMoreCommentsBelowClick}
+          direction="downward"
+        />
+      )}
     </>
   )
 }

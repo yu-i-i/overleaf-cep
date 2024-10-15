@@ -1,4 +1,6 @@
 .review-panel-new {
+  @review-panel-header-height: 69px;
+
   &.review-panel-container {
     height: 100%;
     flex-shrink: 0;
@@ -10,6 +12,7 @@
     flex-shrink: 0;
     background-color: @neutral-10;
     border-left: solid 0 @neutral-20;
+    color: @content-primary;
     font-family: @font-family-base;
     line-height: @line-height-base;
     font-size: @font-size-01;
@@ -26,6 +29,11 @@
     width: calc(100% - @spacing-04);
     margin-left: @spacing-02;
     z-index: 1;
+  }
+
+  .review-panel-entry.review-panel-entry-disabled {
+    opacity: 0.5;
+    pointer-events: none;
   }
 
   .review-panel-entry-indicator {
@@ -85,9 +93,10 @@
 
   .review-panel-change-body {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     color: @content-secondary;
     gap: @spacing-02;
+    overflow-wrap: anywhere;
   }
 
   .review-panel-content-highlight {
@@ -103,6 +112,10 @@
     border-radius: @border-radius-base-new;
     padding: @spacing-02;
     font-size: 16px;
+  }
+
+  .review-panel-entry-change-icon {
+    margin-top: -2px;
   }
 
   .review-panel-entry-icon-accept {
@@ -124,6 +137,7 @@
     position: fixed;
     top: var(--review-panel-top);
     width: var(--review-panel-width);
+    height: @review-panel-header-height;
     z-index: 2;
     display: flex;
     flex-direction: column;
@@ -131,11 +145,16 @@
     border-bottom: 1px solid @rp-border-grey;
     background-color: white;
     text-align: center;
+    z-index: 4;
   }
 
   // TODO: Update this when we move the track changes menu to the new design
   .rp-tc-state {
     background-color: white;
+    max-height: calc(
+      100vh - var(--review-panel-top) - @review-panel-header-height
+    );
+    overflow-y: auto;
   }
 
   .review-panel-tools {
@@ -188,6 +207,10 @@
       margin: 0;
     }
 
+    .review-panel-split-test-badge {
+      margin-left: 4px;
+    }
+
     .review-panel-close-button {
       display: flex;
       align-items: center;
@@ -215,6 +238,11 @@
       gap: 4px;
       padding: 8px 6px;
     }
+  }
+
+  .review-panel-resolved-disabled {
+    opacity: 0.5;
+    pointer-events: none;
   }
 
   .review-panel-resolved-comments-loading {
@@ -395,7 +423,7 @@
   .review-panel-overview {
     padding: 4px;
     position: absolute;
-    top: 69px;
+    top: @review-panel-header-height;
     bottom: 59px;
     width: 100%;
     overflow: auto;
@@ -500,6 +528,31 @@
     }
   }
 
+  .review-panel-more-comments-button-container {
+    position: fixed;
+    width: var(--review-panel-width);
+    display: flex;
+    justify-content: center;
+    z-index: 3;
+
+    &.downwards {
+      // TODO: fix this to not use a magic number when we have updated the footer ui
+      top: calc(100% - 102px);
+    }
+
+    &.upwards {
+      top: calc(var(--review-panel-top) + @review-panel-header-height + 16px);
+    }
+  }
+
+  .review-panel-more-comments-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2px 8px;
+    height: 24px;
+  }
+
   &.review-panel-subview-overview {
     &.review-panel-container {
       overflow-y: hidden;
@@ -525,15 +578,14 @@
       margin-left: 0;
       background-color: transparent;
       border: none;
+      width: 100%;
     }
 
     .review-panel-entry-indicator {
       position: absolute;
       left: 0;
-      top: 7px;
+      top: 0;
       display: flex;
-      width: 16px;
-      height: 16px;
       color: @content-secondary;
       cursor: pointer;
     }
@@ -547,7 +599,7 @@
       padding: @spacing-02;
     }
 
-    .review-panel-entry:hover {
+    .review-panel-entry-hover {
       .review-panel-entry-content {
         display: initial;
         position: absolute;
@@ -556,17 +608,36 @@
       }
     }
 
+    .review-panel-more-comments-button-container {
+      display: none;
+    }
+
     .review-panel-footer {
       display: none;
     }
   }
 }
 
-.review-panel-add-comment-tooltip {
-  height: 24px;
-  border-radius: 12px;
-  padding: 2px 12px;
+.review-tooltip-menu {
+  box-shadow: 0px 2px 4px 0px #1e253029;
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.review-tooltip-menu-button {
+  background-color: inherit;
+  border: none;
   display: flex;
   align-items: center;
   gap: 2px;
+  padding: 2px;
+}
+
+.review-tooltip-add-comment-button {
+  padding: 2px 8px;
+}
+
+.review-panel-tooltip {
+  pointer-events: none; // this is to prevent mouseLeave event from firing when hovering over the tooltip
 }

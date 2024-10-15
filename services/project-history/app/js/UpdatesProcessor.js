@@ -327,7 +327,7 @@ function _getMostRecentVersionWithDebug(projectId, projectHistoryId, callback) {
   )
 }
 
-function _processUpdates(
+export function _processUpdates(
   projectId,
   projectHistoryId,
   updates,
@@ -408,12 +408,20 @@ function _processUpdates(
                 )
               },
               (updatesWithBlobs, cb) => {
-                const changes = UpdateTranslator.convertToChanges(
-                  projectId,
-                  updatesWithBlobs
-                ).map(change => change.toRaw())
-                profile.log('convertToChanges')
-
+                let changes
+                try {
+                  changes = UpdateTranslator.convertToChanges(
+                    projectId,
+                    updatesWithBlobs
+                  ).map(change => change.toRaw())
+                } catch (err) {
+                  return cb(err)
+                } finally {
+                  profile.log('convertToChanges')
+                }
+                cb(null, changes)
+              },
+              (changes, cb) => {
                 let change
                 const numChanges = changes.length
                 const byteLength = Buffer.byteLength(

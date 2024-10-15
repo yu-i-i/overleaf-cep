@@ -7,7 +7,9 @@
   h4,
   h5,
   h6,
-  p {
+  p,
+  ul,
+  ol {
     @if $size == 'heading-2xl' {
       @include heading-2xl;
     } @else if $size == 'heading-xl' {
@@ -54,6 +56,7 @@
     i {
       vertical-align: middle;
       margin-left: var(--spacing-02);
+      padding-bottom: 3px;
     }
 
     &.link-lg {
@@ -63,6 +66,16 @@
       i {
         font-size: 24px;
         line-height: inherit;
+      }
+    }
+
+    &.link-xl {
+      font-size: var(--font-size-06);
+      line-height: var(--line-height-05);
+
+      i {
+        font-size: var(--font-size-06);
+        line-height: var(--font-size-06);
       }
     }
 
@@ -202,6 +215,18 @@
     .font-size-h6 {
       @include reset-font-size('base');
     }
+  }
+
+  .font-size-display-xs {
+    @include display-xs;
+  }
+
+  .text-purple-bright {
+    color: var(--purple-bright);
+  }
+
+  .text-green-bright {
+    color: var(--green-bright);
   }
 
   .card {

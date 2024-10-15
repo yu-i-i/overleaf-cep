@@ -31,7 +31,7 @@ const mountWithEditorProviders = (
   )
 }
 
-describe('change list', function () {
+describe('change list (Bootstrap 3)', function () {
   const scope = {
     ui: { view: 'history', pdfLayout: 'sideBySide', chatOpen: true },
   }
@@ -363,7 +363,7 @@ describe('change list', function () {
       cy.findAllByTestId('history-version-details')
         .eq(1)
         .within(() => {
-          cy.findByRole('button', { name: /compare drop down/i }).click()
+          cy.findByRole('button', { name: /compare/i }).click()
           cy.findByRole('menu').within(() => {
             cy.findByRole('menuitem', {
               name: /compare up to this version/i,

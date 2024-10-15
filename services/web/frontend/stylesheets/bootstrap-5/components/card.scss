@@ -149,4 +149,33 @@
       padding: var(--spacing-13);
     }
   }
+
+  &.card-grey-border {
+    background-color: white;
+    border-radius: var(--border-radius-medium);
+    border: 2px solid var(--neutral-20);
+
+    .card-body {
+      padding: var(--spacing-10);
+    }
+  }
+
+  &.card-green-border {
+    background-color: white;
+    border-radius: var(--border-radius-medium);
+    border: 2px solid var(--green-50);
+
+    .card-body {
+      padding: var(--spacing-09);
+    }
+  }
+}
+
+.card-gray {
+  background-color: var(--neutral-10);
+}
+
+.card-gray-dark {
+  background-color: var(--neutral-20);
+  border-radius: var(--border-radius-base);
 }

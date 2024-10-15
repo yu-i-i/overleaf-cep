@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const minimist = require('minimist')
 
-const APP_CODE_PATH = ['app', 'modules']
+const APP_CODE_PATH = ['app', 'modules', 'migrations', 'scripts']
 
 const {
   _: args,
@@ -17,7 +17,6 @@ const {
     json: 'j',
   },
   default: {
-    _: ['app', 'modules'],
     files: false,
     help: false,
     json: false,
@@ -85,8 +84,8 @@ function collectJsFiles(dir, files = []) {
     if (stat.isDirectory()) {
       const basename = path.basename(fullPath)
 
-      // skipping 'test' and 'frontend' directories from search
-      if (basename !== 'test' && basename !== 'frontend') {
+      // skipping directories from search
+      if (!['frontend', 'node_modules'].includes(basename)) {
         collectJsFiles(fullPath, files)
       }
     } else if (
@@ -158,7 +157,7 @@ function printDirectoriesReport(allFilesAndImports) {
   // collect js files from the selected paths
   const selectedFiles = Array.from(
     findJSAndImports(paths.map(dir => path.resolve(dir))).keys()
-  )
+  ).filter(file => !file.endsWith('settings.test.js'))
   const nonMigratedFiles = selectedFiles.filter(file => !file.endsWith('.mjs'))
   const migratedFileCount = selectedFiles.filter(file =>
     file.endsWith('.mjs')

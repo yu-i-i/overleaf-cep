@@ -45,6 +45,20 @@
   }
 }
 
+@mixin action-button {
+  font-size: 0;
+  line-height: 1;
+  border-radius: 50%;
+  color: var(--content-primary);
+  background-color: transparent;
+
+  &:hover,
+  &:active,
+  &[aria-expanded='true'] {
+    background-color: rgb($neutral-90, 0.08);
+  }
+}
+
 @mixin reset-button() {
   padding: 0;
   cursor: pointer;
@@ -67,11 +81,11 @@
 
 // Toolbar
 @mixin toolbar-sm-height {
-  height: 32px;
+  height: var(--toolbar-small-height);
 }
 
 @mixin toolbar-alt-bg() {
-  background-color: var(--bg-dark-secondary);
+  background-color: var(--toolbar-alt-bg-color);
 }
 
 @mixin theme($name) {
@@ -86,4 +100,46 @@
 
 @mixin box-shadow-button-input {
   box-shadow: 0 0 0 2px var(--blue-30);
+}
+
+@mixin animation($animation) {
+  animation: $animation;
+}
+
+@mixin striped($color: rgba(255, 255, 255, 0.15), $angle: 45deg) {
+  background-image: linear-gradient(
+    $angle,
+    $color 25%,
+    transparent 25%,
+    transparent 50%,
+    $color 50%,
+    $color 75%,
+    transparent 75%,
+    transparent
+  );
+}
+
+@mixin mask-image($gradient) {
+  // mask-image isn't supported without the -webkit prefix on all browsers we support yet
+  -webkit-mask-image: $gradient;
+  mask-image: $gradient;
+}
+
+@mixin premium-background {
+  background-image: var(--premium-gradient);
+}
+
+@mixin premium-text {
+  @include premium-background;
+
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--white); // Fallback
+  background-color: var(--blue-70); // Fallback
+}
+
+@mixin dark-bg {
+  --link-color: var(--link-color-dark);
+  --link-hover-color: var(--link-hover-color-dark);
+  --link-visited-color: var(--link-visited-color-dark);
 }

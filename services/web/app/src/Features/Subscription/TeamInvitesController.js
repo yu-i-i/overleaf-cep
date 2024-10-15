@@ -14,6 +14,7 @@ const EmailHandler = require('../Email/EmailHandler')
 const { RateLimiter } = require('../../infrastructure/RateLimiter')
 const Modules = require('../../infrastructure/Modules')
 const UserAuditLogHandler = require('../User/UserAuditLogHandler')
+const SplitTestHandler = require('../SplitTests/SplitTestHandler')
 
 const rateLimiters = {
   resendGroupInvite: new RateLimiter('resend-group-invite', {
@@ -68,6 +69,13 @@ async function viewInvite(req, res, next) {
 
   const { invite, subscription } =
     await TeamInvitesHandler.promises.getInvite(token)
+
+  await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'bootstrap-5-subscription'
+  )
+
   if (!invite) {
     return ErrorController.notFound(req, res)
   }
@@ -179,6 +187,12 @@ async function viewInvites(req, res, next) {
 
   const teamInvites = groupSubscriptions.map(groupSubscription =>
     groupSubscription.teamInvites.find(invite => invite.email === userEmail)
+  )
+
+  await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'bootstrap-5-subscription'
   )
 
   return res.render('subscriptions/team/group-invites', {

@@ -54,9 +54,10 @@ import { ranges } from './ranges'
 import { trackDetachedComments } from './track-detached-comments'
 import { addComment } from './add-comment'
 
-const moduleExtensions: Array<() => Extension> = importOverleafModules(
-  'sourceEditorExtensions'
-).map((item: { import: { extension: Extension } }) => item.import.extension)
+const moduleExtensions: Array<(options: Record<string, any>) => Extension> =
+  importOverleafModules('sourceEditorExtensions').map(
+    (item: { import: { extension: Extension } }) => item.import.extension
+  )
 
 export const createExtensions = (options: Record<string, any>): Extension[] => [
   lineNumbers(),
@@ -101,7 +102,10 @@ export const createExtensions = (options: Record<string, any>): Extension[] => [
 
   // NOTE: `autoComplete` needs to be before `keybindings` so that arrow key handling
   // in the autocomplete pop-up takes precedence over Vim/Emacs key bindings
-  autoComplete(options.settings),
+  autoComplete({
+    enabled: options.settings.autoComplete,
+    projectFeatures: options.projectFeatures,
+  }),
 
   // NOTE: `keybindings` needs to be before `language` so that Vim/Emacs bindings take
   // precedence over language-specific keyboard shortcuts
@@ -129,7 +133,7 @@ export const createExtensions = (options: Record<string, any>): Extension[] => [
   // so the decorations are added in the correct order.
   emptyLineFiller(),
   isSplitTestEnabled('review-panel-redesign')
-    ? ranges(options.currentDoc)
+    ? ranges()
     : trackChanges(options.currentDoc, options.changeManager),
   trackDetachedComments(options.currentDoc),
   visual(options.visual),
@@ -145,7 +149,7 @@ export const createExtensions = (options: Record<string, any>): Extension[] => [
   // Send exceptions to Sentry
   EditorView.exceptionSink.of(options.handleException),
   // CodeMirror extensions provided by modules
-  moduleExtensions.map(extension => extension()),
+  moduleExtensions.map(extension => extension(options)),
   thirdPartyExtensions(),
   effectListeners(),
   geometryChangeEvent(),

@@ -77,6 +77,7 @@ const config: StorybookConfig = {
           fs: false,
           os: false,
           module: false,
+          tty: require.resolve('tty-browserify'),
         },
         extensions: ['.js', '.jsx', '.mjs', '.ts', '.tsx', '.json'],
         alias: {
@@ -84,6 +85,16 @@ const config: StorybookConfig = {
           // custom prefixes for import paths
           '@': path.join(rootDir, 'frontend/js/'),
         },
+      },
+      module: {
+        ...storybookConfig.module,
+        rules: (storybookConfig.module?.rules ?? []).concat({
+          test: /\.wasm$/,
+          type: 'asset/resource',
+          generator: {
+            filename: 'js/[name]-[contenthash][ext]',
+          },
+        }),
       },
     }
   },

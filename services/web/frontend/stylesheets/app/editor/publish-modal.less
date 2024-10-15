@@ -1,46 +1,10 @@
 .modal-body-publish {
-  @label-column-width: 10em;
-  @control-left-margin: 1em;
-  .form-control-box {
-    margin-bottom: 1.5ex;
-    margin-left: @control-left-margin;
-    label {
-      display: inline-block;
-      width: @label-column-width;
-      vertical-align: baseline;
-    }
-    label.checkbox-label {
-      width: auto;
-    }
-    .form-control {
-      display: inline-block;
-      width: 60%;
-    }
-    input[type='checkbox'] {
-      margin-right: 0.5em;
-    }
-    textarea {
-      vertical-align: baseline;
-    }
-    select {
-      padding-top: 1ex;
-      padding-bottom: 1ex;
-      padding-left: 1em;
-      padding-right: 1em;
-    }
-    option {
-      margin-left: -4px;
-    }
-    a.help {
-      margin-left: 0.6em;
-    }
+  input[type='checkbox'] {
+    margin-top: 6px;
   }
-  .no-label {
-    margin-left: @label-column-width + @control-left-margin;
-  }
-  #search-input-container {
-    overflow: hidden;
-    margin: 5px 0 10px;
+  .gallery-export-license {
+    display: flex;
+    align-items: center;
   }
   .table-content-name {
     width: 100%;
@@ -70,6 +34,7 @@
   .button-as-link {
     color: green;
     text-transform: none;
+    text-decoration: none;
     background: none;
     padding: 0;
     border: none;
@@ -101,12 +66,10 @@
     border-radius: 9px;
   }
   .content-as-table {
-    .table-content,
-    .table-content > * {
-      display: table;
+    .table-content-main {
+      display: flex;
     }
     .table-content-icon {
-      float: left;
       height: 100px;
       width: 106px;
       display: flex;
@@ -118,7 +81,6 @@
       }
     }
     .table-content-text {
-      float: right;
       width: calc(~'100% - 106px');
       vertical-align: top;
       padding-left: 15px;

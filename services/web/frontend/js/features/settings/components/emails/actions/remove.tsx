@@ -23,15 +23,10 @@ function DeleteButton({ disabled, isLoading, onClick }: DeleteButtonProps) {
       variant="danger"
       disabled={disabled}
       isLoading={isLoading}
-      size="small"
+      size="sm"
       onClick={onClick}
       accessibilityLabel={t('remove') || ''}
-      icon={
-        bsVersion({
-          bs5: 'delete',
-          bs3: 'trash',
-        }) as string
-      }
+      icon={bsVersion({ bs5: 'delete', bs3: 'trash' })}
       bs3Props={{ fw: true }}
     />
   )

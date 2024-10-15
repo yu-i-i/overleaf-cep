@@ -1,3 +1,20 @@
+@use 'sass:color';
+
+$editor-toggler-bg-dark-color: color.adjust(
+  $content-disabled,
+  $lightness: -15%
+);
+
+:root {
+  --editor-toggler-bg-color: #{$editor-toggler-bg-dark-color};
+  --editor-resizer-bg-color: var(--bg-dark-secondary);
+}
+
+@include theme('light') {
+  --editor-toggler-bg-color: var(--content-disabled);
+  --editor-resizer-bg-color: var(--bg-light-tertiary);
+}
+
 #ide-root {
   height: 100vh; /* for backwards compatibility */
   height: 100dvh; /* needed for mobile devices */
@@ -23,6 +40,19 @@
       top: 0;
       height: 100%;
     }
+  }
+}
+
+.global-alerts {
+  height: 0;
+  margin-top: var(--spacing-01);
+  text-align: center;
+
+  [role='alert'] {
+    text-align: left;
+    min-width: 400px;
+    position: relative;
+    z-index: 20;
   }
 }
 
@@ -57,16 +87,6 @@
   color: var(--neutral-20);
 }
 
-.ide-react-file-tree-panel {
-  display: flex;
-  flex-direction: column;
-
-  // Prevent the file tree expanding beyond the boundary of the panel
-  .file-tree {
-    width: 100%;
-  }
-}
-
 .ide-react-editor-panel {
   display: flex;
   flex-direction: column;
@@ -79,12 +99,43 @@
 }
 
 .ide-panel-group-resizing {
-  background-color: white;
+  background-color: var(--white);
 
   // Hide panel contents while resizing
   .ide-react-editor-content,
   .pdf {
     display: none !important;
+  }
+}
+
+.modal.lock-editor-modal {
+  display: flex !important;
+  background-color: rgba($bg-dark-primary, 0.3);
+  overflow-y: hidden;
+  pointer-events: none;
+
+  .modal-dialog {
+    top: 25px;
+  }
+}
+
+.out-of-sync-modal {
+  .text-preview {
+    margin-top: var(--spacing-05);
+
+    .scroll-container {
+      @include body-sm;
+
+      max-height: 360px;
+      width: 100%;
+      background-color: var(--bg-light-primary);
+      overflow: auto;
+      border: 1px solid var(--border-primary-dark);
+      padding: var(--spacing-04) var(--spacing-05);
+      text-align: left;
+      white-space: pre;
+      font-family: monospace;
+    }
   }
 }
 
@@ -94,11 +145,14 @@
 
   // Enable ::before and ::after pseudo-elements to position themselves correctly
   position: relative;
-  background-color: var(--bg-dark-secondary);
+  background-color: var(--editor-resizer-bg-color);
 
   .custom-toggler {
     padding: 0;
     border-width: 0;
+
+    // Override react-resizable-panels which sets a global * { cursor: ew-resize }
+    cursor: pointer !important;
   }
 
   &.horizontal-resize-handle-enabled {
@@ -137,13 +191,69 @@
   }
 }
 
+.custom-toggler {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 7px !important;
+  height: 50px;
+  margin-top: calc(var(--spacing-08) * -1);
+  top: 50%;
+  background-color: var(--editor-toggler-bg-color);
+
+  &:hover,
+  &:focus {
+    outline: none;
+    text-decoration: none;
+  }
+
+  // Increase hit area
+  &::before {
+    content: '';
+    display: block;
+    position: absolute;
+    inset: 0 -3px;
+  }
+
+  &::after {
+    font-family: FontAwesome; /* stylelint-disable-line font-family-no-missing-generic-family-keyword */
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 65%;
+    font-weight: bold;
+    color: var(--white);
+    user-select: none;
+    pointer-events: none;
+  }
+
+  &:hover {
+    background-color: var(--bg-accent-01);
+  }
+}
+
+.custom-toggler-east::after {
+  content: '\f105';
+}
+
+.custom-toggler-west::after {
+  content: '\f104';
+}
+
+.custom-toggler-closed.custom-toggler-east::after {
+  content: '\f104';
+}
+
+.custom-toggler-closed.custom-toggler-west::after {
+  content: '\f105';
+}
+
 .vertical-resize-handle {
   height: 6px;
-  background-color: var(--bg-dark-secondary);
+  background-color: var(--editor-resizer-bg-color);
 
   &.vertical-resize-handle-enabled {
     &:hover {
-      background-color: var(--bg-dark-primary);
+      background-color: var(--editor-resizer-bg-color);
     }
   }
 
@@ -162,29 +272,35 @@
   }
 }
 
-.vertical-resizable-resizer {
-  background-color: var(--bg-dark-secondary);
-
-  &:hover {
-    background-color: var(--bg-dark-primary);
-  }
-
-  &::after {
-    @include heading-sm;
-
-    content: '\00b7\00b7\00b7\00b7';
-    display: block;
-    color: var(--content-disabled);
-    text-align: center;
-    pointer-events: none;
-  }
+.full-size {
+  position: absolute;
+  inset: 0;
 }
 
-.vertical-resizable-resizer-disabled {
-  pointer-events: none;
-  opacity: 0.5;
+.teaser-title {
+  margin-top: 0;
+  text-align: center;
+}
 
-  &::after {
-    opacity: 0.5;
-  }
+.teaser-refresh-label {
+  text-align: center;
+}
+
+.teaser-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: var(--spacing-03);
+}
+
+.teaser-video-container {
+  margin: calc(var(--spacing-07) * -1) calc(var(--spacing-07) * -1)
+    var(--spacing-02) calc(var(--spacing-07) * -1);
+  overflow: hidden;
+}
+
+.teaser-video {
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid var(--border-divider);
 }

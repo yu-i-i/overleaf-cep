@@ -66,8 +66,8 @@ function getModuleDirectory(moduleName) {
 }
 
 const mathjaxDir = getModuleDirectory('mathjax')
-
-const pdfjsVersions = ['pdfjs-dist213', 'pdfjs-dist401']
+const pdfjsDir = getModuleDirectory('pdfjs-dist')
+const dictionariesDir = getModuleDirectory('@overleaf/dictionaries')
 
 const vendorDir = path.join(__dirname, 'frontend/js/vendor')
 
@@ -75,6 +75,14 @@ const MATHJAX_VERSION = require('mathjax/package.json').version
 if (MATHJAX_VERSION !== PackageVersions.version.mathjax) {
   throw new Error(
     '"mathjax" version de-synced, update services/web/app/src/infrastructure/PackageVersions.js'
+  )
+}
+
+const DICTIONARIES_VERSION =
+  require('@overleaf/dictionaries/package.json').version
+if (DICTIONARIES_VERSION !== PackageVersions.version.dictionaries) {
+  throw new Error(
+    '"@overleaf/dictionaries" version de-synced, update services/web/app/src/infrastructure/PackageVersions.js'
   )
 }
 
@@ -90,6 +98,7 @@ module.exports = {
     path: path.join(__dirname, 'public'),
 
     publicPath: '/',
+    workerPublicPath: '/',
 
     // By default write into js directory
     filename: 'js/[name]-[contenthash].js',
@@ -122,7 +131,7 @@ module.exports = {
         // Only compile application files and specific dependencies
         // (other npm and vendored dependencies must be in ES5 already)
         exclude: [
-          /node_modules\/(?!(react-dnd|chart\.js|@uppy|pdfjs-dist401|react-resizable-panels)\/)/,
+          /node_modules\/(?!(react-dnd|chart\.js|@uppy|pdfjs-dist|react-resizable-panels)\/)/,
           vendorDir,
         ],
         use: [
@@ -140,6 +149,13 @@ module.exports = {
           },
         ],
         type: 'javascript/auto',
+      },
+      {
+        test: /\.wasm$/,
+        type: 'asset/resource',
+        generator: {
+          filename: 'js/[name]-[contenthash][ext]',
+        },
       },
       {
         // Pass Less files through less-loader/css-loader/mini-css-extract-
@@ -275,6 +291,10 @@ module.exports = {
     },
   },
 
+  experiments: {
+    asyncWebAssembly: true,
+  },
+
   plugins: [
     new LezerGrammarCompilerPlugin(),
 
@@ -306,9 +326,9 @@ module.exports = {
       jQuery: 'jquery',
     }),
 
-    // Copy the required files for loading MathJax from MathJax NPM package
     new CopyPlugin({
       patterns: [
+        // Copy the required files for loading MathJax from MathJax NPM package
         // https://www.npmjs.com/package/mathjax#user-content-hosting-your-own-copy-of-the-mathjax-components
         {
           from: 'es5/tex-svg-full.js',
@@ -346,26 +366,29 @@ module.exports = {
           toType: 'dir',
           context: mathjaxDir,
         },
-        ...pdfjsVersions.flatMap(version => {
-          const dir = getModuleDirectory(version)
-
-          // Copy CMap files (used to provide support for non-Latin characters)
-          // and static images from pdfjs-dist package to build output.
-
-          return [
-            { from: `cmaps`, to: `js/${version}/cmaps`, context: dir },
-            {
-              from: `standard_fonts`,
-              to: `fonts/${version}`,
-              context: dir,
-            },
-            {
-              from: `legacy/web/images`,
-              to: `images/${version}`,
-              context: dir,
-            },
-          ]
-        }),
+        {
+          from: '*',
+          to: `js/dictionaries/${PackageVersions.version.dictionaries}`,
+          toType: 'dir',
+          context: `${dictionariesDir}/dictionaries`,
+        },
+        // Copy CMap files (used to provide support for non-Latin characters),
+        // fonts and images from pdfjs-dist package to build output.
+        {
+          from: 'cmaps',
+          to: 'js/pdfjs-dist/cmaps',
+          context: pdfjsDir,
+        },
+        {
+          from: 'standard_fonts',
+          to: 'fonts/pdfjs-dist',
+          context: pdfjsDir,
+        },
+        {
+          from: 'legacy/web/images',
+          to: 'images/pdfjs-dist',
+          context: pdfjsDir,
+        },
       ],
     }),
   ],

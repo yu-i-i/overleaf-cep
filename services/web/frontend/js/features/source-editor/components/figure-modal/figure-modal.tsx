@@ -1,5 +1,9 @@
-import { Modal } from 'react-bootstrap'
-import AccessibleModal from '../../../../shared/components/accessible-modal'
+import OLModal, {
+  OLModalBody,
+  OLModalFooter,
+  OLModalHeader,
+  OLModalTitle,
+} from '@/features/ui/components/ol/ol-modal'
 import {
   FigureModalProvider,
   FigureModalSource,
@@ -8,7 +12,7 @@ import {
 } from './figure-modal-context'
 import { FigureModalFooter } from './figure-modal-footer'
 import { lazy, memo, Suspense, useCallback, useEffect } from 'react'
-import { useCodeMirrorViewContext } from '../codemirror-editor'
+import { useCodeMirrorViewContext } from '../codemirror-context'
 import { ChangeSpec } from '@codemirror/state'
 import { snippet } from '@codemirror/autocomplete'
 import {
@@ -268,9 +272,9 @@ const FigureModalContent = () => {
     return null
   }
   return (
-    <AccessibleModal onHide={hide} className="figure-modal" show>
-      <Modal.Header closeButton>
-        <Modal.Title>
+    <OLModal onHide={hide} className="figure-modal" show>
+      <OLModalHeader closeButton>
+        <OLModalTitle>
           {helpShown
             ? t('help')
             : sourcePickerShown
@@ -281,22 +285,22 @@ const FigureModalContent = () => {
             url="https://forms.gle/PfEtwceYBNQ32DF4A"
             text="Please click to give feedback about editing figures."
           />
-        </Modal.Title>
-      </Modal.Header>
+        </OLModalTitle>
+      </OLModalHeader>
 
-      <Modal.Body>
+      <OLModalBody>
         <Suspense fallback={<FullSizeLoadingSpinner minHeight="15rem" />}>
           <FigureModalBody />
         </Suspense>
-      </Modal.Body>
+      </OLModalBody>
 
-      <Modal.Footer>
+      <OLModalFooter>
         <FigureModalFooter
           onInsert={insert}
           onCancel={onCancel}
           onDelete={onDelete}
         />
-      </Modal.Footer>
-    </AccessibleModal>
+      </OLModalFooter>
+    </OLModal>
   )
 }

@@ -2,11 +2,34 @@
   CMS Generated Pages:
   /about/*, /contact, /legal, /blog/*, /for/*, /events/*
 */
+
+@mixin section-row-custom-gap($spacing) {
+  // only update the padding between columns
+  // not the padding before the first column
+  // or the padding after the last column
+  // rows can be nested, so only select direct col in row
+
+  > div[class*='col-'] {
+    &:not(:first-child, :last-child) {
+      padding-left: $spacing;
+      padding-right: $spacing;
+    }
+
+    &:first-child {
+      padding-right: $spacing;
+    }
+
+    &:last-child {
+      padding-left: $spacing;
+    }
+  }
+}
+
 .cms-page {
   .sales-contact-form-left-column {
     .sales-contact-form-heading-title {
       font-size: 2.25rem;
-      font-family: var(-font-family-san-serif);
+      font-family: var(--font-family-san-serif);
       font-style: normal;
       font-weight: 600;
       line-height: 1.333;
@@ -45,6 +68,10 @@
 
   .btn + .btn {
     margin-left: var(--spacing-06);
+  }
+
+  .card + .card {
+    margin-top: var(--spacing-09);
   }
 
   .optional-text {
@@ -306,6 +333,29 @@
       }
     }
   }
+
+  .card,
+  .no-card {
+    &.top-margin-sm {
+      margin-top: var(--spacing-05);
+    }
+
+    &.top-margin-md {
+      margin-top: var(--spacing-07);
+    }
+
+    &.top-margin-lg {
+      margin-top: var(--spacing-09);
+    }
+
+    &.top-margin-xl {
+      margin-top: var(--spacing-10);
+    }
+
+    &.top-margin-xxl {
+      margin-top: var(--spacing-11);
+    }
+  }
 }
 
 .icon-with-content {
@@ -349,6 +399,10 @@
 }
 
 .vertically-center-col {
+  div[class*='col-'] {
+    align-self: center;
+  }
+
   // remove margin to better vertically align
   // some elements need to be nested within a container, and others are directly within .no-card/.card
   .card:first-child,
@@ -386,6 +440,41 @@
 
     > :last-child {
       margin-bottom: 0;
+    }
+  }
+}
+
+.sidebar-blog {
+  .card-body {
+    padding: var(--spacing-06) !important;
+
+    h2 {
+      @extend .h5;
+
+      padding: var(--spacing-04) var(--spacing-05);
+      margin-bottom: unset;
+    }
+
+    .tags-list {
+      padding: 0 var(--spacing-05);
+      margin-bottom: 0 !important;
+    }
+
+    .sidebar-register-container {
+      margin-top: var(--spacing-05);
+
+      a {
+        margin-top: var(--spacing-02);
+        margin-left: var(--spacing-05);
+      }
+    }
+  }
+}
+
+.card-pattern.cta-card {
+  .font-size-display-xs {
+    @include media-breakpoint-down(lg) {
+      font-size: var(--font-size-08);
     }
   }
 }
@@ -445,9 +534,53 @@
     }
   }
 
-  .vertically-center-col {
-    div[class*='col-'] {
-      align-self: center;
+  .section-row {
+    &.section-row-max-800 {
+      max-width: 800px !important;
+    }
+
+    &.section-row-max-900 {
+      max-width: 900px !important;
+    }
+
+    &.section-row-max-1000 {
+      max-width: 1000px !important;
+    }
+
+    &.section-row-max-unset {
+      max-width: unset !important;
+    }
+
+    &.section-row-gap-spacing-16 {
+      @include section-row-custom-gap(calc(var(--spacing-16) / 2));
+    }
+
+    &.section-row-gap-spacing-15 {
+      @include section-row-custom-gap(calc(var(--spacing-15) / 2));
+    }
+
+    &.section-row-gap-spacing-14 {
+      @include section-row-custom-gap(calc(var(--spacing-14) / 2));
+    }
+
+    &.section-row-gap-spacing-13 {
+      @include section-row-custom-gap(calc(var(--spacing-13) / 2));
+    }
+
+    &.section-row-gap-spacing-12 {
+      @include section-row-custom-gap(calc(var(--spacing-12) / 2));
+    }
+
+    &.section-row-gap-spacing-11 {
+      @include section-row-custom-gap(calc(var(--spacing-11) / 2));
+    }
+
+    &.section-row-gap-spacing-10 {
+      @include section-row-custom-gap(calc(var(--spacing-10) / 2));
+    }
+
+    &.section-row-gap-spacing-09 {
+      @include section-row-custom-gap(calc(var(--spacing-09) / 2));
     }
   }
 }
@@ -455,90 +588,14 @@
 // Mobile layout options depdendent on mobile breakpoint
 @include media-breakpoint-down(lg) {
   .cms-page {
-    div[class*='col-'] {
-      &:not(:first-child) {
-        padding-top: var(--spacing-13);
-      }
+    div.row {
+      row-gap: var(--spacing-13);
     }
 
     .reverse-col-order-mobile {
       flex-direction: column-reverse;
-
-      // 1st column is displayed as 2nd column on mobile when reversed
-      div[class*='col-'] {
-        &:not(:last-child) {
-          padding-top: var(--spacing-13);
-        }
-
-        &:last-child {
-          padding-top: 0; // unset padding from default rows above
-        }
-      }
     }
   }
-}
-
-// TODO: will be deprecated and gap option used instead
-@include media-breakpoint-up(lg) {
-  .desktop-left-margin-sm {
-    margin-left: var(--spacing-05);
-  }
-
-  .desktop-left-margin-md {
-    margin-left: var(--spacing-07);
-  }
-
-  .desktop-left-margin-lg {
-    margin-left: var(--spacing-09);
-  }
-
-  .desktop-left-margin-xl {
-    margin-left: var(--spacing-10);
-  }
-
-  .desktop-left-margin-xxl {
-    margin-left: var(--spacing-11);
-  }
-
-  .desktop-right-margin-sm {
-    margin-right: var(--spacing-05);
-  }
-
-  .desktop-right-margin-md {
-    margin-right: var(--spacing-07);
-  }
-
-  .desktop-right-margin-lg {
-    margin-right: var(--spacing-09);
-  }
-
-  .desktop-right-margin-xl {
-    margin-right: var(--spacing-10);
-  }
-
-  .desktop-right-margin-xxl {
-    margin-right: var(--spacing-11);
-  }
-}
-
-.top-margin-sm {
-  margin-top: var(--spacing-05);
-}
-
-.top-margin-md {
-  margin-top: var(--spacing-07);
-}
-
-.top-margin-lg {
-  margin-top: var(--spacing-09);
-}
-
-.top-margin-xl {
-  margin-top: var(--spacing-10);
-}
-
-.top-margin-xxl {
-  margin-top: var(--spacing-11);
 }
 
 .bottom-align-last-entry {

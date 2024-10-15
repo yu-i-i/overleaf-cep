@@ -4,9 +4,6 @@ FROM node:18.20.2 AS base
 
 WORKDIR /overleaf/services/web
 
-# install_deps changes app files and installs npm packages
-# as such it has to run at a later stage
-
 # Google Cloud Storage needs a writable $HOME/.config for resumable uploads
 # (see https://googleapis.dev/nodejs/storage/latest/File.html#createWriteStream)
 RUN mkdir /home/node/.config && chown node:node /home/node/.config
@@ -55,7 +52,7 @@ USER node
 # the webpack image has deps+src+webpack artifacts
 FROM dev AS webpack
 USER root
-RUN chmod 0755 ./install_deps.sh && ./install_deps.sh
+RUN OVERLEAF_CONFIG=/overleaf/services/web/config/settings.webpack.js npm run webpack:production
 
 
 # intermediate image for removing source maps ahead of copying into final production image
@@ -74,7 +71,7 @@ RUN OVERLEAF_CONFIG=/overleaf/services/web/config/settings.overrides.saas.js npm
 # the web image with only production dependencies but no webpack production build, for development
 FROM pug AS app-only
 USER node
-CMD ["node", "--expose-gc", "app.js"]
+CMD ["node", "--expose-gc", "app.mjs"]
 
 
 # the final production image, with webpack production build but without source maps
@@ -83,4 +80,4 @@ ARG SENTRY_RELEASE
 ENV SENTRY_RELEASE=$SENTRY_RELEASE
 COPY --from=webpack-no-sourcemaps /overleaf/services/web/public /overleaf/services/web/public
 USER node
-CMD ["node", "--expose-gc", "app.js"]
+CMD ["node", "--expose-gc", "app.mjs"]
