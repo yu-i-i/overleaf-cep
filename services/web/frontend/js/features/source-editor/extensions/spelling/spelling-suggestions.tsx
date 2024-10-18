@@ -13,6 +13,7 @@ import classnames from 'classnames'
 import { useFeatureFlag } from '@/shared/context/split-test-context'
 import { sendMB } from '@/infrastructure/event-tracking'
 import SpellingSuggestionsFeedback from './spelling-suggestions-feedback'
+import { SpellingSuggestionsLanguage } from './spelling-suggestions-language'
 import { captureException } from '@/infrastructure/error-reporter'
 import { debugConsole } from '@/utils/debugging'
 
@@ -66,7 +67,7 @@ export const SpellingSuggestions: FC<{
         })
         .catch(error => {
           captureException(error, {
-            language: spellCheckLanguage,
+            tags: { ol_spell_check_language: spellCheckLanguage },
           })
           debugConsole.error(error)
         })
@@ -82,6 +83,10 @@ export const SpellingSuggestions: FC<{
   }, [spellCheckLanguage])
 
   const spellCheckClientEnabled = useFeatureFlag('spell-check-client')
+
+  if (!language) {
+    return null
+  }
 
   return (
     <ul
@@ -132,10 +137,19 @@ export const SpellingSuggestions: FC<{
           handleLearnWord()
         }}
       />
-      {spellCheckClientEnabled && language?.dic && (
+
+      <li className="divider" />
+      <li role="menuitem">
+        <SpellingSuggestionsLanguage
+          language={language}
+          handleClose={handleClose}
+        />
+      </li>
+
+      {spellCheckClientEnabled && language.dic && (
         <>
           <li className="divider" />
-          <li>
+          <li role="menuitem">
             <SpellingSuggestionsFeedback />
           </li>
         </>

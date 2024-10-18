@@ -1,3 +1,15 @@
+:root {
+  --history-react-header-bg: var(--bg-dark-secondary);
+  --history-react-header-color: var(--content-primary-dark);
+  --history-react-separator-color: var(--border-divider-dark);
+}
+
+@include theme('light') {
+  --history-react-header-bg: var(--bg-light-primary);
+  --history-react-header-color: var(--content-primary);
+  --history-react-separator-color: var(--border-divider);
+}
+
 history-root {
   height: 100%;
   display: block;
@@ -20,8 +32,8 @@ history-root {
     @include body-sm;
 
     height: 40px;
-    background-color: var(--bg-dark-secondary);
-    color: var(--content-primary-dark);
+    background-color: var(--history-react-header-bg);
+    color: var(--history-react-header-color);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -34,7 +46,7 @@ history-root {
     flex-direction: column;
 
     .toolbar-container {
-      border-bottom: 1px solid var(--border-divider-dark);
+      border-bottom: 1px solid var(--history-react-separator-color);
       padding: 0 var(--spacing-04);
     }
 
@@ -55,7 +67,7 @@ history-root {
     display: flex;
     flex-direction: column;
     width: 320px;
-    border-left: 1px solid var(--border-divider-dark);
+    border-left: 1px solid var(--history-react-separator-color);
     box-sizing: content-box;
   }
 
@@ -292,6 +304,21 @@ history-root {
     text-align: center;
   }
 
+  .history-react-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-04);
+
+    .history-react-toolbar-file-info {
+      flex: 1;
+      text-align: right;
+    }
+
+    .history-react-toolbar-time {
+      font-weight: 700;
+    }
+  }
+
   .history-paywall-prompt {
     padding: var(--history-change-list-padding);
 
@@ -362,6 +389,34 @@ history-root {
       color: var(--content-primary);
       background-color: var(--bg-light-secondary);
     }
+  }
+}
+
+.document-diff-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  .cm-viewer-container,
+  .cm-editor {
+    height: 100%;
+  }
+
+  .previous-highlight-button,
+  .next-highlight-button {
+    @include shadow-md;
+
+    position: absolute;
+    right: var(--spacing-06);
+  }
+
+  .previous-highlight-button {
+    top: var(--spacing-06);
+  }
+
+  .next-highlight-button {
+    bottom: var(--spacing-06);
   }
 }
 

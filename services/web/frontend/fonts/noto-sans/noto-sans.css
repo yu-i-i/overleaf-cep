@@ -1,0 +1,50 @@
+/* Noto Sans - Regular */
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: fallback;
+  src: url('NotoSans-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: italic;
+  font-weight: 400;
+  font-display: fallback;
+  src: url('NotoSans-Italic.woff2') format('woff2');
+}
+
+/* Noto Sans - Medium */
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: fallback;
+  src: url('NotoSans-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: italic;
+  font-weight: 500;
+  font-display: fallback;
+  src: url('NotoSans-MediumItalic.woff2') format('woff2');
+}
+
+/* Noto Sans - SemiBold */
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: fallback;
+  src: url('NotoSans-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: italic;
+  font-weight: 600;
+  font-display: fallback;
+  src: url('NotoSans-SemiBoldItalic.woff2') format('woff2');
+}

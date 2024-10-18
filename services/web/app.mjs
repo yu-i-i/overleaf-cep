@@ -7,12 +7,9 @@ import Settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
 import PlansLocator from './app/src/Features/Subscription/PlansLocator.js'
 import SiteAdminHandler from './app/src/infrastructure/SiteAdminHandler.js'
-
 import http from 'node:http'
 import https from 'node:https'
-
 import * as Serializers from './app/src/infrastructure/LoggerSerializers.js'
-
 import Server from './app/src/infrastructure/Server.mjs'
 import QueueWorkers from './app/src/infrastructure/QueueWorkers.js'
 import mongodb from './app/src/infrastructure/mongodb.js'
@@ -38,9 +35,14 @@ metrics.open_sockets.monitor()
 
 if (Settings.catchErrors) {
   process.removeAllListeners('uncaughtException')
-  process.on('uncaughtException', error =>
-    logger.error({ err: error }, 'uncaughtException')
-  )
+  process.removeAllListeners('unhandledRejection')
+  process
+    .on('uncaughtException', error =>
+      logger.error({ err: error }, 'uncaughtException')
+    )
+    .on('unhandledRejection', (reason, p) => {
+      logger.error({ err: reason }, 'unhandledRejection at Promise', p)
+    })
 }
 
 // Create ./data/dumpFolder if needed
