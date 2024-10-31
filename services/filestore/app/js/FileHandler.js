@@ -1,7 +1,7 @@
 const Settings = require('@overleaf/settings')
 const { callbackify } = require('util')
 const fs = require('fs')
-const PersistorManager = require('./PersistorManager')
+let PersistorManager = require('./PersistorManager')
 const LocalFileWriter = require('./LocalFileWriter')
 const FileConverter = require('./FileConverter')
 const KeyBuilder = require('./KeyBuilder')
@@ -10,6 +10,7 @@ const { ConversionError, InvalidParametersError } = require('./Errors')
 const metrics = require('@overleaf/metrics')
 
 module.exports = {
+  copyObject: callbackify(copyObject),
   insertFile: callbackify(insertFile),
   deleteFile: callbackify(deleteFile),
   deleteProject: callbackify(deleteProject),
@@ -18,6 +19,7 @@ module.exports = {
   getFileSize: callbackify(getFileSize),
   getDirectorySize: callbackify(getDirectorySize),
   promises: {
+    copyObject,
     getFile,
     getRedirectUrl,
     insertFile,
@@ -28,6 +30,16 @@ module.exports = {
   },
 }
 
+if (process.env.NODE_ENV === 'test') {
+  module.exports._TESTONLYSwapPersistorManager = _PersistorManager => {
+    PersistorManager = _PersistorManager
+  }
+}
+
+async function copyObject(bucket, sourceKey, destinationKey) {
+  await PersistorManager.copyObject(bucket, sourceKey, destinationKey)
+}
+
 async function insertFile(bucket, key, stream) {
   const convertedKey = KeyBuilder.getConvertedFolderKey(key)
   if (!convertedKey.match(/^[0-9a-f]{24}\/([0-9a-f]{24}|v\/[0-9]+\/[a-z]+)/i)) {
@@ -36,9 +48,6 @@ async function insertFile(bucket, key, stream) {
       key,
       convertedKey,
     })
-  }
-  if (Settings.enableConversions) {
-    await PersistorManager.deleteDirectory(bucket, convertedKey)
   }
   await PersistorManager.sendStream(bucket, key, stream)
 }
@@ -53,7 +62,10 @@ async function deleteFile(bucket, key) {
     })
   }
   const jobs = [PersistorManager.deleteObject(bucket, key)]
-  if (Settings.enableConversions) {
+  if (
+    Settings.enableConversions &&
+    bucket === Settings.filestore.stores.template_files
+  ) {
     jobs.push(PersistorManager.deleteDirectory(bucket, convertedKey))
   }
   await Promise.all(jobs)

@@ -1,4 +1,6 @@
 .gallery-search {
+  margin-bottom: var(--spacing-16);
+
   form {
     display: flex;
     justify-content: center;
@@ -18,6 +20,105 @@
 
       @include media-breakpoint-up(md) {
         width: 544px;
+      }
+    }
+  }
+
+  .search-hits {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-08);
+
+    .search-hits-loading,
+    .search-hits-empty,
+    .search-hit:first-of-type {
+      margin-top: var(--spacing-16);
+    }
+
+    .search-hit {
+      display: flex;
+      gap: var(--spacing-08);
+
+      .search-image {
+        a {
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          height: 100%;
+          width: 100%;
+          position: relative;
+
+          &::before {
+            content: '';
+            background: var(--neutral-90);
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: var(--border-radius-base);
+            transition: opacity 0.15s ease-in-out;
+          }
+
+          img {
+            @include shadow-md;
+
+            width: 185px;
+            border-radius: var(--border-radius-base);
+
+            @include media-breakpoint-down(sm) {
+              width: 35vw;
+            }
+          }
+
+          &:hover {
+            &::before {
+              opacity: 0.08;
+              transition: opacity 0.15s ease-in-out;
+            }
+          }
+        }
+      }
+
+      .search-title {
+        margin-bottom: var(--spacing-04);
+        max-width: $templates-search-max-width;
+        display: flex;
+        align-items: center;
+
+        a {
+          @include heading-md;
+
+          line-clamp: 2;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow-y: hidden;
+          color: var(--content-primary);
+          text-decoration: none;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+
+      .search-highlight {
+        max-width: $templates-search-max-width;
+      }
+
+      .search-author {
+        display: block;
+
+        & + .badge-link-list {
+          margin-top: var(--spacing-06);
+        }
+      }
+
+      .gallery-official {
+        margin-left: var(--spacing-06);
+        vertical-align: text-top;
       }
     }
   }

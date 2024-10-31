@@ -28,7 +28,7 @@ import { canAggregate } from '../utils/can-aggregate'
 import ReviewPanelEmptyState from './review-panel-empty-state'
 import useEventListener from '@/shared/hooks/use-event-listener'
 import { hasActiveRange } from '@/features/review-panel-new/utils/has-active-range'
-import { addCommentStateField } from '@/features/source-editor/extensions/add-comment'
+import { reviewTooltipStateField } from '@/features/source-editor/extensions/review-tooltip'
 import ReviewPanelMoreCommentsButton from './review-panel-more-comments-button'
 import useMoreCommments from '../hooks/use-more-comments'
 import { Decoration } from '@codemirror/view'
@@ -111,9 +111,12 @@ const ReviewPanelCurrentFile: FC = () => {
 
   const positionsRef = useRef<Map<string, number>>(new Map())
 
-  const addCommentRanges = state.field(addCommentStateField, false)?.ranges
+  const addCommentRanges = state.field(
+    reviewTooltipStateField,
+    false
+  )?.addCommentRanges
 
-  useEffect(() => {
+  const positionsMeasureRequest = useCallback(() => {
     if (aggregatedRanges) {
       view.requestMeasure({
         key: 'review-panel-position',
@@ -173,6 +176,9 @@ const ReviewPanelCurrentFile: FC = () => {
       })
     }
   }, [view, aggregatedRanges, addCommentRanges])
+
+  useEffect(positionsMeasureRequest, [positionsMeasureRequest])
+  useEventListener('editor:geometry-change', positionsMeasureRequest)
 
   const showEmptyState = useMemo(
     () => hasActiveRange(ranges, threads) === false,

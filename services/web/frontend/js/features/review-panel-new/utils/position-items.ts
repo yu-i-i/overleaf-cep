@@ -2,6 +2,7 @@ import { debounce } from 'lodash'
 
 const COLLAPSED_HEADER_HEIGHT = 75
 const OFFSET_FOR_ENTRIES_ABOVE = 70
+const GAP_BETWEEN_ENTRIES = 4
 
 export const positionItems = debounce(
   (
@@ -25,14 +26,14 @@ export const positionItems = debounce(
 
     if (activeItemIndex === -1) {
       // if there is no action available
-      // check if there is a focused entry
+      // check if there is manually selected entry
       activeItemIndex = items.findIndex(item =>
-        item.classList.contains('review-panel-entry-focused')
+        item.classList.contains('review-panel-entry-selected')
       )
     }
 
     if (activeItemIndex === -1) {
-      // if entry was not focused manually
+      // if entry was not selected manually
       // check if there is an entry in selection and use that as the focused item
       activeItemIndex = items.findIndex(item =>
         item.classList.contains('review-panel-entry-highlighted')
@@ -62,7 +63,7 @@ export const positionItems = debounce(
       let top = getTopPosition(item, i === 0)
       const bottom = top + rect.height
       if (bottom > topLimit) {
-        top = topLimit - rect.height - 10
+        top = topLimit - rect.height - GAP_BETWEEN_ENTRIES
       }
       item.style.top = `${top}px`
       item.style.visibility = 'visible'
@@ -76,7 +77,7 @@ export const positionItems = debounce(
       const rect = item.getBoundingClientRect()
       let top = getTopPosition(item, false)
       if (top < bottomLimit) {
-        top = bottomLimit + 10
+        top = bottomLimit + GAP_BETWEEN_ENTRIES
       }
       item.style.top = `${top}px`
       item.style.visibility = 'visible'

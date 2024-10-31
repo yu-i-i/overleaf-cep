@@ -1,4 +1,12 @@
-import { Dispatch, FC, SetStateAction, useEffect, useState } from 'react'
+import {
+  Dispatch,
+  FC,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import ReactDOM from 'react-dom'
 import MaterialIcon from '@/shared/components/material-icon'
 import { useTranslation } from 'react-i18next'
@@ -7,14 +15,21 @@ import {
   useCodeMirrorViewContext,
 } from '@/features/source-editor/components/codemirror-context'
 import {
-  addCommentStateField,
   buildAddNewCommentRangeEffect,
-} from '@/features/source-editor/extensions/add-comment'
-import { getTooltip } from '@codemirror/view'
+  reviewTooltipStateField,
+} from '@/features/source-editor/extensions/review-tooltip'
+import { EditorView, getTooltip } from '@codemirror/view'
 import useViewerPermissions from '@/shared/hooks/use-viewer-permissions'
 import usePreviousValue from '@/shared/hooks/use-previous-value'
 import { useLayoutContext } from '@/shared/context/layout-context'
 import { useReviewPanelViewActionsContext } from '../context/review-panel-view-context'
+import {
+  useRangesActionsContext,
+  useRangesContext,
+} from '../context/ranges-context'
+import { isInsertOperation } from '@/utils/operations'
+import { isCursorNearViewportEdge } from '@/features/source-editor/utils/is-cursor-near-edge'
+import OLTooltip from '@/features/ui/components/ol/ol-tooltip'
 
 const ReviewTooltipMenu: FC = () => {
   const state = useCodeMirrorStateContext()
@@ -22,7 +37,7 @@ const ReviewTooltipMenu: FC = () => {
   const isViewer = useViewerPermissions()
   const [show, setShow] = useState(true)
 
-  const tooltipState = state.field(addCommentStateField, false)?.tooltip
+  const tooltipState = state.field(reviewTooltipStateField, false)?.tooltip
   const previousTooltipState = usePreviousValue(tooltipState)
 
   useEffect(() => {
@@ -55,26 +70,85 @@ const ReviewTooltipMenuContent: FC<{
   const state = useCodeMirrorStateContext()
   const { setReviewPanelOpen } = useLayoutContext()
   const { setView } = useReviewPanelViewActionsContext()
+  const ranges = useRangesContext()
+  const { acceptChanges, rejectChanges } = useRangesActionsContext()
 
-  const handleClick = () => {
+  const addComment = useCallback(() => {
     setReviewPanelOpen(true)
     setView('cur_file')
 
-    view.dispatch({
-      effects: buildAddNewCommentRangeEffect(state.selection.main),
-    })
+    const commentPos = state.selection.main.anchor
+    const effects = isCursorNearViewportEdge(view, commentPos)
+      ? [
+          buildAddNewCommentRangeEffect(state.selection.main),
+          EditorView.scrollIntoView(commentPos, { y: 'center' }),
+        ]
+      : [buildAddNewCommentRangeEffect(state.selection.main)]
+
+    view.dispatch({ effects })
     setShow(false)
-  }
+  }, [setReviewPanelOpen, setView, setShow, view, state.selection.main])
+
+  useEffect(() => {
+    window.addEventListener('add-new-review-comment', addComment)
+    return () => {
+      window.removeEventListener('add-new-review-comment', addComment)
+    }
+  }, [addComment])
+
+  const changeIdsInSelection = useMemo(() => {
+    return (ranges?.changes ?? [])
+      .filter(({ op }) => {
+        const opFrom = op.p
+        const opLength = isInsertOperation(op) ? op.i.length : 0
+        const opTo = opFrom + opLength
+        const selection = state.selection.main
+        return opFrom >= selection.from && opTo <= selection.to
+      })
+      .map(({ id }) => id)
+  }, [ranges, state.selection.main])
+
+  const acceptChangesHandler = useCallback(() => {
+    acceptChanges(...changeIdsInSelection)
+  }, [acceptChanges, changeIdsInSelection])
+
+  const rejectChangesHandler = useCallback(() => {
+    rejectChanges(...changeIdsInSelection)
+  }, [rejectChanges, changeIdsInSelection])
+
+  const showChangesButtons = changeIdsInSelection.length > 0
 
   return (
     <div className="review-tooltip-menu">
       <button
         className="review-tooltip-menu-button review-tooltip-add-comment-button"
-        onClick={handleClick}
+        onClick={addComment}
       >
         <MaterialIcon type="chat" />
         {t('add_comment')}
       </button>
+      {showChangesButtons && (
+        <>
+          <div className="review-tooltip-menu-divider" />
+          <OLTooltip id="accept-all-changes" description={t('accept_all')}>
+            <button
+              className="review-tooltip-menu-button"
+              onClick={acceptChangesHandler}
+            >
+              <MaterialIcon type="check" />
+            </button>
+          </OLTooltip>
+
+          <OLTooltip id="reject-all-changes" description={t('reject_all')}>
+            <button
+              className="review-tooltip-menu-button"
+              onClick={rejectChangesHandler}
+            >
+              <MaterialIcon type="clear" />
+            </button>
+          </OLTooltip>
+        </>
+      )}
     </div>
   )
 }

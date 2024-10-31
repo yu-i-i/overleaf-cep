@@ -30,6 +30,10 @@
     margin-left: @spacing-02;
     z-index: 1;
   }
+  .review-panel-entry:hover {
+    // shadow-sm
+    box-shadow: 0px 2px 4px rgba(30, 37, 48, 0.16);
+  }
 
   .review-panel-entry.review-panel-entry-disabled {
     opacity: 0.5;
@@ -47,10 +51,18 @@
     gap: @spacing-04;
   }
 
-  .review-panel-entry-focused,
-  .review-panel-entry-highlighted {
+  .review-panel-entry.review-panel-entry-selected,
+  .review-panel-entry.review-panel-entry-highlighted {
     margin-left: @spacing-01;
     border: 1px solid @blue-50;
+    // shadow-md
+    box-shadow:
+      0px 4px 12px rgba(30, 37, 48, 0.12),
+      0px 2px 4px rgba(30, 37, 48, 0.08);
+  }
+
+  .review-panel-entry.review-panel-entry-focused {
+    z-index: 2;
   }
 
   .review-panel-entry-header {
@@ -86,7 +98,7 @@
 
       .review-panel-entry-actions-icon {
         padding: @spacing-01;
-        font-size: 20px;
+        font-size: @font-size-05;
       }
     }
   }
@@ -111,7 +123,7 @@
   .review-panel-entry-icon {
     border-radius: @border-radius-base-new;
     padding: @spacing-02;
-    font-size: 16px;
+    font-size: @font-size-03;
   }
 
   .review-panel-entry-change-icon {
@@ -134,11 +146,10 @@
   }
 
   .review-panel-header {
-    position: fixed;
-    top: var(--review-panel-top);
+    position: sticky;
+    top: 0;
     width: var(--review-panel-width);
     height: @review-panel-header-height;
-    z-index: 2;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -187,7 +198,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 14px;
+    font-size: @font-size-02;
 
     i {
       width: 8px;
@@ -202,7 +213,7 @@
 
     .review-panel-label {
       font-family: Lato, sans-serif;
-      font-size: 14px;
+      font-size: @font-size-02;
       font-weight: bold;
       margin: 0;
     }
@@ -245,10 +256,6 @@
     pointer-events: none;
   }
 
-  .review-panel-resolved-comments-loading {
-    text-align: center;
-  }
-
   .review-panel-resolved-comments-empty {
     text-align: center;
   }
@@ -266,9 +273,10 @@
   }
 
   .review-panel-resolved-comments-count {
+    color: @content-secondary;
     background-color: @neutral-20;
-    border-radius: @border-radius-base-new;
-    padding: 2px;
+    font-weight: normal;
+    padding: 4px;
   }
 
   .review-panel-resolved-comment {
@@ -319,6 +327,10 @@
     background-color: @neutral-20;
     border-radius: @border-radius-base-new;
     padding: 4px 8px;
+
+    .btn-inline-link {
+      font-size: 12px;
+    }
   }
 
   .review-panel-resolved-comment-quoted-text-label {
@@ -327,6 +339,7 @@
   }
 
   .review-panel-resolved-comment-quoted-text-quote {
+    color: @content-primary;
     overflow-wrap: anywhere;
     font-size: 14px;
   }
@@ -376,6 +389,10 @@
     min-height: 25px;
     overflow-x: hidden;
     max-height: 400px;
+  }
+
+  .review-panel-comment-edit {
+    margin-top: var(--spacing-03);
   }
 
   .review-panel-empty-state {
@@ -453,6 +470,9 @@
   }
 
   .review-panel-overview-file-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     overflow: hidden;
     padding-top: 4px;
     padding-bottom: 6px;
@@ -472,7 +492,7 @@
     width: var(--review-panel-width);
     z-index: 2;
     background-color: white;
-    border-top: 1px solid #d9d9d9;
+    border-top: 1px solid @rp-border-grey;
     display: flex;
 
     .review-panel-tab {
@@ -505,11 +525,6 @@
     padding: 2px 6px;
     resize: vertical;
     min-height: 44px;
-  }
-
-  .review-panel-add-comment {
-    position: absolute;
-    z-index: 2;
   }
 
   .review-panel-add-comment-buttons {
@@ -545,12 +560,11 @@
     }
   }
 
+  // Would not be migrated
   .review-panel-more-comments-button {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 2px 8px;
-    height: 24px;
   }
 
   &.review-panel-subview-overview {
@@ -581,6 +595,12 @@
       width: 100%;
     }
 
+    .review-panel-entry:hover,
+    .review-panel-entry-focused,
+    .review-panel-entry-highlighted {
+      box-shadow: none;
+    }
+
     .review-panel-entry-indicator {
       position: absolute;
       left: 0;
@@ -601,10 +621,11 @@
 
     .review-panel-entry-hover {
       .review-panel-entry-content {
-        display: initial;
+        display: flex;
         position: absolute;
         left: -200px;
         top: 0;
+        padding: @spacing-04;
       }
     }
 
@@ -619,10 +640,12 @@
 }
 
 .review-tooltip-menu {
+  display: flex;
   box-shadow: 0px 2px 4px 0px #1e253029;
   border: none;
   border-radius: 4px;
   padding: 4px;
+  gap: 4px;
 }
 
 .review-tooltip-menu-button {
@@ -632,6 +655,12 @@
   align-items: center;
   gap: 2px;
   padding: 2px;
+  border-radius: @border-radius-base;
+}
+
+.review-tooltip-menu-divider {
+  width: 1px;
+  background-color: #e7e9ee;
 }
 
 .review-tooltip-add-comment-button {
@@ -640,4 +669,53 @@
 
 .review-panel-tooltip {
   pointer-events: none; // this is to prevent mouseLeave event from firing when hovering over the tooltip
+}
+
+.review-panel-in-editor-widgets {
+  position: sticky;
+  top: 0;
+  right: 0;
+  font-size: 11px;
+  z-index: 2;
+  font-family: @font-family-sans-serif;
+
+  .review-panel-in-editor-widgets-inner {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .review-panel-track-changes-indicator {
+    border: 0;
+  }
+}
+.review-panel-track-changes-indicator {
+  display: block;
+  padding: 5px 10px;
+  background-color: rgba(240, 240, 240, 0.9);
+  color: @rp-type-blue;
+  text-align: center;
+  border-bottom-left-radius: 3px;
+  white-space: nowrap;
+
+  &.review-panel-track-changes-indicator-on-dark {
+    background-color: rgba(88, 88, 88, 0.8);
+    color: #fff;
+
+    &:hover,
+    &:focus {
+      background-color: rgba(88, 88, 88, 1);
+      color: #fff;
+    }
+  }
+
+  &:hover,
+  &:focus {
+    outline: 0;
+    text-decoration: none;
+    background-color: rgba(240, 240, 240, 1);
+    color: @rp-type-blue;
+  }
 }

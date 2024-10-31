@@ -90,6 +90,13 @@ const _ProjectController = {
       await EditorController.promises.setRootDoc(projectId, req.body.rootDocId)
     }
 
+    if (req.body.mainBibliographyDocId != null) {
+      await EditorController.promises.setMainBibliographyDoc(
+        projectId,
+        req.body.mainBibliographyDocId
+      )
+    }
+
     res.sendStatus(204)
   },
 
@@ -341,7 +348,6 @@ const _ProjectController = {
       'write-and-cite-ars',
       'default-visual-for-beginners',
       'hotjar',
-      'spell-check-client',
     ].filter(Boolean)
 
     const getUserValues = async userId =>

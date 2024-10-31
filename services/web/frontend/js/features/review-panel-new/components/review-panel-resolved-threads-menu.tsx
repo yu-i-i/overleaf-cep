@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { ReviewPanelResolvedThread } from './review-panel-resolved-thread'
 import useProjectRanges from '../hooks/use-project-ranges'
 import { useFileTreeData } from '@/shared/context/file-tree-data-context'
-import Icon from '@/shared/components/icon'
 import { Change, CommentOperation } from '../../../../../types/change'
 import { ThreadId } from '../../../../../types/review-panel/review-panel'
+import LoadingSpinner from '@/shared/components/loading-spinner'
+import OLBadge from '@/features/ui/components/ol/ol-badge'
 
 export const ReviewPanelResolvedThreadsMenu: FC = () => {
   const { t } = useTranslation()
@@ -59,11 +60,7 @@ export const ReviewPanelResolvedThreadsMenu: FC = () => {
   }, [threads])
 
   if (loading) {
-    return (
-      <div className="review-panel-resolved-comments-loading">
-        <Icon type="spinner" spin />
-      </div>
-    )
+    return <LoadingSpinner className="ms-auto me-auto" />
   }
 
   if (!resolvedThreads.length) {
@@ -80,9 +77,13 @@ export const ReviewPanelResolvedThreadsMenu: FC = () => {
         <div className="review-panel-resolved-comments-label">
           {t('resolved_comments')}
         </div>
-        <div className="review-panel-resolved-comments-count">
+        <OLBadge
+          bg="light"
+          text="dark"
+          className="review-panel-resolved-comments-count"
+        >
           {resolvedThreads.length}
-        </div>
+        </OLBadge>
       </div>
       {resolvedThreads.map(thread => {
         const comment = allComments.get(thread.id)

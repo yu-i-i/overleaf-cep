@@ -3,15 +3,19 @@ import { MainDocument } from '../../../../../types/project-settings'
 import { Ranges } from '../context/ranges-context'
 import { ReviewPanelComment } from './review-panel-comment'
 import { ReviewPanelChange } from './review-panel-change'
-import { isDeleteChange, isInsertChange } from '@/utils/operations'
+import {
+  isCommentOperation,
+  isDeleteChange,
+  isInsertChange,
+} from '@/utils/operations'
 import {
   Change,
+  CommentOperation,
   DeleteOperation,
   EditOperation,
 } from '../../../../../types/change'
 import { canAggregate } from '../utils/can-aggregate'
 
-import { Button } from 'react-bootstrap'
 import MaterialIcon from '@/shared/components/material-icon'
 import useOverviewFileCollapsed from '../hooks/use-overview-file-collapsed'
 import { useThreadsContext } from '../context/threads-context'
@@ -45,25 +49,24 @@ export const ReviewPanelOverviewFile: FC<{
     return { aggregates, changes }
   }, [ranges])
 
-  const unresolvedComments = useMemo(() => {
-    return ranges.comments.filter(comment => {
+  const entries = useMemo(() => {
+    const unresolvedComments = ranges.comments.filter(comment => {
       const thread = threads?.[comment.op.t]
       return thread && thread.messages.length > 0 && !thread.resolved
     })
-  }, [ranges.comments, threads])
+    return [...changes, ...unresolvedComments].sort((a, b) => a.op.p - b.op.p)
+  }, [changes, ranges.comments, threads])
 
-  const numEntries = changes.length + unresolvedComments.length
-
-  if (numEntries === 0) {
+  if (entries.length === 0) {
     return null
   }
 
   return (
     <>
       <div>
-        <Button
-          bsClass="review-panel-overview-file-header"
-          bsStyle={null}
+        <button
+          type="button"
+          className="review-panel-overview-file-header"
           onClick={toggleCollapsed}
         >
           <MaterialIcon
@@ -71,31 +74,31 @@ export const ReviewPanelOverviewFile: FC<{
           />
           {doc.doc.name}
           <div className="review-panel-overview-file-entry-count">
-            {numEntries}
+            {entries.length}
           </div>
-        </Button>
+        </button>
 
         {!collapsed && (
           <div className="review-panel-overview-file-entries">
-            {changes.map(change => (
-              <ReviewPanelChange
-                key={change.id}
-                change={change}
-                aggregate={aggregates.get(change.id)}
-                editable={false}
-                docId={doc.doc.id}
-                hoverRanges={false}
-              />
-            ))}
-
-            {unresolvedComments.map(comment => (
-              <ReviewPanelComment
-                key={comment.id}
-                comment={comment}
-                docId={doc.doc.id}
-                hoverRanges={false}
-              />
-            ))}
+            {entries.map(entry =>
+              isCommentOperation(entry.op) ? (
+                <ReviewPanelComment
+                  key={entry.id}
+                  comment={entry as Change<CommentOperation>}
+                  docId={doc.doc.id}
+                  hoverRanges={false}
+                />
+              ) : (
+                <ReviewPanelChange
+                  key={entry.id}
+                  change={entry as Change<EditOperation>}
+                  aggregate={aggregates.get(entry.id)}
+                  editable={false}
+                  docId={doc.doc.id}
+                  hoverRanges={false}
+                />
+              )
+            )}
           </div>
         )}
       </div>

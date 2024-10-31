@@ -1,4 +1,4 @@
-import { keymap } from '@codemirror/view'
+import { EditorView, keymap } from '@codemirror/view'
 import { Prec } from '@codemirror/state'
 import { indentMore } from '../commands/indent'
 import {
@@ -23,19 +23,33 @@ import {
   deleteToVisualLineEnd,
   deleteToVisualLineStart,
 } from './visual-line-selection'
+import { isSplitTestEnabled } from '@/utils/splitTestUtils'
 
 const toggleReviewPanel = () => {
-  dispatchEditorEvent('toggle-review-panel')
+  if (isSplitTestEnabled('review-panel-redesign')) {
+    window.dispatchEvent(new Event('ui.toggle-review-panel'))
+  } else {
+    dispatchEditorEvent('toggle-review-panel')
+  }
+
   return true
 }
 
-const addNewCommentFromKbdShortcut = () => {
-  dispatchEditorEvent('add-new-comment')
+const addNewCommentFromKbdShortcut = (view: EditorView) => {
+  if (isSplitTestEnabled('review-panel-redesign')) {
+    window.dispatchEvent(new Event('add-new-review-comment'))
+  } else {
+    dispatchEditorEvent('add-new-comment')
+  }
   return true
 }
 
 const toggleTrackChangesFromKbdShortcut = () => {
-  dispatchEditorEvent('toggle-track-changes')
+  if (isSplitTestEnabled('review-panel-redesign')) {
+    window.dispatchEvent(new Event('toggle-track-changes'))
+  } else {
+    dispatchEditorEvent('toggle-track-changes')
+  }
   return true
 }
 

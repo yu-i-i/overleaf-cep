@@ -8,10 +8,12 @@ block vars
 	- var suppressFooter = true
 	- var suppressSkipToContent = true
 	- var suppressCookieBanner = true
+	- bootstrap5PageStatus = 'enabled' // One of 'disabled', 'enabled', and 'queryStringOnly'
+	- bootstrap5PageSplitTest = 'bootstrap-5-ide'
 	- metadata.robotsNoindexNofollow = true
 
 block content
 	#pdf-preview-detached-root()
 
 block append meta
-	include ./editor/meta
+	include editor/_meta

@@ -4,30 +4,19 @@ import getMeta from '../../../../utils/meta'
 import { useProjectSettingsContext } from '../../context/project-settings-context'
 import SettingsMenuSelect from './settings-menu-select'
 import type { Optgroup } from './settings-menu-select'
-import { useFeatureFlag } from '@/shared/context/split-test-context'
-
-// allow selection of spell-check languages that are only supported in the client-side spell checker
-const showClientOnlyLanguages = true
+import { useEditorContext } from '@/shared/context/editor-context'
 
 export default function SettingsSpellCheckLanguage() {
   const { t } = useTranslation()
-  const languages = getMeta('ol-languages')
-
-  const spellCheckClientEnabled = useFeatureFlag('spell-check-client')
 
   const { spellCheckLanguage, setSpellCheckLanguage } =
     useProjectSettingsContext()
+  const { permissionsLevel } = useEditorContext()
 
   const optgroup: Optgroup = useMemo(() => {
-    const options = (languages ?? []).filter(lang => {
-      const clientOnly = lang.server === false
-
-      if (clientOnly && !showClientOnlyLanguages) {
-        return false
-      }
-
-      return spellCheckClientEnabled || !clientOnly
-    })
+    const options = (getMeta('ol-languages') ?? [])
+      // only include spell-check languages that are available in the client
+      .filter(language => language.dic !== undefined)
 
     return {
       label: 'Language',
@@ -36,7 +25,7 @@ export default function SettingsSpellCheckLanguage() {
         label: language.name,
       })),
     }
-  }, [languages, spellCheckClientEnabled])
+  }, [])
 
   return (
     <SettingsMenuSelect
@@ -46,6 +35,7 @@ export default function SettingsSpellCheckLanguage() {
       optgroup={optgroup}
       label={t('spell_check')}
       name="spellCheckLanguage"
+      disabled={permissionsLevel === 'readOnly'}
     />
   )
 }

@@ -66,6 +66,7 @@ import { useRangesContext } from '@/features/review-panel-new/context/ranges-con
 import { updateRanges } from '@/features/source-editor/extensions/ranges'
 import { useThreadsContext } from '@/features/review-panel-new/context/threads-context'
 import { useHunspell } from '@/features/source-editor/hooks/use-hunspell'
+import { isBootstrap5 } from '@/features/utils/bootstrap-5'
 
 function useCodeMirrorScope(view: EditorView) {
   const { fileTreeData } = useFileTreeData()
@@ -108,9 +109,12 @@ function useCodeMirrorScope(view: EditorView) {
     'onlineUserCursorHighlights'
   )
 
-  const [spellCheckLanguage] = useScopeValue<string>(
-    'project.spellCheckLanguage'
-  )
+  let [spellCheckLanguage] = useScopeValue<string>('project.spellCheckLanguage')
+  // spell check is off when read-only
+  if (!permissions.write) {
+    spellCheckLanguage = ''
+  }
+
   const [projectFeatures] =
     useScopeValue<Record<string, boolean | string | number | undefined>>(
       'project.features'
@@ -138,6 +142,7 @@ function useCodeMirrorScope(view: EditorView) {
     lineHeight,
     overallTheme,
     editorTheme,
+    bootstrapVersion: 3 as 3 | 5,
   })
 
   useEffect(() => {
@@ -147,6 +152,7 @@ function useCodeMirrorScope(view: EditorView) {
       lineHeight,
       overallTheme,
       editorTheme,
+      bootstrapVersion: isBootstrap5() ? 5 : 3,
     }
 
     view.dispatch(
@@ -155,6 +161,7 @@ function useCodeMirrorScope(view: EditorView) {
         fontSize,
         lineHeight,
         overallTheme,
+        bootstrapVersion: themeRef.current.bootstrapVersion,
       })
     )
 
@@ -225,7 +232,9 @@ function useCodeMirrorScope(view: EditorView) {
       spellCheckLanguage,
       hunspellManager,
     }
-    view.dispatch(setSpellCheckLanguage(spellingRef.current))
+    window.setTimeout(() => {
+      view.dispatch(setSpellCheckLanguage(spellingRef.current))
+    })
   }, [view, spellCheckLanguage, hunspellManager])
 
   const projectFeaturesRef = useRef(projectFeatures)
