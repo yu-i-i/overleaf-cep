@@ -1,22 +1,54 @@
-const fs = require('fs')
-const Path = require('path')
+const fs = require('node:fs')
+const Path = require('node:path')
+const crypto = require('node:crypto')
+const {
+  RootKeyEncryptionKey,
+} = require('@overleaf/object-persistor/src/PerProjectEncryptedS3Persistor')
 
 // use functions to get a fresh copy, not a reference, each time
+function s3BaseConfig() {
+  return {
+    endpoint: process.env.AWS_S3_ENDPOINT,
+    pathStyle: true,
+    partSize: 100 * 1024 * 1024,
+    ca: [fs.readFileSync('/certs/public.crt')],
+  }
+}
+
 function s3Config() {
   return {
     key: process.env.AWS_ACCESS_KEY_ID,
     secret: process.env.AWS_SECRET_ACCESS_KEY,
-    endpoint: process.env.AWS_S3_ENDPOINT,
-    pathStyle: true,
-    partSize: 100 * 1024 * 1024,
+    ...s3BaseConfig(),
+  }
+}
+
+const S3SSECKeys = [
+  new RootKeyEncryptionKey(
+    crypto.generateKeySync('aes', { length: 256 }).export(),
+    Buffer.alloc(32)
+  ),
+]
+
+function s3SSECConfig() {
+  return {
+    ...s3Config(),
+    ignoreErrorsFromDEKReEncryption: false,
+    automaticallyRotateDEKEncryption: true,
+    dataEncryptionKeyBucketName: process.env.AWS_S3_USER_FILES_DEK_BUCKET_NAME,
+    pathToProjectFolder(_bucketName, path) {
+      const [projectFolder] = path.match(/^[a-f0-9]+\//)
+      return projectFolder
+    },
+    async getRootKeyEncryptionKeys() {
+      return S3SSECKeys
+    },
   }
 }
 
 function s3ConfigDefaultProviderCredentials() {
   return {
-    endpoint: process.env.AWS_S3_ENDPOINT,
-    pathStyle: true,
-    partSize: 100 * 1024 * 1024,
+    ...s3BaseConfig(),
   }
 }
 
@@ -60,7 +92,7 @@ function fallbackStores(primaryConfig, fallbackConfig) {
   }
 }
 
-module.exports = {
+const BackendSettings = {
   SHARD_01_FSPersistor: {
     backend: 'fs',
     stores: fsStores(),
@@ -79,6 +111,11 @@ module.exports = {
     backend: 'gcs',
     gcs: gcsConfig(),
     stores: gcsStores(),
+  },
+  SHARD_01_PerProjectEncryptedS3Persistor: {
+    backend: 's3SSEC',
+    s3SSEC: s3SSECConfig(),
+    stores: s3Stores(),
   },
   SHARD_02_FallbackS3ToFSPersistor: {
     backend: 's3',
@@ -137,3 +174,9 @@ function checkForUnexpectedTestFile() {
   }
 }
 checkForUnexpectedTestFile()
+
+module.exports = {
+  BackendSettings,
+  s3Config,
+  s3SSECConfig,
+}

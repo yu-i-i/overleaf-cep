@@ -25,11 +25,19 @@ export type Features = {
   zotero?: boolean
 }
 
+export type FeatureUsage = {
+  [feature: string]: {
+    remainingUsage: number
+    resetDate: string // date string
+  }
+}
+
 export type User = {
-  id: UserId | null
+  id: UserId
   isAdmin?: boolean
   email: string
   allowedFreeTrial?: boolean
+  hasRecurlySubscription?: boolean
   first_name?: string
   last_name?: string
   alphaProgram?: boolean
@@ -44,6 +52,24 @@ export type User = {
     autoCreatedAccount: boolean
     firstAutoLoad: boolean
   }
+  featureUsage?: FeatureUsage
+}
+
+export type LoggedOutUser = {
+  id: null
+  email?: undefined
+  first_name?: undefined
+  last_name?: undefined
+  signUpDate?: undefined
+  labsProgram?: undefined
+  alphaProgram?: undefined
+  betaProgram?: undefined
+  allowedFreeTrial?: undefined
+  features?: undefined
+  refProviders?: undefined
+  writefull?: undefined
+  isAdmin?: undefined
+  featureUsage?: undefined
 }
 
 export type MongoUser = Pick<User, Exclude<keyof User, 'id'>> & { _id: string }

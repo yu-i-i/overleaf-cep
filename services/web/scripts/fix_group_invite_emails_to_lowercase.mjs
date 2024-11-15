@@ -1,7 +1,6 @@
-import { db, waitForDb } from '../app/src/infrastructure/mongodb.js'
-import BatchedUpdateModule from './helpers/batchedUpdate.mjs'
+import { db } from '../app/src/infrastructure/mongodb.js'
+import { batchedUpdate } from '@overleaf/mongo-utils/batchedUpdate.js'
 
-const { batchedUpdate } = BatchedUpdateModule
 const DRY_RUN = process.env.DRY_RUN !== 'false'
 
 console.log({
@@ -46,8 +45,6 @@ async function processBatch(subscriptions) {
 }
 
 async function main() {
-  await waitForDb()
-
   const projection = {
     _id: 1,
     teamInvites: 1,
@@ -57,7 +54,7 @@ async function main() {
       $exists: true,
     },
   }
-  await batchedUpdate('subscriptions', query, processBatch, projection)
+  await batchedUpdate(db.subscriptions, query, processBatch, projection)
 }
 
 try {

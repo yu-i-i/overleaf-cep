@@ -2,19 +2,18 @@
 // Example:
 // node scripts/create_project.js --user-id=5dca84e11e71ae002ff73bd4 --name="My Test Project" --old-history
 
-import fs from 'fs'
+import fs from 'node:fs'
 
-import path from 'path'
+import path from 'node:path'
 import _ from 'lodash'
 import parseArgs from 'minimist'
 import OError from '@overleaf/o-error'
-import { waitForDb } from '../app/src/infrastructure/mongodb.js'
 import { User } from '../app/src/models/User.js'
 import ProjectCreationHandler from '../app/src/Features/Project/ProjectCreationHandler.js'
 import ProjectEntityUpdateHandler from '../app/src/Features/Project/ProjectEntityUpdateHandler.js'
 import ProjectEntityHandler from '../app/src/Features/Project/ProjectEntityHandler.js'
 import EditorController from '../app/src/Features/Editor/EditorController.js'
-import { fileURLToPath } from 'url'
+import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -207,7 +206,6 @@ async function _applyRandomDocUpdate(ownerId, projectId) {
 }
 
 async function createProject() {
-  await waitForDb()
   const user = await User.findById(userId)
   console.log('Will create project')
   console.log('user_id:', userId, '=>', user.email)

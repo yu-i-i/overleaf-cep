@@ -1,14 +1,14 @@
-const crypto = require('crypto')
-const fs = require('fs')
-const fsPromises = require('fs/promises')
+const crypto = require('node:crypto')
+const fs = require('node:fs')
+const fsPromises = require('node:fs/promises')
 const globCallbacks = require('glob')
-const Path = require('path')
-const { PassThrough } = require('stream')
-const { pipeline } = require('stream/promises')
-const { promisify } = require('util')
+const Path = require('node:path')
+const { PassThrough } = require('node:stream')
+const { pipeline } = require('node:stream/promises')
+const { promisify } = require('node:util')
 
 const AbstractPersistor = require('./AbstractPersistor')
-const { ReadError, WriteError } = require('./Errors')
+const { ReadError, WriteError, NotImplementedError } = require('./Errors')
 const PersistorHelper = require('./PersistorHelper')
 
 const glob = promisify(globCallbacks)
@@ -36,6 +36,14 @@ module.exports = class FSPersistor extends AbstractPersistor {
   }
 
   async sendStream(location, target, sourceStream, opts = {}) {
+    if (opts.ifNoneMatch === '*') {
+      // The standard library only has fs.rename(), which does not support exclusive flags.
+      // Refuse to act on this write operation.
+      throw new NotImplementedError(
+        'Overwrite protection required by caller, but it is not available is FS backend. Configure GCS or S3 backend instead, get in touch with support for further information.'
+      )
+    }
+
     const targetPath = this._getFsPath(location, target)
 
     try {
@@ -55,7 +63,7 @@ module.exports = class FSPersistor extends AbstractPersistor {
       throw PersistorHelper.wrapError(
         err,
         'failed to write stream',
-        { location, target },
+        { location, target, ifNoneMatch: opts.ifNoneMatch },
         WriteError
       )
     }
@@ -63,6 +71,11 @@ module.exports = class FSPersistor extends AbstractPersistor {
 
   // opts may be {start: Number, end: Number}
   async getObjectStream(location, name, opts = {}) {
+    if (opts.autoGunzip) {
+      throw new NotImplementedError(
+        'opts.autoGunzip is not supported by FS backend. Configure GCS or S3 backend instead, get in touch with support for further information.'
+      )
+    }
     const observer = new PersistorHelper.ObserverStream({
       metric: 'fs.ingress', // ingress to us from disk
       bucket: location,

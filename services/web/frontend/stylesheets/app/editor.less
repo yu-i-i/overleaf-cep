@@ -7,6 +7,7 @@
 @import './editor/error-boundary.less';
 @import './editor/share.less';
 @import './editor/chat.less';
+@import './editor/toast.less';
 @import './editor/file-view.less';
 @import './editor/search.less';
 @import './editor/publish-template.less';
@@ -518,8 +519,7 @@ CodeMirror
       padding-left: 38px;
       padding-right: 38px;
       margin: auto;
-      background: white;
-      opacity: 0.95;
+      background: rgba(255, 255, 255, 0.95);
       border-radius: 8px;
       .message {
         margin-top: 15px;
@@ -529,9 +529,6 @@ CodeMirror
         ul.list-unstyled {
           text-align: left;
         }
-      }
-      a.btn {
-        opacity: 1;
       }
     }
   }
@@ -589,6 +586,9 @@ CodeMirror
     border: 1px solid @gray-lighter;
     background-color: @gray-lightest;
   }
+}
+.teaser-feature-icon {
+  vertical-align: sub;
 }
 
 .teaser-title,

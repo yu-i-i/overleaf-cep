@@ -138,3 +138,152 @@
     }
   }
 }
+
+.payment-container {
+  padding-top: var(--spacing-13);
+  display: flex;
+  gap: var(--spacing-10);
+  justify-content: center;
+
+  @include media-breakpoint-down(lg) {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .payment-review-panel {
+    width: 339px;
+
+    @include media-breakpoint-down(lg) {
+      width: 100%;
+    }
+
+    h4 {
+      color: var(--neutral-70);
+      font-weight: 600;
+
+      @include heading-sm;
+    }
+
+    .price-feature-description {
+      color: var(--neutral-70);
+      font-weight: 400;
+
+      @include body-base;
+
+      h4 {
+        margin-bottom: var(--spacing-06);
+      }
+
+      .features-list {
+        margin-top: var(--spacing-08);
+      }
+
+      .price-summary {
+        .price-summary-line {
+          display: flex;
+          justify-content: space-between;
+
+          .price-summary-line-width {
+            width: 70%;
+          }
+        }
+
+        p {
+          margin: unset;
+        }
+
+        .price-nowrap {
+          white-space: nowrap;
+        }
+
+        .price-summary-total-line {
+          margin-top: var(--spacing-06);
+
+          .price-summary-due {
+            color: var(--green-50);
+          }
+        }
+      }
+
+      .price-cancel-anytime {
+        @include body-xs;
+      }
+    }
+
+    hr {
+      margin-top: var(--spacing-08);
+      margin-bottom: var(--spacing-08);
+    }
+  }
+
+  .payment-checkout {
+    padding: var(--spacing-08);
+    width: 408px;
+
+    @include media-breakpoint-down(lg) {
+      width: 100%;
+    }
+
+    h1 {
+      @include heading-md;
+    }
+
+    .student-disclaimer {
+      @include body-sm;
+    }
+  }
+}
+
+.group-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-04);
+  margin-bottom: var(--spacing-06);
+
+  h2 {
+    @include heading-lg;
+
+    margin: 0;
+    word-break: break-all;
+  }
+
+  .btn-ghost {
+    --bs-btn-bg: transparent;
+  }
+}
+
+.change-currency {
+  .dropdown-item:not(:first-child) {
+    margin-top: var(--spacing-02);
+  }
+}
+
+.change-currency-toggle {
+  padding-left: 0;
+  text-decoration: underline;
+  color: var(--content-secondary);
+
+  &:hover,
+  &:focus,
+  &:active {
+    // !important is unfortunately necessary to override btn:first-child:active
+    color: var(--content-secondary) !important;
+  }
+
+  &:not(:hover) {
+    text-decoration: underline;
+  }
+
+  // Hide the dropdown caret, BS5 react-bootstrap does not have a prop for this
+  &::after {
+    display: none;
+  }
+
+  @include body-xs;
+}
+
+.change-currency-dropdown-selected-icon {
+  position: absolute;
+  right: 10px;
+  top: var(--bs-dropdown-item-padding-y);
+}

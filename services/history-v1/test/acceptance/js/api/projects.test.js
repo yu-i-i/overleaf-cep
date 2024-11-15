@@ -1,7 +1,7 @@
 'use strict'
 
 const { expect } = require('chai')
-const fs = require('fs')
+const fs = require('node:fs')
 const HTTPStatus = require('http-status')
 const fetch = require('node-fetch')
 const sinon = require('sinon')
@@ -22,23 +22,16 @@ const {
   Change,
   AddFileOperation,
 } = require('overleaf-editor-core')
+const testProjects = require('./support/test_projects')
 
 describe('project controller', function () {
   beforeEach(cleanup.everything)
   beforeEach(fixtures.create)
 
   describe('initializeProject', function () {
-    let initializeProject
-
-    before(function () {
-      initializeProject =
-        testServer.basicAuthClient.apis.Project.initializeProject
-    })
-
     it('can initialize a new project', async function () {
-      const response = await initializeProject()
-      expect(response.status).to.equal(HTTPStatus.OK)
-      expect(response.obj.projectId).to.be.a('string')
+      const projectId = await testProjects.createEmptyProject()
+      expect(projectId).to.be.a('string')
     })
   })
 

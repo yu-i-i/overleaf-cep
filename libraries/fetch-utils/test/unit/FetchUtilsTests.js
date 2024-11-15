@@ -1,7 +1,7 @@
 const { expect } = require('chai')
 const { FetchError, AbortError } = require('node-fetch')
-const { Readable } = require('stream')
-const { once } = require('events')
+const { Readable } = require('node:stream')
+const { once } = require('node:events')
 const { TestServer } = require('./helpers/TestServer')
 const selfsigned = require('selfsigned')
 const {
@@ -24,13 +24,17 @@ const pems = selfsigned.generate(attrs, { days: 365 })
 const PRIVATE_KEY = pems.private
 const PUBLIC_CERT = pems.cert
 
-const dns = require('dns')
+const dns = require('node:dns')
 const _originalLookup = dns.lookup
 // Custom DNS resolver function
 dns.lookup = (hostname, options, callback) => {
   if (hostname === 'example.com') {
     // If the hostname is our test case, return the ip address for the test server
-    callback(null, '127.0.0.1', 4)
+    if (options?.all) {
+      callback(null, [{ address: '127.0.0.1', family: 4 }])
+    } else {
+      callback(null, '127.0.0.1', 4)
+    }
   } else {
     // Otherwise, use the default lookup
     _originalLookup(hostname, options, callback)

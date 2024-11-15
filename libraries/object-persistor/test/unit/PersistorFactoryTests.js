@@ -1,7 +1,7 @@
 const chai = require('chai')
 const { expect } = chai
 const SandboxedModule = require('sandboxed-module')
-const StreamPromises = require('stream/promises')
+const StreamPromises = require('node:stream/promises')
 
 const MODULE_PATH = '../../src/PersistorFactory.js'
 
@@ -32,7 +32,7 @@ describe('PersistorManager', function () {
     Settings = {}
     const requires = {
       './GcsPersistor': GcsPersistor,
-      './S3Persistor': S3Persistor,
+      './S3Persistor': { S3Persistor },
       './FSPersistor': FSPersistor,
       '@overleaf/logger': {
         info() {},

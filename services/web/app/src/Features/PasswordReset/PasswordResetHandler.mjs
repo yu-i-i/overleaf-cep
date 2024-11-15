@@ -4,7 +4,7 @@ import UserGetter from '../User/UserGetter.js'
 import OneTimeTokenHandler from '../Security/OneTimeTokenHandler.js'
 import EmailHandler from '../Email/EmailHandler.js'
 import AuthenticationManager from '../Authentication/AuthenticationManager.js'
-import { callbackify, promisify } from 'util'
+import { callbackify, promisify } from 'node:util'
 import PermissionsManager from '../Authorization/PermissionsManager.js'
 
 const assertUserPermissions = PermissionsManager.promises.assertUserPermissions
@@ -75,6 +75,7 @@ async function getUserForPasswordResetToken(token) {
     _id: 1,
     'overleaf.id': 1,
     email: 1,
+    must_reconfirm: 1,
   })
 
   await assertUserPermissions(user, ['change-password'])
@@ -121,7 +122,12 @@ async function setNewUserPassword(token, password, auditLog) {
 
   await PasswordResetHandler.promises.expirePasswordResetToken(token)
 
-  return { found: true, reset, userId: user._id }
+  return {
+    found: true,
+    reset,
+    userId: user._id,
+    mustReconfirm: user.must_reconfirm,
+  }
 }
 
 const PasswordResetHandler = {

@@ -124,4 +124,9 @@ $max-width: 160px;
   list-style: none;
   margin: 0;
   padding: 0;
+  align-content: flex-start;
+
+  .badge {
+    max-width: 200px;
+  }
 }

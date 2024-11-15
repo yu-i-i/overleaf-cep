@@ -16,7 +16,7 @@ import mongodb from './app/src/infrastructure/mongodb.js'
 import mongoose from './app/src/infrastructure/Mongoose.js'
 import { triggerGracefulShutdown } from './app/src/infrastructure/GracefulShutdown.js'
 import FileWriter from './app/src/infrastructure/FileWriter.js'
-import { fileURLToPath } from 'url'
+import { fileURLToPath } from 'node:url'
 
 logger.initialize(process.env.METRICS_APP_NAME || 'web')
 logger.logger.serializers.user = Serializers.user
@@ -26,7 +26,9 @@ logger.logger.serializers.project = Serializers.project
 if (Settings.sentry?.dsn != null) {
   logger.initializeErrorReporting(Settings.sentry.dsn)
 }
+http.globalAgent.keepAlive = false
 http.globalAgent.maxSockets = Settings.limits.httpGlobalAgentMaxSockets
+https.globalAgent.keepAlive = false
 https.globalAgent.maxSockets = Settings.limits.httpsGlobalAgentMaxSockets
 
 metrics.memory.monitor(logger)
@@ -59,7 +61,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
   PlansLocator.ensurePlansAreSetupCorrectly()
 
-  Promise.all([mongodb.waitForDb(), mongoose.connectionPromise])
+  Promise.all([mongodb.connectionPromise, mongoose.connectionPromise])
     .then(async () => {
       Server.server.listen(port, host, function () {
         logger.debug(`web starting up, listening on ${host}:${port}`)
@@ -77,7 +79,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 }
 
 // initialise site admin tasks
-Promise.all([mongodb.waitForDb(), mongoose.connectionPromise])
+Promise.all([mongodb.connectionPromise, mongoose.connectionPromise])
   .then(() => SiteAdminHandler.initialise())
   .catch(err => {
     logger.fatal({ err }, 'Cannot connect to mongo. Exiting.')

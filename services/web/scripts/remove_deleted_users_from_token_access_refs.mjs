@@ -1,17 +1,14 @@
 import {
   db,
-  waitForDb,
   READ_PREFERENCE_SECONDARY,
 } from '../app/src/infrastructure/mongodb.js'
-import BatchedUpdateModule from './helpers/batchedUpdate.mjs'
+import { batchedUpdate } from '@overleaf/mongo-utils/batchedUpdate.js'
 import mongodb from 'mongodb-legacy'
 import minimist from 'minimist'
 import CollaboratorsHandler from '../app/src/Features/Collaborators/CollaboratorsHandler.js'
-import { fileURLToPath } from 'url'
+import { fileURLToPath } from 'node:url'
 
 const { ObjectId } = mongodb
-
-const { batchedUpdate } = BatchedUpdateModule
 
 const argv = minimist(process.argv.slice(2), {
   string: ['projects'],
@@ -80,7 +77,7 @@ async function fixProjectsWithInvalidTokenAccessRefsIds(
   }
 
   await batchedUpdate(
-    'projects',
+    db.projects,
     query,
     async projects => {
       for (const project of projects) {
@@ -192,7 +189,6 @@ async function fixProjectsWithInvalidTokenAccessRefsIds(
 }
 
 async function main(DRY_RUN, PROJECTS_LIST) {
-  await waitForDb()
   await fixProjectsWithInvalidTokenAccessRefsIds(DRY_RUN, PROJECTS_LIST)
 }
 

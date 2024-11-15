@@ -1,11 +1,10 @@
-import { db, waitForDb } from '../app/src/infrastructure/mongodb.js'
-import BatchedUpdateModule from './helpers/batchedUpdate.mjs'
+import { db } from '../app/src/infrastructure/mongodb.js'
+import { batchedUpdate } from '@overleaf/mongo-utils/batchedUpdate.js'
 import mongodb from 'mongodb-legacy'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const { ObjectId } = mongodb
-const { batchedUpdate } = BatchedUpdateModule
 const CHUNK_SIZE = 1000
 
 // Function to chunk the array
@@ -26,10 +25,9 @@ async function main() {
   optedOutList = optedOutFile.split('\n').map(id => new ObjectId(id))
 
   console.log(`preserving opt-outs of ${optedOutList.length} users`)
-  await waitForDb()
   // update all applicable user models
   await batchedUpdate(
-    'users',
+    db.users,
     { 'writefull.enabled': false }, // and is false
     { $set: { 'writefull.enabled': null } }
   )

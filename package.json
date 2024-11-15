@@ -19,6 +19,7 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-promise": "^6.0.0",
+    "eslint-plugin-unicorn": "^56.0.0",
     "prettier": "3.3.3",
     "typescript": "^5.5.4"
   },
@@ -63,7 +64,6 @@
     "services/project-history",
     "services/real-time",
     "services/references",
-    "services/spelling",
     "services/templates",
     "services/third-party-datastore",
     "services/third-party-references",

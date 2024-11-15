@@ -1,10 +1,8 @@
-import { db, waitForDb } from '../app/src/infrastructure/mongodb.js'
-import BatchedUpdateModule from './helpers/batchedUpdate.mjs'
+import { db } from '../app/src/infrastructure/mongodb.js'
+import { batchedUpdate } from '@overleaf/mongo-utils/batchedUpdate.js'
 import minimist from 'minimist'
 import CollaboratorsInviteHelper from '../app/src/Features/Collaborators/CollaboratorsInviteHelper.js'
-import { fileURLToPath } from 'url'
-
-const { batchedUpdate } = BatchedUpdateModule
+import { fileURLToPath } from 'node:url'
 
 const argv = minimist(process.argv.slice(2), {
   boolean: ['dry-run', 'help'],
@@ -19,7 +17,7 @@ async function addTokenHmacField(DRY_RUN) {
   const query = { tokenHmac: { $exists: false } }
 
   await batchedUpdate(
-    'projectInvites',
+    db.projectInvites,
     query,
     async invites => {
       for (const invite of invites) {
@@ -53,7 +51,6 @@ async function addTokenHmacField(DRY_RUN) {
 }
 
 async function main(DRY_RUN) {
-  await waitForDb()
   await addTokenHmacField(DRY_RUN)
 }
 

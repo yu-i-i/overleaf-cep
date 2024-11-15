@@ -1,9 +1,9 @@
-const Crypto = require('crypto')
-const Stream = require('stream')
-const { pipeline } = require('stream/promises')
+const Crypto = require('node:crypto')
+const Stream = require('node:stream')
+const { pipeline } = require('node:stream/promises')
 const Logger = require('@overleaf/logger')
 const Metrics = require('@overleaf/metrics')
-const { WriteError, NotFoundError } = require('./Errors')
+const { WriteError, NotFoundError, AlreadyWrittenError } = require('./Errors')
 
 const _128KiB = 128 * 1024
 const TIMING_BUCKETS = [
@@ -26,12 +26,14 @@ const SIZE_BUCKETS = [
  */
 class ObserverStream extends Stream.Transform {
   /**
-   * @param {string} metric prefix for metrics
-   * @param {string} bucket name of source/target bucket
-   * @param {string} hash optional hash algorithm, e.g. 'md5'
+   * @param {Object} opts
+   * @param {string} opts.metric prefix for metrics
+   * @param {string} opts.bucket name of source/target bucket
+   * @param {string} [opts.hash] optional hash algorithm, e.g. 'md5'
    */
-  constructor({ metric, bucket, hash = '' }) {
+  constructor(opts) {
     super({ autoDestroy: true })
+    const { metric, bucket, hash = '' } = opts
 
     this.bytes = 0
     this.start = performance.now()
@@ -146,6 +148,13 @@ function wrapError(error, message, params, ErrorType) {
     (error.response && error.response.statusCode === 404)
   ) {
     return new NotFoundError('no such file', params, error)
+  } else if (
+    params.ifNoneMatch === '*' &&
+    (error.code === 'PreconditionFailed' ||
+      error.response?.statusCode === 412 ||
+      error instanceof AlreadyWrittenError)
+  ) {
+    return new AlreadyWrittenError(message, params, error)
   } else {
     return new ErrorType(message, params, error)
   }

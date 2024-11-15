@@ -1,8 +1,7 @@
 import NotificationsBuilder from '../app/src/Features/Notifications/NotificationsBuilder.js'
-import { db, waitForDb } from '../app/src/infrastructure/mongodb.js'
-import BatchedUpdateModule from './helpers/batchedUpdate.mjs'
+import { db } from '../app/src/infrastructure/mongodb.js'
+import { batchedUpdate } from '@overleaf/mongo-utils/batchedUpdate.js'
 
-const { batchedUpdate } = BatchedUpdateModule
 const DRY_RUN = !process.argv.includes('--dry-run=false')
 
 if (DRY_RUN) {
@@ -57,9 +56,7 @@ async function processBatch(groupSubscriptionsBatch) {
 }
 
 async function main() {
-  await waitForDb()
-
-  await batchedUpdate('subscriptions', { groupPlan: true }, processBatch, {
+  await batchedUpdate(db.subscriptions, { groupPlan: true }, processBatch, {
     member_ids: 1,
   })
 }

@@ -1,12 +1,9 @@
-import Path from 'path'
-import mongodb from '../../app/src/infrastructure/mongodb.js'
-import Mongoose from '../../app/src/infrastructure/Mongoose.js'
-import { fileURLToPath } from 'url'
+import Path from 'node:path'
+import { db } from '../../app/src/infrastructure/mongodb.js'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = Path.dirname(__filename)
-const { db, waitForDb } = mongodb
-const { getNativeDb } = Mongoose
 
 class Adapter {
   constructor(params) {
@@ -26,9 +23,7 @@ class Adapter {
   }
 
   async connect() {
-    await waitForDb()
-    const nativeDb = await getNativeDb()
-    return { db, nativeDb }
+    return { db }
   }
 
   disconnect() {
@@ -36,7 +31,6 @@ class Adapter {
   }
 
   async getExecutedMigrationNames() {
-    const { db } = await this.connect()
     const migrations = await db.migrations
       .find({}, { sort: { migratedAt: 1 }, projection: { name: 1 } })
       .toArray()
@@ -44,7 +38,6 @@ class Adapter {
   }
 
   async markExecuted(name) {
-    const { db } = await this.connect()
     return db.migrations.insertOne({
       name,
       migratedAt: new Date(),
@@ -52,7 +45,6 @@ class Adapter {
   }
 
   async unmarkExecuted(name) {
-    const { db } = await this.connect()
     return db.migrations.deleteOne({
       name,
     })

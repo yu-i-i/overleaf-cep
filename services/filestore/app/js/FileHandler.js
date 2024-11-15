@@ -1,6 +1,6 @@
 const Settings = require('@overleaf/settings')
-const { callbackify } = require('util')
-const fs = require('fs')
+const { callbackify } = require('node:util')
+const fs = require('node:fs')
 let PersistorManager = require('./PersistorManager')
 const LocalFileWriter = require('./LocalFileWriter')
 const FileConverter = require('./FileConverter')
@@ -130,7 +130,7 @@ async function getFileSize(bucket, key) {
 }
 
 async function getDirectorySize(bucket, projectId) {
-  return PersistorManager.directorySize(bucket, projectId)
+  return await PersistorManager.directorySize(bucket, projectId)
 }
 
 async function _getConvertedFile(bucket, key, opts) {

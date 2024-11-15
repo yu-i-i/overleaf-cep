@@ -80,6 +80,13 @@ export default {
       SubscriptionGroupController.removeSelfFromGroup
     )
 
+    webRouter.get(
+      '/user/subscription/group/request-confirmation',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
+      SubscriptionGroupController.requestConfirmation
+    )
+
     // Team invites
     webRouter.get(
       '/subscription/invites/:token/',
@@ -119,6 +126,12 @@ export default {
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
       SubscriptionController.updateSubscription
+    )
+    webRouter.get(
+      '/user/subscription/addon/:addOnCode/add',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(subscriptionRateLimiter),
+      SubscriptionController.previewAddonPurchase
     )
     webRouter.post(
       '/user/subscription/addon/:addOnCode/add',

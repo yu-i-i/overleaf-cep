@@ -525,6 +525,16 @@ describe('SubscriptionController', function () {
         })
       })
     })
+    it('should return correct countryCode', function (done) {
+      this.GeoIpLookup.promises.getCurrencyCode.resolves({
+        countryCode: 'MX',
+      })
+      this.res.render = (page, opts) => {
+        expect(opts.countryCode).to.equal('MX')
+        done()
+      }
+      this.SubscriptionController.plansPage(this.req, this.res)
+    })
   })
 
   describe('plansPage light touch redesign', function () {
@@ -772,6 +782,17 @@ describe('SubscriptionController', function () {
         this.SubscriptionController.plansPageLightDesign(this.req, this.res)
       })
     })
+
+    it('should return correct countryCode', function (done) {
+      this.GeoIpLookup.promises.getCurrencyCode.resolves({
+        countryCode: 'MX',
+      })
+      this.res.render = (page, opts) => {
+        expect(opts.countryCode).to.equal('MX')
+        done()
+      }
+      this.SubscriptionController.plansPageLightDesign(this.req, this.res)
+    })
   })
 
   describe('interstitialPaymentPage', function () {
@@ -959,6 +980,17 @@ describe('SubscriptionController', function () {
         })
       })
     })
+
+    it('should return correct countryCode', function (done) {
+      this.GeoIpLookup.promises.getCurrencyCode.resolves({
+        countryCode: 'MX',
+      })
+      this.res.render = (page, opts) => {
+        expect(opts.countryCode).to.equal('MX')
+        done()
+      }
+      this.SubscriptionController.interstitialPaymentPage(this.req, this.res)
+    })
   })
 
   describe('successfulSubscription', function () {
@@ -985,6 +1017,7 @@ describe('SubscriptionController', function () {
           title: 'thank_you',
           personalSubscription: 'foo',
           postCheckoutRedirect: undefined,
+          user: this.user,
         })
         done()
       }

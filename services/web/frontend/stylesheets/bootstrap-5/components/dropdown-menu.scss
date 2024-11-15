@@ -1,5 +1,20 @@
 .dropdown {
   display: inline-flex;
+
+  .no-left-border {
+    border-left: none;
+  }
+
+  .custom-toggle {
+    &::after {
+      content: none !important;
+    }
+
+    padding-left: var(--spacing-04);
+    padding-right: var(--spacing-05);
+    display: flex;
+    align-items: center;
+  }
 }
 
 .dropdown-header {
@@ -7,6 +22,15 @@
 
   padding: var(--spacing-05) var(--spacing-06) var(--spacing-02)
     var(--spacing-04);
+}
+
+.dropdown-menu.dropdown-menu-unpositioned {
+  position: unset;
+  top: unset;
+  left: unset;
+  z-index: unset;
+  display: block;
+  float: unset;
 }
 
 .dropdown-menu {

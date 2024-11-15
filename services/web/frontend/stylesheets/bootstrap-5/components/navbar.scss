@@ -84,6 +84,19 @@
           background-color: var(--navbar-subdued-hover-bg);
         }
       }
+
+      &.primary > .nav-link {
+        color: var(--navbar-primary-color);
+        background-color: var(--navbar-primary-bg);
+        border-color: var(--navbar-primary-border-color);
+
+        &.show,
+        &:hover,
+        &:focus {
+          background-color: var(--navbar-primary-hover-bg);
+          border-color: var(--navbar-primary-hover-border-color);
+        }
+      }
     }
   }
 
@@ -136,7 +149,8 @@
         display: block;
 
         > a,
-        > .dropdown-toggle {
+        > .dropdown-toggle,
+        > .nav-link {
           margin: 0;
           padding-top: var(--spacing-05);
           padding-bottom: var(--spacing-05);
@@ -198,7 +212,8 @@
   }
 }
 
-.website-redesign-navbar {
+.website-redesign-navbar,
+.website-redesign .navbar-default {
   --navbar-title-color: var(--content-primary);
   --navbar-title-color-hover: var(--content-secondary);
   --navbar-brand-image-url: url('../../../../public/img/ol-brand/overleaf-black.svg');
