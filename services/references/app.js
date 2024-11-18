@@ -21,7 +21,7 @@ const settings =
     ? Settings.internal.references
     : undefined
 const host = settings && settings.host ? settings.host : 'localhost'
-const port = settings && settings.port ? settings.port : 3036
+const port = settings && settings.port ? settings.port : 3056
 
 logger.debug('Listening at', { host, port })
 
