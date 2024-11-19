@@ -25,7 +25,11 @@
 
 ## Extended Community Edition
 
-The present "extended" version of Overleaf CE includes LDAP authentication and enhanced collaboration features such as tracked changes and comments.
+The present "extended" version of Overleaf CE includes:
+
+- LDAP authentication
+- Real-time track changes and comments
+- Autocomplete of reference keys
 
 ## Enterprise
 

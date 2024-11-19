@@ -33,7 +33,6 @@ export default {
           logger.error({ error }, "bib file skipped.")
         }
       }
-      console.log("All keys: ", keys)
       res.status(200).json({ keys })
     } catch (error) {
       logger.error({ error }, "Unexpected error during indexing process.")

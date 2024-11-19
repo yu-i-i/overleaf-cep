@@ -1002,7 +1002,7 @@ module.exports = {
 
   splitTestOverrides: {
 //  'history-ranges-support': 'enabled',
-    'math-preview': 'enabled',
+//  'math-preview': 'enabled',
   },
 }
 
