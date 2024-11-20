@@ -201,6 +201,7 @@ class PerProjectEncryptedS3Persistor extends S3Persistor {
         // Do not overwrite any objects if already created
         ifNoneMatch: '*',
         ssecOptions: await this.#getCurrentKeyEncryptionKey(projectFolder),
+        contentLength: 32,
       }
     )
     return new SSECOptions(dataEncryptionKey)
@@ -311,6 +312,16 @@ class PerProjectEncryptedS3Persistor extends S3Persistor {
     return await super.getObjectSize(bucketName, path, { ...opts, ssecOptions })
   }
 
+  async getObjectStorageClass(bucketName, path, opts = {}) {
+    const ssecOptions =
+      opts.ssecOptions ||
+      (await this.#getExistingDataEncryptionKeyOptions(bucketName, path))
+    return await super.getObjectStorageClass(bucketName, path, {
+      ...opts,
+      ssecOptions,
+    })
+  }
+
   async directorySize(bucketName, path, continuationToken) {
     // Note: Listing a bucket does not require SSE-C credentials.
     return await super.directorySize(bucketName, path, continuationToken)
@@ -394,6 +405,7 @@ class CachedPerProjectEncryptedS3Persistor {
    * @param {Object} opts
    * @param {string} [opts.contentType]
    * @param {string} [opts.contentEncoding]
+   * @param {number} [opts.contentLength]
    * @param {'*'} [opts.ifNoneMatch]
    * @param {SSECOptions} [opts.ssecOptions]
    * @param {string} [opts.sourceMd5]

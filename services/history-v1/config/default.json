@@ -13,12 +13,23 @@
       "deleteConcurrency": "50"
     }
   },
+  "backupPersistor": {
+    "backend": "s3SSEC",
+    "s3SSEC": {
+      "maxRetries": "1",
+      "pathStyle": false,
+      "httpOptions": {
+        "timeout": "8000"
+      }
+    }
+  },
   "chunkStore": {
     "historyStoreConcurrency": "4"
   },
   "zipStore": {
     "zipTimeoutMs": "360000"
   },
+  "minSoftDeletionPeriodDays": "90",
   "maxDeleteKeys": "1000",
   "useDeleteObjects": "true",
   "clusterWorkers": "1",

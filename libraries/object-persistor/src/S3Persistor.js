@@ -64,6 +64,7 @@ class S3Persistor extends AbstractPersistor {
   constructor(settings = {}) {
     super()
 
+    settings.storageClass = settings.storageClass || {}
     this.settings = settings
   }
 
@@ -84,6 +85,7 @@ class S3Persistor extends AbstractPersistor {
    * @param {Object} opts
    * @param {string} [opts.contentType]
    * @param {string} [opts.contentEncoding]
+   * @param {number} [opts.contentLength]
    * @param {'*'} [opts.ifNoneMatch]
    * @param {SSECOptions} [opts.ssecOptions]
    * @param {string} [opts.sourceMd5]
@@ -100,11 +102,15 @@ class S3Persistor extends AbstractPersistor {
       // observer will catch errors, clean up and log a warning
       pipeline(readStream, observer, () => {})
 
-      // if we have an md5 hash, pass this to S3 to verify the upload
+      /** @type {S3.PutObjectRequest} */
       const uploadOptions = {
         Bucket: bucketName,
         Key: key,
         Body: observer,
+      }
+
+      if (this.settings.storageClass[bucketName]) {
+        uploadOptions.StorageClass = this.settings.storageClass[bucketName]
       }
 
       if (opts.contentType) {
@@ -112,6 +118,9 @@ class S3Persistor extends AbstractPersistor {
       }
       if (opts.contentEncoding) {
         uploadOptions.ContentEncoding = opts.contentEncoding
+      }
+      if (opts.contentLength) {
+        uploadOptions.ContentLength = opts.contentLength
       }
       if (opts.ifNoneMatch === '*') {
         uploadOptions.IfNoneMatch = '*'
@@ -129,9 +138,15 @@ class S3Persistor extends AbstractPersistor {
         clientOptions.computeChecksums = true
       }
 
-      await this._getClientForBucket(bucketName, clientOptions)
-        .upload(uploadOptions, { partSize: this.settings.partSize })
-        .promise()
+      if (this.settings.disableMultiPartUpload) {
+        await this._getClientForBucket(bucketName, clientOptions)
+          .putObject(uploadOptions)
+          .promise()
+      } else {
+        await this._getClientForBucket(bucketName, clientOptions)
+          .upload(uploadOptions, { partSize: this.settings.partSize })
+          .promise()
+      }
     } catch (err) {
       throw PersistorHelper.wrapError(
         err,
@@ -145,7 +160,7 @@ class S3Persistor extends AbstractPersistor {
   /**
    * @param {string} bucketName
    * @param {string} key
-   * @param {Object} opts
+   * @param {Object} [opts]
    * @param {number} [opts.start]
    * @param {number} [opts.end]
    * @param {boolean} [opts.autoGunzip]
@@ -334,6 +349,18 @@ class S3Persistor extends AbstractPersistor {
   async getObjectSize(bucketName, key, opts = {}) {
     const response = await this.#headObject(bucketName, key, opts)
     return response.ContentLength || 0
+  }
+
+  /**
+   * @param {string} bucketName
+   * @param {string} key
+   * @param {Object} opts
+   * @param {SSECOptions} [opts.ssecOptions]
+   * @return {Promise<string | undefined>}
+   */
+  async getObjectStorageClass(bucketName, key, opts = {}) {
+    const response = await this.#headObject(bucketName, key, opts)
+    return response.StorageClass
   }
 
   /**
