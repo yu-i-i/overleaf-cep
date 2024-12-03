@@ -3,7 +3,7 @@ import Path from 'node:path'
 let ProjectEditorHandler
 
 export default ProjectEditorHandler = {
-  trackChangesAvailable: false,
+  trackChangesAvailable: true,
 
   buildProjectModelView(
     project,
