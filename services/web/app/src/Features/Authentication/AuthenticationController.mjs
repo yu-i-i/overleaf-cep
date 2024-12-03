@@ -102,9 +102,9 @@ const AuthenticationController = {
     // so we can send back our custom `{message: {text: "", type: ""}}` responses on failure,
     // and send a `{redir: ""}` response on success
     passport.authenticate(
-      'local',
+      Settings.ldap?.enable ? ['custom-fail-ldapauth','local'] : ['local'],
       { keepSessionInfo: true },
-      async function (err, user, info) {
+      async function (err, user, infoArray) {
         if (err) {
           return next(err)
         }
@@ -126,6 +126,7 @@ const AuthenticationController = {
             return next(err)
           }
         } else {
+	  let info = infoArray[0]
           if (info.redir != null) {
             return res.json({ redir: info.redir })
           } else {
