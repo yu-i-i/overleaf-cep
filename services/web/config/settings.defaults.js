@@ -1193,6 +1193,7 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'sandboxed-compiles',
+    'user-activate',
     'symbol-palette',
     'reference-picker',
     'track-changes',
