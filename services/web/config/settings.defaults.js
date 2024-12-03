@@ -990,6 +990,8 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    'ldap-authentication',
+    'saml-authentication',
   ],
   viewIncludes: {},
 
