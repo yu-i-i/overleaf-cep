@@ -17,6 +17,10 @@ async function generateAndEmailResetToken(email) {
     return null
   }
 
+  if (!user.hashedPassword) {
+    return 'external'
+  }
+
   if (user.email !== email) {
     return 'secondary'
   }
