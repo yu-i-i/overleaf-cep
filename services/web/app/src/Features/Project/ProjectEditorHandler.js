@@ -4,7 +4,7 @@ const Path = require('path')
 const Features = require('../../infrastructure/Features')
 
 module.exports = ProjectEditorHandler = {
-  trackChangesAvailable: false,
+  trackChangesAvailable: true,
 
   buildProjectModelView(project, members, invites) {
     let owner, ownerFeatures
