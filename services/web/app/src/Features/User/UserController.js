@@ -397,7 +397,7 @@ async function updateUserSettings(req, res, next) {
   if (
     newEmail == null ||
     newEmail === user.email ||
-    req.externalAuthenticationSystemUsed()
+    (req.externalAuthenticationSystemUsed() && !user.hashedPassword)
   ) {
     // end here, don't update email
     SessionManager.setInSessionUser(req.session, {
@@ -474,6 +474,7 @@ async function doLogout(req) {
 }
 
 async function logout(req, res, next) {
+  if (req?.session.saml_extce) return res.redirect(308, '/saml/logout')
   const requestedRedirect = req.body.redirect
     ? UrlHelper.getSafeRedirectPath(req.body.redirect)
     : undefined
