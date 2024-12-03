@@ -154,7 +154,8 @@ function registerExternalAuthAdmin(authMethod) {
       await User.updateOne(
         { _id: user._id },
         {
-          $set: { isAdmin: true, emails: [{ email, reversedHostname }] },
+          $set: { isAdmin: true, emails: [{ email, reversedHostname, 'confirmedAt' : Date.now() }] },
+          $unset: { 'hashedPassword': "" }, // external-auth user must not have a hashedPassword
         }
       ).exec()
     } catch (err) {
