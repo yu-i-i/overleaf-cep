@@ -996,6 +996,8 @@ module.exports = {
     'user-activate',
     'symbol-palette',
     'track-changes',
+    'ldap-authentication',
+    'saml-authentication',
   ],
   viewIncludes: {},
 
