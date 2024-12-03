@@ -3,7 +3,7 @@ const _ = require('lodash')
 const Path = require('path')
 
 module.exports = ProjectEditorHandler = {
-  trackChangesAvailable: false,
+  trackChangesAvailable: true,
 
   buildProjectModelView(
     project,
