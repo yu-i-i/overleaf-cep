@@ -19,10 +19,10 @@ block content
 								| !{translate('password_compromised_try_again_or_use_known_device_or_reset', {}, [{name: 'a', attrs: {href: 'https://haveibeenpwned.com/passwords', rel: 'noopener noreferrer', target: '_blank'}}, {name: 'a', attrs: {href: '/user/password/reset', target: '_blank'}}])}.
 							.form-group
 								input.form-control(
-									type='email',
+									type=(settings.ldap && settings.ldap.enable) ? 'text' : 'email',
 									name='email',
 									required,
-									placeholder='email@example.com',
+									placeholder=(settings.ldap && settings.ldap.enable) ? settings.ldap.placeholder : 'email@example.com',
 									autofocus="true"
 								)
 							.form-group
@@ -40,3 +40,12 @@ block content
 									span(data-ol-inflight="idle") #{translate("login")}
 									span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
 								a.pull-right(href='/user/password/reset') #{translate("forgot_your_password")}?
+						if settings.saml && settings.saml.enable
+							form(data-ol-async-form, name="samlLoginForm")
+								.actions(style='margin-top: 30px;')
+									a.btn.btn-secondary.btn-block(
+										href='/saml/login',
+										data-ol-disabled-inflight
+									)
+										span(data-ol-inflight="idle") #{settings.saml.identityServiceName}
+										span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
