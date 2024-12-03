@@ -1400,6 +1400,10 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
     TokenAccessController.grantTokenAccessReadOnly
   )
 
+  webRouter.get(['/learn*', '/templates*', '/blog*', '/latex*', '/for/*', '/contact*'], (req, res) => {
+    res.redirect(301, `https://www.overleaf.com${req.originalUrl}`)
+  })
+
   webRouter.get('/unsupported-browser', renderUnsupportedBrowserPage)
 
   webRouter.get('*', ErrorController.notFound)
