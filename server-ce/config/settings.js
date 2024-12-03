@@ -473,19 +473,21 @@ switch (process.env.OVERLEAF_FILESTORE_BACKEND) {
 // Overleaf CEP Compiler options to enable sandboxed compiles.
 // --------
 if (process.env.SANDBOXED_COMPILES === 'true') {
-  settings.clsi = {
-    dockerRunner: true,
-    docker: {
-      image: process.env.TEX_LIVE_DOCKER_IMAGE,
-      env: {
-        HOME: '/tmp',
-        PATH:
-          process.env.COMPILER_PATH ||
-          '/usr/local/texlive/2015/bin/x86_64-linux:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-      },
-      user: 'www-data',
-    },
+  if (!settings.clsi) {
+    settings.clsi = {}; 
   }
+
+  settings.clsi.dockerRunner = true;
+  settings.clsi.docker = {
+    image: process.env.TEX_LIVE_DOCKER_IMAGE,
+    env: { 
+      HOME: '/tmp',
+      PATH:
+        process.env.COMPILER_PATH ||
+        '/usr/local/texlive/2015/bin/x86_64-linux:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+    },
+    user: 'www-data',
+  };
 
   if (settings.path == null) {
     settings.path = {}
