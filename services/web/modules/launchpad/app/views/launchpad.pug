@@ -129,6 +129,41 @@ block content
 																span(data-ol-inflight='idle') #{translate("register")}
 																span(hidden data-ol-inflight='pending') #{translate("registering")}…
 
+													h3 #{translate('local_account')}
+													p
+														| #{translate('alternatively_create_local_admin_account')}
+
+													form(
+														data-ol-async-form
+														data-ol-register-admin
+														action='/launchpad/register_admin'
+														method='POST'
+													)
+														input(name='_csrf' type='hidden' value=csrfToken)
+														+formMessages
+														.form-group
+															label.form-label(for='email') #{translate("email")}
+															input.form-control(
+																name='email'
+																type='email'
+																id='email-local'
+																autocomplete='username'
+																required
+																autofocus='true'
+															)
+														.form-group
+															label.form-label(for='passwordField') #{translate("password")}
+															input#passwordField.form-control(
+																name='password'
+																type='password'
+																autocomplete='new-password'
+																required
+															)
+														.actions
+															button.btn-primary.btn(type='submit' data-ol-disabled-inflight)
+																span(data-ol-inflight='idle') #{translate("register")}
+																span(hidden data-ol-inflight='pending') #{translate("registering")}…
+
 												// Saml Form
 												if authMethod === 'saml'
 													h3 #{translate('saml')}
@@ -152,6 +187,41 @@ block content
 																autocomplete='username'
 																required
 																autofocus='true'
+															)
+														.actions
+															button.btn-primary.btn(type='submit' data-ol-disabled-inflight)
+																span(data-ol-inflight='idle') #{translate("register")}
+																span(hidden data-ol-inflight='pending') #{translate("registering")}…
+
+													h3 #{translate('local_account')}
+													p
+														| #{translate('alternatively_create_local_admin_account')}
+
+													form(
+														data-ol-async-form
+														data-ol-register-admin
+														action='/launchpad/register_admin'
+														method='POST'
+													)
+														input(name='_csrf' type='hidden' value=csrfToken)
+														+formMessages
+														.form-group
+															label.form-label(for='email-local') #{translate("email")}
+															input.form-control(
+																name='email'
+																type='email'
+																id='email-local'
+																autocomplete='username'
+																required
+																autofocus='true'
+															)
+														.form-group
+															label.form-label(for='passwordField') #{translate("password")}
+															input#passwordField.form-control(
+																name='password'
+																type='password'
+																autocomplete='new-password'
+																required
 															)
 														.actions
 															button.btn-primary.btn(type='submit' data-ol-disabled-inflight)
