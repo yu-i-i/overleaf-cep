@@ -24,9 +24,9 @@ block content
 								.form-group
 									input.form-control(
 										name='email'
-										type='email'
+										type=(settings.ldap && settings.ldap.enable) ? 'text' : 'email'
 										required
-										placeholder='email@example.com'
+										placeholder=(settings.ldap && settings.ldap.enable) ? settings.ldap.placeholder : 'email@example.com'
 										autofocus='true'
 									)
 								.form-group
@@ -44,3 +44,12 @@ block content
 								if login_support_text
 									hr
 									p.text-center !{login_support_text}
+							if settings.saml && settings.saml.enable
+								form(data-ol-async-form, name="samlLoginForm")
+									.actions(style='margin-top: 30px;')
+										a.btn.btn-secondary.btn-block(
+											href='/saml/login',
+											data-ol-disabled-inflight
+										)
+											span(data-ol-inflight="idle") #{settings.saml.identityServiceName}
+											span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
