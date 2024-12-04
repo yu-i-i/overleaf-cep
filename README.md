@@ -35,6 +35,54 @@ Sign up to the [mailing list](https://mailchi.mp/overleaf.com/community-edition-
 
 We have detailed installation instructions in the [Overleaf Toolkit](https://github.com/overleaf/toolkit/).
 
+<details>
+<summary><h3>Sandboxed Compiles</h3></summary>
+
+To enable sandboxed compiles, edit `docker-compose.override.yml` to include the following `volumes` and `environment` configuration options.
+
+```yml
+---
+version: '2.2'
+services:
+    sharelatex:
+        volumes:
+            "${DOCKER_SOCKET_PATH}": "/var/run/docker.sock"
+    
+        environment:
+            DOCKER_RUNNER: 'true'
+            SANDBOXED_COMPILES: 'true'
+            SANDBOXED_COMPILES_SIBLING_CONTAINERS: 'true'
+            SANDBOXED_COMPILES_HOST_DIR: "${OVERLEAF_DATA_PATH}/data/compiles"
+            SYNCTEX_BIN_HOST_PATH: "${OVERLEAF_DATA_PATH}/bin/synctex"
+            TEXLIVE_IMAGE: "texlive/texlive:latest-full"
+            TEX_LIVE_DOCKER_IMAGE: "texlive/texlive:latest-full"
+```
+
+Edit `overleaf-toolkit/config/overleaf.rc` to set the following configuration options to an appropriate value for your host machine.
+
+```text
+# Sibling Containers
+# The following option is in comments to silence a built-in warning, will be enabled differently
+# SIBLING_CONTAINERS_ENABLED=true
+DOCKER_SOCKET_PATH=/var/run/docker.sock
+```
+
+Note that `SIBLING_CONTAINERS_ENABLED` is commented out to silence the following warning that Overleaf prints at startup (the option is set in the docker-compose file instead):
+
+> WARNING: SIBLING_CONTAINERS_ENABLED=true is not supported in Overleaf Community Edition.
+>   Sibling containers are not available in Community Edition, which is intended for use in environments where all users are trusted. Community Edition is not appropriate for scenarios where isolation of users is required.
+>   When not using Sibling containers, users have full read and write access to the 'sharelatex' container resources (filesystem, network, environment variables) when running LaTeX compiles.
+>   Sibling containers are offered as part of our Server Pro offering and you can read more about the differences at https://www.overleaf.com/for/enterprises/features.
+>   Falling back using insecure in-container compiles. Set SIBLING_CONTAINERS_ENABLED=false in config/overleaf.rc to silence this warning.
+
+The above `docker-compose.override.yml` will compile documents in a fresh docker container that uses the `texlive/texlive:latest-full` image. This image is not automatically installed, and must be available on the system. Before starting overleaf, you can make it available on the host system as follows:
+
+```sh
+docker pull texlive/texlive:latest-full
+```
+
+</details>
+
 ## Upgrading
 
 If you are upgrading from a previous version of Overleaf, please see the [Release Notes section on the Wiki](https://github.com/overleaf/overleaf/wiki#release-notes) for all of the versions between your current version and the version you are upgrading to.
