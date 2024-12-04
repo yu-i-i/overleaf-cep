@@ -458,6 +458,41 @@ switch (process.env.OVERLEAF_FILESTORE_BACKEND) {
     }
 }
 
+// Overleaf Extended CE Compiler options to enable sandboxed compiles.
+// -----------
+if (process.env.SANDBOXED_COMPILES === 'true') {
+  settings.clsi = {
+    ...settings.clsi,
+    dockerRunner: true,
+    docker: {
+      image: process.env.TEX_LIVE_DOCKER_IMAGE,
+      env: {
+        HOME: '/tmp',
+        PATH:
+          process.env.COMPILER_PATH ||
+          '/usr/local/bin:/usr/bin:/bin',
+      },
+      user: 'www-data',
+    }
+  }
+
+  if (settings.path == null) {
+    settings.path = {}
+  }
+  settings.path.synctexBaseDir = () => '/compile'
+  if (process.env.SANDBOXED_COMPILES_SIBLING_CONTAINERS === 'true') {
+    console.log('Using sibling containers for sandboxed compiles')
+    if (process.env.SANDBOXED_COMPILES_HOST_DIR) {
+      settings.path.sandboxedCompilesHostDir =
+        process.env.SANDBOXED_COMPILES_HOST_DIR
+    } else {
+      console.error(
+        'Sibling containers, but SANDBOXED_COMPILES_HOST_DIR not set'
+      )
+    }
+  }
+}
+
 // With lots of incoming and outgoing HTTP connections to different services,
 // sometimes long running, it is a good idea to increase the default number
 // of sockets that Node will hold open.
