@@ -261,6 +261,9 @@ module.exports = {
     notifications: {
       url: `http://${process.env.NOTIFICATIONS_HOST || '127.0.0.1'}:3042`,
     },
+    references: {
+      url: `http://${process.env.REFERENCES_HOST || '127.0.0.1'}:3056`,
+    },
     webpack: {
       url: `http://${process.env.WEBPACK_HOST || '127.0.0.1'}:3808`,
     },
@@ -990,6 +993,9 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    'track-changes',
+    'ldap-authentication',
+    'saml-authentication',
   ],
   viewIncludes: {},
 

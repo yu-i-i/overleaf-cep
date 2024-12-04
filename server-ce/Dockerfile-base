@@ -2,7 +2,7 @@
 # Overleaf Base Image (sharelatex/sharelatex-base)
 # --------------------------------------------------
 
-FROM phusion/baseimage:noble-1.0.0
+FROM phusion/baseimage:jammy-1.0.4
 
 # Makes sure LuaTex cache is writable
 # -----------------------------------
@@ -70,12 +70,7 @@ RUN mkdir /install-tl-unx \
       -repository ${TEXLIVE_MIRROR} \
     \
 &&  $(find /usr/local/texlive -name tlmgr) path add \
-&&  tlmgr install --repository ${TEXLIVE_MIRROR} \
-      latexmk \
-      texcount \
-      synctex \
-      etoolbox \
-      xetex \
+&&  tlmgr install --repository ${TEXLIVE_MIRROR} scheme-full \
 &&  tlmgr path add \
 &&  rm -rf /install-tl-unx
 
