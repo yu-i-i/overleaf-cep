@@ -16,7 +16,7 @@
 
 <img src="doc/screenshot.png" alt="A screenshot of a project being edited in Overleaf Community Edition">
 <p align="center">
-  Figure 1: A screenshot of a project being edited in extended Overleaf Community Edition.
+  Figure 1: A screenshot of a project being edited in Overleaf Extended Community Edition.
 </p>
 
 ## Community Edition
@@ -27,6 +27,7 @@
 
 The present "extended" version of Overleaf CE includes:
 
+- Sandboxed Compiles
 - LDAP authentication
 - SAML authentication
 - Real-time track changes and comments
@@ -34,19 +35,19 @@ The present "extended" version of Overleaf CE includes:
 
 ## Enterprise
 
-If you want help installing and maintaining Overleaf in your lab or workplace, Overleaf an officially supported version called [Overleaf Server Pro](https://www.overleaf.com/for/enterprises).
+If you want help installing and maintaining Overleaf in your lab or workplace, Overleaf offers an officially supported version called [Overleaf Server Pro](https://www.overleaf.com/for/enterprises).
 
 ## Installation
 
 Detailed installation instructions can be found in the [Overleaf Toolkit](https://github.com/overleaf/toolkit/).
-To run a custom image, add a file named docker-compose.override.yml with the following or similar content into the ./overleaf-toolkit/config directory:
+To run a custom image, add a file named docker-compose.override.yml with the following or similar content into the `overleaf-toolkit/config directory`:
 
-```
+```yml
 ---
 version: '2.2'
 services:
     sharelatex:
-        image: sharelatex/sharelatex:extce
+        image: sharelatex/sharelatex:ext-ce
         volumes:
           - ../config/certs:/overleaf/certs
 ```
@@ -54,8 +55,28 @@ Here, the attached volume provides convenient access for the container to the ce
 
 If you want to build a Docker image of the extended CE based on the upstream v5.2.1 codebase, check out the corresponding tag by running 
 ```
-git checkout v5.2.1-extce
+git checkout v5.2.1-ext-ce
 ```
+
+## Sandboxed Compiles
+
+To enable sandboxed compiles (the feature is also known as "Sibling containers"), set the following configuration options in `overleaf-toolkit/config/overleaf.rc`:
+
+```
+SERVER_PRO=true
+SIBLING_CONTAINERS_ENABLED=true
+```
+
+The following environment variables are used to determine which Tex Live images to use for sandboxed compiles:
+
+- `ALL_TEX_LIVE_DOCKER_IMAGES`
+    * A comma-separated list of TeX Live images to be downloaded or updated.
+      - Example: `ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full,texlive/texlive:TL2023-historic`
+- `TEX_LIVE_DOCKER_IMAGE`
+    * The TeX Live image to be used for compilation.
+      - Example: `TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full`
+
+For additional details refer to [Sandboxed Compiles](https://github.com/overleaf/toolkit/blob/master/doc/sandboxed-compiles.md).
 
 ## Authentication Methods
 
@@ -402,7 +423,7 @@ for `passport-saml` to get a feel for the configuration it expects.
 
 - `OVERLEAF_SAML_SIGNATURE_ALGORITHM`
     * Optionally set the signature algorithm for signing requests,
-          valid values are 'sha1' (default), 'sha256' (prefered), 'sha256' (most secure, check if your IdP supports it).
+          valid values are 'sha1' (default), 'sha256' (prefered), 'sha512' (most secure, check if your IdP supports it).
 
 - `OVERLEAF_SAML_ADDITIONAL_PARAMS`
     * JSON dictionary of additional query params to add to all requests.
@@ -599,8 +620,8 @@ This repo contains two dockerfiles, [`Dockerfile-base`](server-ce/Dockerfile-bas
 `sharelatex/sharelatex-base` image, and [`Dockerfile`](server-ce/Dockerfile) which builds the
 `sharelatex/sharelatex` (or "community") image.
 
-The Base image generally contains the basic dependencies like `wget` and
-`aspell`, plus `texlive`. We split this out because it's a pretty heavy set of
+The Base image generally contains the basic dependencies like `wget`, plus `texlive`.
+We split this out because it's a pretty heavy set of
 dependencies, and it's nice to not have to rebuild all of that every time.
 
 The `sharelatex/sharelatex` image extends the base image and adds the actual Overleaf code
@@ -623,3 +644,5 @@ Extensions for CE by: [yu-i-i](https://github.com/yu-i-i/overleaf-cep)
 ## License
 
 The code in this repository is released under the GNU AFFERO GENERAL PUBLIC LICENSE, version 3. A copy can be found in the [`LICENSE`](LICENSE) file.
+
+Copyright (c) Overleaf, 2014-2024.
