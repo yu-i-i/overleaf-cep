@@ -304,9 +304,6 @@ Please note: the user gains admin status if the search result is not empty, not 
     * The scope of the LDAP search can be `base`, `one`, or `sub` (default)
 
 <details>
-
-## Upgrading
-
 <summary><h5>Example</h5></summary>
 
 In the following example admins are members of a group `admins`, the objectClass of the entry `admins` is `groupOfNames`:
