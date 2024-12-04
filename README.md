@@ -46,7 +46,7 @@ To run a custom image, add a file named docker-compose.override.yml with the fol
 version: '2.2'
 services:
     sharelatex:
-        image: sharelatex/sharelatex:extce
+        image: sharelatex/sharelatex:ext-ce
         volumes:
           - ../config/certs:/overleaf/certs
 ```
