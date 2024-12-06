@@ -22,7 +22,6 @@ const ProjectOptionsHandler = {
     if (!imageName || !Array.isArray(settings.allowedImageNames)) {
       return
     }
-    imageName = imageName.toLowerCase()
     const isAllowed = settings.allowedImageNames.find(
       allowed => imageName === allowed.imageName
     )
@@ -30,7 +29,7 @@ const ProjectOptionsHandler = {
       throw new Error(`invalid imageName: ${imageName}`)
     }
     const conditions = { _id: projectId }
-    const update = { imageName: settings.imageRoot + '/' + imageName }
+    const update = { imageName: imageName }
     return Project.updateOne(conditions, update, {})
   },
 

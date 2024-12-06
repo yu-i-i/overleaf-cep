@@ -27,7 +27,7 @@
 
 The present "extended" version of Overleaf CE includes:
 
-- Sandboxed Compiles
+- Sandboxed Compiles with TeX Live image selection
 - LDAP authentication
 - SAML authentication
 - Real-time track changes and comments
@@ -53,30 +53,47 @@ services:
 ```
 Here, the attached volume provides convenient access for the container to the certificates needed for SAML or LDAP authentication.
 
-If you want to build a Docker image of the extended CE based on the upstream v5.2.1 codebase, check out the corresponding tag by running 
+If you want to build a Docker image of the extended CE based on the upstream v5.2.1 codebase, you can check out the corresponding tag by running:
+
 ```
 git checkout v5.2.1-ext-ce
 ```
+Alternatively, you can download a prebuilt image from Docker Hub:
+```
+docker pull overleafcep/sharelatex:2.5.1-ext-ce
+```
+Make sure to update the image name in overleaf-toolkit/config/docker-compose.override.yml accordingly.
 
 ## Sandboxed Compiles
 
-To enable sandboxed compiles (the feature is also known as "Sibling containers"), set the following configuration options in `overleaf-toolkit/config/overleaf.rc`:
+To enable sandboxed compiles (also known as "Sibling containers"), set the following configuration options in `overleaf-toolkit/config/overleaf.rc`:
 
 ```
 SERVER_PRO=true
 SIBLING_CONTAINERS_ENABLED=true
 ```
 
-The following environment variables are used to determine which Tex Live images to use for sandboxed compiles:
+The following environment variables are used to specify which TeX Live images to use for sandboxed compiles:
 
-- `ALL_TEX_LIVE_DOCKER_IMAGES`
-    * A comma-separated list of TeX Live images to be downloaded or updated.
-      - Example: `ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full,texlive/texlive:TL2023-historic`
-- `TEX_LIVE_DOCKER_IMAGE`
-    * The TeX Live image to be used for compilation.
-      - Example: `TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full`
+- `ALL_TEX_LIVE_DOCKER_IMAGES` **(required)**
+    * A comma-separated list of TeX Live images to use. These images will be downloaded or updated.
+      To skip downloading the images, set `SIBLING_CONTAINERS_PULL=false` in `config/overleaf.rc`.
+- `ALL_TEX_LIVE_DOCKER_IMAGE_NAMES`
+    * A comma-separated list of friendly names for the images. If omitted, the version name will be used (e.g., `latest-full`).
+- `TEX_LIVE_DOCKER_IMAGE` **(required)**
+    * The default TeX Live image that will be used for compiling new projects. The environment variable `ALL_TEX_LIVE_DOCKER_IMAGES` must include this image.
 
-For additional details refer to [Sandboxed Compiles](https://github.com/overleaf/toolkit/blob/master/doc/sandboxed-compiles.md).
+Users can select the image for their project in the project menu.
+
+Here is an example where the default TeX Live image is `latest-full` from Docker Hub, but the `TL2023-historic` image can be used for older projects:
+```
+ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2023-historic
+ALL_TEX_LIVE_DOCKER_IMAGE_NAMES=TeXLive 2024, TeXLive 2023
+TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
+```
+For additional details refer to
+[Server Pro: Sandboxed Compiles](https://github.com/overleaf/overleaf/wiki/Server-Pro:-Sandboxed-Compiles) and
+[Toolkit: Sandboxed Compiles](https://github.com/overleaf/toolkit/blob/master/doc/sandboxed-compiles.md).
 
 ## Authentication Methods
 
@@ -269,6 +286,14 @@ OVERLEAF_CUSTOM_EMAIL_FOOTER=This system is run by department x
 
 OVERLEAF_PROXY_LEARN=true
 NAV_HIDE_POWERED_BY=true
+
+########################
+## Sandboxed Compiles ##
+########################
+
+ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2023-historic
+ALL_TEX_LIVE_DOCKER_IMAGE_NAMES=TeXLive 2024, TeXLive 2023
+TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
 
 #################
 ## LDAP for CE ##
@@ -587,6 +612,14 @@ OVERLEAF_CUSTOM_EMAIL_FOOTER=This system is run by department x
 
 OVERLEAF_PROXY_LEARN=true
 NAV_HIDE_POWERED_BY=true
+
+########################
+## Sandboxed Compiles ##
+########################
+
+ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2023-historic
+ALL_TEX_LIVE_DOCKER_IMAGE_NAMES=TeXLive 2024, TeXLive 2023
+TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
 
 #################
 ## SAML for CE ##
