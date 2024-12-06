@@ -1020,6 +1020,16 @@ module.exports = {
   managedUsers: {
     enabled: false,
   },
+
+  allowedImageNames: (() => {
+    if (process.env.SANDBOXED_COMPILES != 'true') return null
+    const imageNames = parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGES);
+    const imageDescs = parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGE_NAMES);
+    return imageNames.map((imageName, index) => ({
+      imageName,
+      imageDesc: imageDescs[index] || imageName.split(':')[1],
+    }))
+  })()
 }
 
 module.exports.mergeWith = function (overrides) {
