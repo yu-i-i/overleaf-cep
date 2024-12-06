@@ -22,10 +22,7 @@ module.exports = ProjectEditorHandler = {
       deletedByExternalDataSource: project.deletedByExternalDataSource || false,
       members: [],
       invites: this.buildInvitesView(invites),
-      imageName:
-        project.imageName != null
-          ? Path.basename(project.imageName)
-          : undefined,
+      imageName: project.imageName,
     }
 
     ;({ owner, ownerFeatures, members } =
