@@ -39,7 +39,6 @@ const ProjectOptionsHandler = {
     if (!imageName || !Array.isArray(settings.allowedImageNames)) {
       return undefined
     }
-    imageName = imageName.toLowerCase()
     const isAllowed = settings.allowedImageNames.find(
       allowed => imageName === allowed.imageName
     )
