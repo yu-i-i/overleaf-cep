@@ -466,13 +466,7 @@ if (process.env.SANDBOXED_COMPILES === 'true') {
     dockerRunner: true,
     docker: {
       image: process.env.TEX_LIVE_DOCKER_IMAGE,
-      env: {
-        HOME: '/tmp',
-        PATH:
-          process.env.COMPILER_PATH ||
-          '/usr/local/bin:/usr/bin:/bin',
-      },
-      user: 'www-data',
+      user:  process.env.TEX_LIVE_DOCKER_USER || 'www-data',
     }
   }
 
