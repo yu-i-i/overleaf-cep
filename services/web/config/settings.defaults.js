@@ -958,7 +958,7 @@ module.exports = {
     pdfLogEntriesComponents: [],
     diagnosticActions: [],
     sourceEditorCompletionSources: [],
-    sourceEditorSymbolPalette: [],
+    sourceEditorSymbolPalette: ['@/features/symbol-palette/components/symbol-palette'],
     sourceEditorToolbarComponents: [],
     mainEditorLayoutModals: [],
     langFeedbackLinkingWidgets: [],
@@ -991,6 +991,7 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    'symbol-palette',
   ],
   viewIncludes: {},
 
