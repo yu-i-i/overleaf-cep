@@ -82,6 +82,7 @@ const AuthenticationController = {
       analyticsId: user.analyticsId || user._id,
       alphaProgram: user.alphaProgram || undefined, // only store if set
       betaProgram: user.betaProgram || undefined, // only store if set
+      externalAuth: user.externalAuth || false,
     }
     if (user.isAdmin) {
       lightUser.isAdmin = true
@@ -102,9 +103,9 @@ const AuthenticationController = {
     // so we can send back our custom `{message: {text: "", type: ""}}` responses on failure,
     // and send a `{redir: ""}` response on success
     passport.authenticate(
-      Settings.ldap?.enable ? ['custom-fail-ldapauth','local'] : ['local'],
+      'local',
       { keepSessionInfo: true },
-      async function (err, user, infoArray) {
+      async function (err, user, info) {
         if (err) {
           return next(err)
         }
@@ -126,7 +127,6 @@ const AuthenticationController = {
             return next(err)
           }
         } else {
-	  let info = infoArray[0]
           if (info.redir != null) {
             return res.json({ redir: info.redir })
           } else {
