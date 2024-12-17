@@ -53,3 +53,12 @@ block content
 									)
 										span(data-ol-inflight="idle") #{settings.saml.identityServiceName}
 										span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
+						if settings.oidc && settings.oidc.enable
+							form(data-ol-async-form, name="oidcLoginForm")
+								.actions(style='margin-top: 30px;')
+									a.btn.btn-secondary.btn-block(
+										href='/oidc/login',
+										data-ol-disabled-inflight
+									)
+										span(data-ol-inflight="idle") #{settings.oidc.identityServiceName}
+										span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
