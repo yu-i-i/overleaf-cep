@@ -39,11 +39,7 @@ function CanOnlyLogInThroughSSO() {
   return (
     <p>
       <Trans
-        i18nKey="you_cant_add_or_change_password_due_to_sso"
-        components={[
-          // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
-          <a href="https://docs.overleaf.com/accounts-and-security/email-address-and-login-options/logging-in-with-group-sso" />,
-        ]}
+        i18nKey="you_cant_add_or_change_password_due_to_ldap_or_sso"
       />
     </p>
   )

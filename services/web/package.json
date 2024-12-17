@@ -173,6 +173,7 @@
     "passport-ldapauth": "^2.1.4",
     "passport-local": "^1.0.0",
     "passport-oauth2": "patch:passport-oauth2@npm%3A1.6.1#~/.yarn/patches/passport-oauth2-npm-1.6.1.patch",
+    "passport-openidconnect": "^0.1.2",
     "passport-orcid": "0.0.4",
     "pug": "^3.0.3",
     "pug-runtime": "^3.0.1",

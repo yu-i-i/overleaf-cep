@@ -1,15 +1,16 @@
 import Settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
 import passport from 'passport'
-import AuthenticationController from '../../../../app/src/Features/Authentication/AuthenticationController.js'
-import AuthenticationManagerSaml from './AuthenticationManagerSaml.mjs'
-import UserController from '../../../../app/src/Features/User/UserController.js'
-import UserSessionsManager from '../../../../app/src/Features/User/UserSessionsManager.js'
-import { handleAuthenticateErrors } from '../../../../app/src/Features/Authentication/AuthenticationErrors.js'
-import { xmlResponse } from '../../../../app/src/infrastructure/Response.js'
+import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.js'
+import SAMLAuthenticationManager from './SAMLAuthenticationManager.mjs'
+import UserController from '../../../../../app/src/Features/User/UserController.js'
+import UserSessionsManager from '../../../../../app/src/Features/User/UserSessionsManager.js'
+import { handleAuthenticateErrors } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.js'
+import { xmlResponse } from '../../../../../app/src/infrastructure/Response.js'
+import { readFilesContentFromEnv } from '../../../utils.mjs'
 
-const AuthenticationControllerSaml = {
-  passportSamlAuthWithIdP(req, res, next) {
+const SAMLAuthenticationController = {
+  passportLogin(req, res, next) {
     if ( passport._strategy('saml')._saml.options.authnRequestBinding === 'HTTP-POST') {
       const csp = res.getHeader('Content-Security-Policy')
       if (csp) {
@@ -21,7 +22,7 @@ const AuthenticationControllerSaml = {
     }
     passport.authenticate('saml')(req, res, next)
   },
-  passportSamlLogin(req, res, next) {
+  passportLoginCallback(req, res, next) {
     // This function is middleware which wraps the passport.authenticate middleware,
     // so we can send back our custom `{message: {text: "", type: ""}}` responses on failure,
     // and send a `{redir: ""}` response on success
@@ -46,24 +47,19 @@ const AuthenticationControllerSaml = {
           if (info.redir != null) {
             return res.json({ redir: info.redir })
           } else {
-            res.status(info.status || 200)
+            res.status(info.status || 401)
             delete info.status
             const body = { message: info }
-            const { errorReason } = info
-            if (errorReason) {
-              body.errorReason = errorReason
-              delete info.errorReason
-            }
             return res.json(body)
           }
         }
       }
     )(req, res, next)
   },
-  async doPassportSamlLogin(req, profile, done) {
+  async doPassportLogin(req, profile, done) {
     let user, info
     try {
-      ;({ user, info } = await AuthenticationControllerSaml._doPassportSamlLogin(
+      ;({ user, info } = await SAMLAuthenticationController._doPassportLogin(
         req,
         profile
       ))
@@ -72,7 +68,7 @@ const AuthenticationControllerSaml = {
     }
     return done(undefined, user, info)
   },
-  async _doPassportSamlLogin(req, profile) {
+  async _doPassportLogin(req, profile) {
     const { fromKnownDevice } = AuthenticationController.getAuditInfo(req)
     const auditLog = {
       ipAddress: req.ip,
@@ -81,7 +77,7 @@ const AuthenticationControllerSaml = {
 
     let user
     try {
-      user = await AuthenticationManagerSaml.promises.findOrCreateSamlUser(profile, auditLog)
+      user = await SAMLAuthenticationManager.promises.findOrCreateUser(profile, auditLog)
     } catch (error) {
       return {
         user: false,
@@ -89,9 +85,10 @@ const AuthenticationControllerSaml = {
       }
     }
     if (user) {
+      user.externalAuth = 'saml'
       req.session.saml_extce = {nameID : profile.nameID, sessionIndex : profile.sessionIndex}
       return { user, info: undefined }
-    } else { //something wrong
+    } else { // we cannot be here, something is terribly wrong
       logger.debug({ email : profile.mail }, 'failed SAML log in')
       return {
         user: false,
@@ -103,23 +100,24 @@ const AuthenticationControllerSaml = {
       }
     }
   },
-  async passportSamlSPLogout(req, res, next) {
+  async passportLogout(req, res, next) {
     passport._strategy('saml').logout(req, async (err, url) => {
-      if (err) logger.error({ err }, 'can not generate logout url')
       await UserController.promises.doLogout(req)
+      if (err) return next(err)
       res.redirect(url)
     })
   },
-  passportSamlIdPLogout(req, res, next) {
+  passportLogoutCallback(req, res, next) {
+//TODO: is it possible to close the editor?
     passport.authenticate('saml')(req, res, (err) => {
       if (err) return next(err)
       res.redirect('/login');
     })
   },
-  async doPassportSamlLogout(req, profile, done) {
+  async doPassportLogout(req, profile, done) {
     let user, info
     try {
-      ;({ user, info } = await AuthenticationControllerSaml._doPassportSamlLogout(
+      ;({ user, info } = await SAMLAuthenticationController._doPassportLogout(
         req,
         profile
       ))
@@ -128,7 +126,7 @@ const AuthenticationControllerSaml = {
     }
     return done(undefined, user, info)
   },
-  async _doPassportSamlLogout(req, profile) {
+  async _doPassportLogout(req, profile) {
     if (req?.session?.saml_extce?.nameID === profile.nameID &&
         req?.session?.saml_extce?.sessionIndex === profile.sessionIndex) {
       profile = req.user
@@ -138,23 +136,15 @@ const AuthenticationControllerSaml = {
     })
     return { user: profile, info: undefined }
   },
-  passportSamlMetadata(req, res) {
+  getSPMetadata(req, res) {
     const samlStratery = passport._strategy('saml')
     res.setHeader('Content-Disposition', `attachment; filename="${samlStratery._saml.options.issuer}-meta.xml"`)
     xmlResponse(res,
       samlStratery.generateServiceProviderMetadata(
-        samlStratery._saml.options.decryptionCert,
-        samlStratery._saml.options.signingCert
+        readFilesContentFromEnv(process.env.OVERLEAF_SAML_DECRYPTION_CERT),
+        readFilesContentFromEnv(process.env.OVERLEAF_SAML_PUBLIC_CERT)
       )
     )
   },
 }
-export const {
-  passportSamlAuthWithIdP,
-  passportSamlLogin,
-  passportSamlSPLogout,
-  passportSamlIdPLogout,
-  doPassportSamlLogin,
-  doPassportSamlLogout,
-  passportSamlMetadata,
-} = AuthenticationControllerSaml
+export default SAMLAuthenticationController
