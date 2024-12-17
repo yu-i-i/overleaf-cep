@@ -1,18 +1,13 @@
 import Settings from '@overleaf/settings'
 import { callbackify } from '@overleaf/promise-utils'
-import UserCreator from '../../../../app/src/Features/User/UserCreator.js'
-import { User } from '../../../../app/src/models/User.js'
+import UserCreator from '../../../../../app/src/Features/User/UserCreator.js'
+import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.js'
+import { User } from '../../../../../app/src/models/User.js'
+import { splitFullName } from '../../../utils.mjs'
 
-const AuthenticationManagerLdap = {
-  splitFullName(fullName) {
-    fullName = fullName.trim();
-    let lastSpaceIndex = fullName.lastIndexOf(' ');
-    let firstNames = fullName.substring(0, lastSpaceIndex).trim();
-    let lastName = fullName.substring(lastSpaceIndex + 1).trim();
-    return [firstNames, lastName];
-  },
-  async findOrCreateLdapUser(profile, auditLog) {
-    //user is already authenticated in Ldap
+const LDAPAuthenticationManager = {
+  async findOrCreateUser(profile, auditLog) {
+    //user is already authenticated in LDAP
     const {
       attEmail,
       attFirstName,
@@ -28,7 +23,7 @@ const AuthenticationManagerLdap = {
                     : profile[attEmail].toLowerCase()
     let nameParts = ["",""]
     if ((!attFirstName || !attLastName) && attName) {
-      nameParts = this.splitFullName(profile[attName] || "")
+      nameParts = splitFullName(profile[attName] || "")
     }
     const firstName = attFirstName ? (profile[attFirstName] || "") : nameParts[0]
     let   lastName  = attLastName  ? (profile[attLastName]  || "") : nameParts[1]
@@ -40,6 +35,7 @@ const AuthenticationManagerLdap = {
                                                     profile[attAdmin] === valAdmin)
     }
     let user = await User.findOne({ 'email': email }).exec()
+
     if( !user ) {
       user = await UserCreator.promises.createNewUser(
         {
@@ -61,8 +57,12 @@ const AuthenticationManagerLdap = {
       userDetails.isAdmin = isAdmin
     }
     const result = await User.updateOne(
-      { _id: user._id, loginEpoch: user.loginEpoch }, { $inc: { loginEpoch: 1 }, $set: userDetails },
-      {}
+      { _id: user._id, loginEpoch: user.loginEpoch },
+      {
+        $inc: { loginEpoch: 1 },
+        $set: userDetails,
+        $unset: { hashedPassword: "" },
+      }
     ).exec()
     if (result.modifiedCount !== 1) {
       throw new ParallelLoginError()
@@ -72,9 +72,5 @@ const AuthenticationManagerLdap = {
 }
 
 export default {
-  findOrCreateLdapUser: callbackify(AuthenticationManagerLdap.findOrCreateLdapUser),
-  promises: AuthenticationManagerLdap,
+  promises: LDAPAuthenticationManager,
 }
-export const {
-  splitFullName,
-} = AuthenticationManagerLdap

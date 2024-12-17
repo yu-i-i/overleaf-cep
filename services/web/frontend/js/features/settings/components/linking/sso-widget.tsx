@@ -4,6 +4,7 @@ import { FetchError } from '../../../../infrastructure/fetch-json'
 import IEEELogo from '../../../../shared/svgs/ieee-logo'
 import GoogleLogo from '../../../../shared/svgs/google-logo'
 import OrcidLogo from '../../../../shared/svgs/orcid-logo'
+import OpenIDLogo from '../../../../shared/svgs/openid-logo'
 import LinkingStatus from './status'
 import OLButton from '@/features/ui/components/ol/ol-button'
 import OLModal, {
@@ -17,6 +18,7 @@ const providerLogos: { readonly [p: string]: JSX.Element } = {
   collabratec: <IEEELogo />,
   google: <GoogleLogo />,
   orcid: <OrcidLogo />,
+  oidc: <OpenIDLogo />,
 }
 
 type SSOLinkingWidgetProps = {
@@ -66,7 +68,7 @@ export function SSOLinkingWidget({
 
   return (
     <div className="settings-widget-container">
-      <div>{providerLogos[providerId]}</div>
+      <div>{providerLogos[providerId] || providerLogos['oidc']}</div>
       <div className="description-container">
         <div className="title-row">
           <h4>{title}</h4>

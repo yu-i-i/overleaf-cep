@@ -106,9 +106,9 @@ module.exports = function (webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.use(function (req, res, next) {
     req.externalAuthenticationSystemUsed =
-      Features.externalAuthenticationSystemUsed
+      () => !!req?.user?.externalAuth
     res.locals.externalAuthenticationSystemUsed =
-      Features.externalAuthenticationSystemUsed
+      () => !!req?.user?.externalAuth
     req.hasFeature = res.locals.hasFeature = Features.hasFeature
     next()
   })

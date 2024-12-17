@@ -39,11 +39,7 @@ function CanOnlyLogInThroughSSO() {
   return (
     <p>
       <Trans
-        i18nKey="you_cant_add_or_change_password_due_to_sso"
-        components={[
-          // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
-          <a href="/learn/how-to/Logging_in_with_Group_single_sign-on" />,
-        ]}
+        i18nKey="you_cant_add_or_change_password_due_to_ldap_or_sso"
       />
     </p>
   )
