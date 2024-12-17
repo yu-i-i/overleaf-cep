@@ -6,7 +6,6 @@ block content
 			.row
 				.col-lg-6.offset-lg-3.col-xl-4.offset-xl-4
 					.card
-<<<<<<< HEAD
 						.card-body
 							.page-header
 								if login_support_title
@@ -56,4 +55,13 @@ block content
 											data-ol-disabled-inflight
 										)
 											span(data-ol-inflight="idle") #{settings.saml.identityServiceName}
+											span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
+							if settings.oidc && settings.oidc.enable
+								form(data-ol-async-form, name="oidcLoginForm")
+									.actions(style='margin-top: 30px;')
+										a.btn.btn-secondary.btn-block(
+											href='/oidc/login',
+											data-ol-disabled-inflight
+										)
+											span(data-ol-inflight="idle") #{settings.oidc.identityServiceName}
 											span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
