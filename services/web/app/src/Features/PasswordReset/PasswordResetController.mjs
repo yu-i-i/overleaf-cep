@@ -118,7 +118,7 @@ async function requestReset(req, res, next) {
     OError.tag(err, 'failed to generate and email password reset token', {
       email,
     })
-    if (err.message === 'user does not have permission for change-password') {
+    if (err.message === 'user does not have one or more permissions within change-password') {
       return res.status(403).json({
         message: {
           key: 'no-password-allowed-due-to-sso',
@@ -135,10 +135,6 @@ async function requestReset(req, res, next) {
   } else if (status === 'secondary') {
     return res.status(404).json({
       message: req.i18n.translate('secondary_email_password_reset'),
-    })
-  } else if (status === 'external') {
-    return res.status(403).json({
-      message: req.i18n.translate('password_managed_externally'),
     })
   } else {
     return res.status(404).json({

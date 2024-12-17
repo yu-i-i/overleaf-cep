@@ -53,10 +53,8 @@ async function settingsPage(req, res) {
   const reconfirmedViaSAML = _.get(req.session, ['saml', 'reconfirmed'])
   delete req.session.saml
   let shouldAllowEditingDetails = true
-  if (Settings.ldap && Settings.ldap.updateUserDetailsOnLogin) {
-    shouldAllowEditingDetails = false
-  }
-  if (Settings.saml && Settings.saml.updateUserDetailsOnLogin) {
+  const externalAuth = req.user.externalAuth
+  if (externalAuth && Settings[externalAuth].updateUserDetailsOnLogin) {
     shouldAllowEditingDetails = false
   }
   const oauthProviders = Settings.oauthProviders || {}

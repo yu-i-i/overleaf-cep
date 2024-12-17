@@ -1925,6 +1925,7 @@
   "you_can_request_a_maximum_of_limit_fixes_per_day": "",
   "you_can_select_or_invite": "",
   "you_can_select_or_invite_plural": "",
+  "you_cant_add_or_change_password_due_to_ldap_or_sso": "",
   "you_cant_add_or_change_password_due_to_sso": "",
   "you_cant_join_this_group_subscription": "",
   "you_dont_have_any_repositories": "",
