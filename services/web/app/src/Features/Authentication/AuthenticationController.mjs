@@ -142,7 +142,7 @@ const AuthenticationController = {
     passport.authenticate(
       Settings.ldap?.enable ? ['ldapauth','local'] : ['local'],
       { keepSessionInfo: true },
-      async function (err, user, infoArray) {
+      async function (err, user, info) {
         if (err) {
           return next(err)
         }
@@ -164,7 +164,6 @@ const AuthenticationController = {
             return next(err)
           }
         } else {
-	  let info = infoArray[0]
           if (info.redir != null) {
             return res.json({ redir: info.redir })
           } else {

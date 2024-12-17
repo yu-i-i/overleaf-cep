@@ -1234,6 +1234,15 @@ module.exports = {
 
   enablePandocConversions: process.env.ENABLE_PANDOC_CONVERSIONS === 'true',
 
+  allowedImageNames: process.env.SANDBOXED_COMPILES === 'true'
+    ? parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGES)
+        .map((imageName, index) => ({
+          imageName,
+          imageDesc: parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGE_NAMES)[index]
+            || imageName.split(':')[1],
+        }))
+    : undefined,
+
   oauthProviders: {
     ...(process.env.EXTERNAL_AUTH && process.env.EXTERNAL_AUTH.includes('oidc') && {
       [process.env.OVERLEAF_OIDC_PROVIDER_ID || 'oidc']: {
@@ -1265,7 +1274,6 @@ module.exports = {
       'revert-project': 'enabled',
     } : {}),
   },
-
 }
 
 module.exports.mergeWith = function (overrides) {

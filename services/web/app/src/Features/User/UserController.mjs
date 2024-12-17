@@ -535,7 +535,7 @@ async function updateUserSettings(req, res, next) {
   if (
     newEmail == null ||
     newEmail === user.email ||
-    (req.externalAuthenticationSystemUsed() && !user.hashedPassword)
+    req.externalAuthenticationSystemUsed()
   ) {
     // end here, don't update email
     SessionManager.setInSessionUser(req.session, {
