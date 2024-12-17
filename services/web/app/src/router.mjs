@@ -212,6 +212,8 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
     CaptchaMiddleware.canSkipCaptcha
   )
 
+  await Modules.applyRouter(webRouter, privateApiRouter, publicApiRouter)
+
   webRouter.get('/login', UserPagesController.loginPage)
   AuthenticationController.addEndpointToLoginWhitelist('/login')
 
@@ -279,8 +281,6 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
   UserMembershipRouter.apply(webRouter)
   TokenAccessRouter.apply(webRouter)
   HistoryRouter.apply(webRouter, privateApiRouter)
-
-  await Modules.applyRouter(webRouter, privateApiRouter, publicApiRouter)
 
   if (Settings.enableSubscriptions) {
     webRouter.get(
