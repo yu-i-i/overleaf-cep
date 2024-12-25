@@ -505,6 +505,12 @@ for `passport-saml` to get a feel for the configuration it expects.
 
           - Example: `{"some_key": "some_value"}`
 
+- `OVERLEAF_SAML_ASSERTIONS_SIGNED`
+    * When this parameter is set to `true`, Overleaf expects the SAML Assertions (statements such as user information and roles) to be signed by the Identity Provider (IdP). This enhances security by ensuring that the received information has not been altered during transmission.
+
+- `OVERLEAF_AUTHN_RESPONSE_SIGNED`
+    * When this parameter is set to `true`, Overleaf expects the entire SAML Authentication Response to be signed by the Identity Provider (IdP). This ensures the entire response is validated for authenticity and integrity.
+
 - `OVERLEAF_SAML_IDENTIFIER_FORMAT`
     * Name identifier format to request from identity provider (default: `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`).
 
