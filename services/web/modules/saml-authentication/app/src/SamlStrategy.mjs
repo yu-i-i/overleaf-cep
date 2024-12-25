@@ -47,8 +47,8 @@ const samlOptions = {
   logoutCallbackUrl: process.env.OVERLEAF_SAML_LOGOUT_CALLBACK_URL,
   additionalLogoutParams: JSON.parse(process.env.OVERLEAF_SAML_ADDITIONAL_LOGOUT_PARAMS || '{}'),
   passReqToCallback: true,
-  wantAssertionsSigned: process.env.OVERLEAF_SAML_ASSERTIONS_SIGNED,
-  wantAuthnResponseSigned: process.env.OVERLEAF_AUTHN_RESPONSE_SIGNED,
+  wantAssertionsSigned: String(process.env.OVERLEAF_SAML_WANT_ASSERTIONS_SIGNED).toLowerCase() === 'true',
+  wantAuthnResponseSigned: String(process.env.OVERLEAF_SAML_WANT_AUTHN_RESPONSE_SIGNED).toLowerCase() === 'true',
 }
 
 function addSamlStrategy(passport) {
