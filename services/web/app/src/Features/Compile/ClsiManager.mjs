@@ -1189,6 +1189,10 @@ function _finaliseRequest(projectId, options, project, docs, files) {
     options.compileGroup
   )
 
+  if (process.env.TEX_COMPILER_EXTRA_FLAGS) {
+    flags.push(...process.env.TEX_COMPILER_EXTRA_FLAGS.split(/\s+/).filter(Boolean))
+  }
+
   return {
     compile: {
       options: {
