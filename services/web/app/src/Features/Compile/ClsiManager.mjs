@@ -1018,7 +1018,7 @@ async function _getContentFromMongo(projectId) {
 
 function _finaliseRequest(projectId, options, project, docs, files) {
   const resources = []
-  let flags
+  let flags = []
   let rootResourcePath = options.rootResourcePath
   let rootResourcePathOverride = null
   let hasMainFile = false
@@ -1085,6 +1085,10 @@ function _finaliseRequest(projectId, options, project, docs, files) {
 
   if (options.fileLineErrors) {
     flags = ['-file-line-error']
+  }
+
+  if (process.env.TEX_COMPILER_EXTRA_FLAGS) {
+    flags.push(...process.env.TEX_COMPILER_EXTRA_FLAGS.split(/\s+/).filter(Boolean))
   }
 
   return {
