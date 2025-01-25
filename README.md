@@ -30,6 +30,7 @@ The present "extended" version of Overleaf CE includes:
 - Sandboxed Compiles with TeX Live image selection
 - LDAP authentication
 - SAML authentication
+- OpenID Connect authentication
 - Real-time track changes and comments
 - Autocomplete of reference keys
 - Symbol Palette
@@ -54,13 +55,14 @@ services:
 ```
 Here, the attached volume provides convenient access for the container to the certificates needed for SAML or LDAP authentication.
 
-If you want to build a Docker image of the extended CE based on the upstream v5.2.1 codebase, you can check out the corresponding tag by running:
+If you want to build a Docker image of the extended CE based on the upstream v5.3.1 codebase, you can check out the corresponding tag by running:
 ```
-git checkout v5.2.1-ext
+git checkout v5.3.1-ext-v1
 ```
+After building the image, switch to the latest state of the repository and check the `server-ce/hotfix` directory. If a subdirectory matching your version (e.g., `5.3.1`) exists, build a patched image.
 Alternatively, you can download a prebuilt image from Docker Hub:
 ```
-docker pull overleafcep/sharelatex:5.2.1-ext
+docker pull overleafcep/sharelatex:5.3.1-ext-v1
 ```
 Make sure to update the image name in overleaf-toolkit/config/docker-compose.override.yml accordingly.
 
@@ -94,6 +96,12 @@ TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
 For additional details refer to
 [Server Pro: Sandboxed Compiles](https://github.com/overleaf/overleaf/wiki/Server-Pro:-Sandboxed-Compiles) and
 [Toolkit: Sandboxed Compiles](https://github.com/overleaf/toolkit/blob/master/doc/sandboxed-compiles.md).
+
+When the compilation takes place in a dedicated container, it is relatively safe to permit running external commands from inside the TeX
+file during compilation. This is required for packages like `minted`. For this purpose, the following environment variable can be used:
+
+- `TEX_COMPILER_EXTRA_FLAGS`
+    * A list of extra flags for TeX compiler. Example: `-shell-escape -file-line-error`
 
 <details>
 <summary><h4>Sample variables.env file</h4></summary>
@@ -147,13 +155,20 @@ NAV_HIDE_POWERED_BY=true
 ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2023-historic
 ALL_TEX_LIVE_DOCKER_IMAGE_NAMES=TeXLive 2024, TeXLive 2023
 TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
+TEX_COMPILER_EXTRA_FLAGS=-shell-escape
 ```
 </details>
 
 ## Authentication Methods
 
-The following authentication methods are supported: Local authentication, LDAP authentication, and SAML authentication. Local authentication is always active.
-To enable LDAP or SAML authentication, the environment variable `EXTERNAL_AUTH` must be set to `ldap` or `saml`, respectively.
+The following authentication methods are supported: local authentication, LDAP authentication, SAML authentication,
+and OpenID Connect (OIDC) authentication. Local authentication is always active. The environment variable `EXTERNAL_AUTH`
+specifies which external authentication methods are activated. The value of this variable is a list. If the list includes `ldap`, `saml`, or `oidc`,
+then LDAP authentication, SAML authentication, and OIDC authentication will be activated, respectively. 
+
+For example: `EXTERNAL_AUTH=ldap saml oidc`
+
+This configuration activates all available authentication methods, although this is rarely necessary.
 
 <details>
 <summary><h3>Local Authentication</h3></summary>
@@ -181,6 +196,14 @@ It is possible to enforce password restrictions on local users:
 <summary><h3>LDAP Authentication</h3></summary>
 
 Internally, Overleaf LDAP uses the [passport-ldapauth](https://github.com/vesse/passport-ldapauth) library. Most of these configuration options are passed through to the `server` config object which is used to configure `passport-ldapauth`. If you are having issues configuring LDAP, it is worth reading the README for `passport-ldapauth` to understand the configuration it expects.
+
+When using Local and LDAP authentication methods, a user enters a `username` and `password` in the login form. If LDAP authentication is enabled, it is attempted first:
+
+1. An LDAP user is searched for in the LDAP directory using the filter defined by `OVERLEAF_LDAP_SEARCH_FILTER` and authenticated.
+2. If authentication is successful, the Overleaf users database is checked for a user with the primary email address that matches the email address of the authenticated LDAP user:
+   - If a matching user is found, the `hashedPassword` field for this user is deleted (if it exists). This ensures that the user can only log in via LDAP authentication in the future.
+   - If no matching user is found, a new Overleaf user is created using the email, first name, and last name retrieved from the LDAP server.
+3. If LDAP authentication fails or is unsuccessful, local authentication is attempted.
 
 #### Environment Variables
 
@@ -437,19 +460,43 @@ Internally, Overleaf SAML module uses the [passport-saml](https://github.com/nod
 configuration options are passed through to `passport-saml`. If you are having issues configuring SAML, it is worth reading the README
 for `passport-saml` to get a feel for the configuration it expects.
 
+When using the SAML authentication method, a user is redirected to the Identity Provider (IdP) authentication site.
+If the IdP successfully authenticates the user, the Overleaf users database is checked for a record containing a `samlIdentifiers` field structured as follows:
+
+```
+samlIdentifiers: [
+  {
+    externalUserId: "...",
+    providerId: "1",
+    userIdAttribute: "..."
+  }
+]
+```
+The `externalUserId` must match the value of the property specified by `userIdAttribute` in the user profile returned by the IdP server.
+
+If no matching record is found, the database is searched for a user with the primary email address matching the email in the IdP user profile:
+
+- If such a user is found, the `hashedPassword` field is deleted to disable local authentication, and the `samlIdentifiers` field is added.
+- If no matching user is found, a new user is created with the email address and `samlIdentifiers` from the IdP profile.
+
+**Note:** Currently, only one SAML IdP is supported. The `providerId` field in `samlIdentifiers` is fixed to `'1'`.
+
 #### Environment Variables
 
 - `OVERLEAF_SAML_IDENTITY_SERVICE_NAME`
-    * Display name for the identity service, used on the login page (default: `Login with SAML IdP`).
+    * Display name for the identity service, used on the login page (default: `Log in with SAML IdP`).
+
+- `OVERLEAF_SAML_USER_ID_FIELD`
+    * The value of this attribute will be used by Overleaf as the external user ID, defaults to `nameID`.
 
 - `OVERLEAF_SAML_EMAIL_FIELD`
-    * Name of the Email field in user profile, default to 'nameID'.
+    * Name of the Email field in user profile, defaults to `nameID`.
 
 - `OVERLEAF_SAML_FIRST_NAME_FIELD`
-    * Name of the firstName field in user profile, default to 'givenName'.
+    * Name of the firstName field in user profile, defaults to `givenName`.
 
 - `OVERLEAF_SAML_LAST_NAME_FIELD`
-    * Name of the lastName field in user profile, default to 'lastName'
+    * Name of the lastName field in user profile, defaults to `lastName`
 
 - `OVERLEAF_SAML_UPDATE_USER_DETAILS_ON_LOGIN`
     * If set to `true`, updates the user `first_name` and `last_name` field on login,
@@ -460,11 +507,6 @@ for `passport-saml` to get a feel for the configuration it expects.
 
       - Example: `https://idp.example.com/simplesaml/saml2/idp/SSOService.php`
       - Azure Example: `https://login.microsoftonline.com/8b26b46a-6dd3-45c7-a104-f883f4db1f6b/saml2`
-
-- `OVERLEAF_SAML_CALLBACK_URL` **(required)**
-    * Callback URL for Overleaf service. Should be the full URL of the `/saml/login/callback` path.
-
-      - Example: `https://my-overleaf-instance.com/saml/login/callback`
 
 - `OVERLEAF_SAML_ISSUER` **(required)**
     * The Issuer name.
@@ -503,10 +545,13 @@ for `passport-saml` to get a feel for the configuration it expects.
 - `OVERLEAF_SAML_ADDITIONAL_AUTHORIZE_PARAMS`
     * JSON dictionary of additional query params to add to 'authorize' requests.
 
-          - Example: `{"some_key": "some_value"}`
+        - Example: `{"some_key": "some_value"}`
 
 - `OVERLEAF_SAML_IDENTIFIER_FORMAT`
-    * Name identifier format to request from identity provider (default: `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`).
+    * Name identifier format to request from the identity provider (default: `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`).
+      If using `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`, ensure the `OVERLEAF_SAML_EMAIL_FIELD` envirionment variable is defined.
+      If `urn:oasis:names:tc:SAML:2.0:nameid-format:transient` is required, you must also define the `OVERLEAF_SAML_ID_FIELD` environment variable,
+      which can, for example, be set to the user's email address.
 
 - `OVERLEAF_SAML_ACCEPTED_CLOCK_SKEW_MS`
     * Time in milliseconds of skew that is acceptable between client and server when checking OnBefore and NotOnOrAfter assertion
@@ -543,20 +588,13 @@ for `passport-saml` to get a feel for the configuration it expects.
 
       - Example: `https://idp.example.com/simplesaml/saml2/idp/SingleLogoutService.php`
 
-- `OVERLEAF_SAML_LOGOUT_CALLBACK_URL`
-    * Callback URL for IdP initiated logout. Should be the full URL of the `/saml/logot/callback` path.
-       With this value the `Location` attribute in the `SingleLogoutService` elements in the generated service provider metadata is populated with this value.
-
-      - Example: `https://my-overleaf-instance.com/saml/logout/callback`
-
 - `OVERLEAF_SAML_ADDITIONAL_LOGOUT_PARAMS`
     * JSON dictionary of additional query params to add to 'logout' requests.
-
 
 - `OVERLEAF_SAML_IS_ADMIN_FIELD` and `OVERLEAF_SAML_IS_ADMIN_FIELD_VALUE`
     * When both environment variables are set, the login process updates `user.isAdmin = true` if the profile returned by the SAML IdP contains the attribute specified by
      `OVERLEAF_SAML_IS_ADMIN_FIELD` and its value either matches `OVERLEAF_SAML_IS_ADMIN_FIELD_VALUE` or is an array containing `OVERLEAF_SAML_IS_ADMIN_FIELD_VALUE`,
-      otherwise `user.isAdmin` is set to `false`. If either of these variables is not set, then the admin status is only set to `true` during admin user.
+      otherwise `user.isAdmin` is set to `false`. If either of these variables is not set, then the admin status is only set to `true` during admin user
       creation in Launchpad.
 
 #### Metadata for the Identity Provider
@@ -665,7 +703,7 @@ NAV_HIDE_POWERED_BY=true
 #################
 
 EXTERNAL_AUTH=saml
-OVERLEAF_SAML_IDENTITY_SERVICE_NAME='Login with My IdP'
+OVERLEAF_SAML_IDENTITY_SERVICE_NAME='Log in with My IdP'
 OVERLEAF_SAML_EMAIL_FIELD=mail
 OVERLEAF_SAML_FIRST_NAME_FIELD=givenName
 OVERLEAF_SAML_LAST_NAME_FIELD=sn
@@ -681,6 +719,158 @@ OVERLEAF_SAML_DECRYPTION_CERT=/overleaf/certs/myol_decr_cert.pem
 OVERLEAF_SAML_DECRYPTION_PVK=/overleaf/certs/myol_decr_key.pem
 OVERLEAF_SAML_IS_ADMIN_FIELD=mail
 OVERLEAF_SAML_IS_ADMIN_FIELD_VALUE=overleaf.admin@example.com
+```
+</details>
+</details>
+
+<details>
+<summary><h3>OIDC Authentication</h3></summary>
+
+Internally, Overleaf OIDC module uses the [passport-openidconnect](https://github.com/jaredhanson/passport-openidconnect) library.
+If you are having issues configuring OpenID Connect, it is worth reading the README for `passport-openidconnect` to get a feel for the configuration it expects.
+
+
+When using the OIDC authentication method, a user is redirected to the Identity Provider (IdP) authentication site.
+If the IdP successfully authenticates the user, the Overleaf users database is checked for a record containing a `thirdPartyIdentifiers` field structured as follows:
+
+```
+thirdPartyIdentifiers: [
+  {
+    externalUserId: "...",
+    externalData: null,
+    providerId: "..."
+  }
+]
+```
+
+The `externalUserId` must match the user ID in the profile returned by the IdP server (see the `OVERLEAF_OIDC_USER_ID_FIELD` environment variable), and `providerId`
+must match the ID of the OIDC provider (see the `OVERLEAF_OIDC_PROVIDER_ID`).
+
+If no matching record is found, the database is searched for a user with the primary email address matching the email in the IdP user profile:
+- If such a user is found, the `thirdPartyIdentifiers` field is updated.
+- If no matching user is found, a new user is created with the email address and `thirdPartyIdentifiers` from the IdP profile.
+
+In both cases, the user is said to be 'linked' to the external OIDC user. The user can be unlinked from the OIDC provider on the `/user/settings` page.
+
+
+#### Environment Variables
+
+The values of the following five required variables can be found using `.well-known/openid-configuration` endpoint of your OpenID Provider (OP).
+
+- `OVERLEAF_OIDC_ISSUER` **(required)**
+
+- `OVERLEAF_OIDC_AUTHORIZATION_URL` **(required)**
+
+- `OVERLEAF_OIDC_TOKEN_URL` **(required)**
+
+- `OVERLEAF_OIDC_USER_INFO_URL` **(required)**
+
+- `OVERLEAF_OIDC_LOGOUT_URL` **(required)**
+
+The values of the following two required variables will be provided by the admin of your OP
+
+- `OVERLEAF_OIDC_CLIENT_ID` **(required)**
+
+- `OVERLEAF_OIDC_CLIENT_SECRET` **(required)**
+
+- `OVERLEAF_OIDC_SCOPE`
+    * Default: `openid profile email`
+
+- `OVERLEAF_OIDC_PROVIDER_ID`
+    * Arbitrary ID of the OP, defaults to `oidc`.
+
+- `OVERLEAF_OIDC_PROVIDER_NAME`
+    * The name of the OP, used in the `Linked Accounts` section of the `/user/settings` page, defaults to `OIDC Provider`.
+
+- `OVERLEAF_OIDC_IDENTITY_SERVICE_NAME`
+    * Display name for the identity service, used on the login page (default: `Log in with $OVERLEAF_OIDC_PROVIDER_NAME`).
+
+- `OVERLEAF_OIDC_PROVIDER_DESCRIPTION`
+    * Description of OP, used in the `Linked Accounts` section (default: `Log in with $OVERLEAF_OIDC_PROVIDER_NAME`).
+
+- `OVERLEAF_OIDC_PROVIDER_INFO_LINK`
+    * `Learn more` URL in the OP description, default: no `Learn more` link in the description.
+
+- `OVERLEAF_OIDC_PROVIDER_HIDE_NOT_LINKED`
+    * Do not show OP on the `/user/settings` page, if the user's account is not linked with the OP, default `false`.
+
+- `OVERLEAF_OIDC_USER_ID_FIELD`
+    * The value of this attribute will be used by Overleaf as the external user ID, defaults to `id`.
+
+- `OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN`
+    * If set to `true`, updates the user `first_name` and `last_name` field on login,
+      and disables the user details form on `/user/settings` page.
+
+- `OVERLEAF_OIDC_IS_ADMIN_FIELD` and `OVERLEAF_OIDC_IS_ADMIN_FIELD_VALUE`
+    * When both environment variables are set, the login process updates `user.isAdmin = true` if the profile returned by the OP contains the attribute specified by
+      `OVERLEAF_OIDC_IS_ADMIN_FIELD` and its value matches `OVERLEAF_OIDC_IS_ADMIN_FIELD_VALUE`, otherwise `user.isAdmin` is set to `false`.
+      If `OVERLEAF_OIDC_IS_ADMIN_FIELD` is `email` then the value of the attribute `emails[0].value` is used for match checking.
+
+<details>
+<summary><h4>Sample variables.env file</h4></summary>
+
+```
+OVERLEAF_APP_NAME="Our Overleaf Instance"
+
+ENABLED_LINKED_FILE_TYPES=project_file,project_output_file
+
+# Enables Thumbnail generation using ImageMagick
+ENABLE_CONVERSIONS=true
+
+# Disables email confirmation requirement
+EMAIL_CONFIRMATION_DISABLED=true
+
+## Nginx
+# NGINX_WORKER_PROCESSES=4
+# NGINX_WORKER_CONNECTIONS=768
+
+## Set for TLS via nginx-proxy
+# OVERLEAF_BEHIND_PROXY=true
+# OVERLEAF_SECURE_COOKIE=true
+
+OVERLEAF_SITE_URL=http://my-overleaf-instance.com
+OVERLEAF_NAV_TITLE=Our Overleaf Instance
+# OVERLEAF_HEADER_IMAGE_URL=http://somewhere.com/mylogo.png
+OVERLEAF_ADMIN_EMAIL=support@example.com
+
+OVERLEAF_LEFT_FOOTER=[{"text": "Contact your support team", "url": "mailto:support@example.com"}]
+OVERLEAF_RIGHT_FOOTER=[{"text":"Hello, I am on the Right", "url":"https://github.com/yu-i-i/overleaf-cep"}]
+
+OVERLEAF_EMAIL_FROM_ADDRESS=team@example.com
+OVERLEAF_EMAIL_SMTP_HOST=smtp.example.com
+OVERLEAF_EMAIL_SMTP_PORT=587
+OVERLEAF_EMAIL_SMTP_SECURE=false
+# OVERLEAF_EMAIL_SMTP_USER=
+# OVERLEAF_EMAIL_SMTP_PASS=
+# OVERLEAF_EMAIL_SMTP_NAME=
+OVERLEAF_EMAIL_SMTP_LOGGER=false
+OVERLEAF_EMAIL_SMTP_TLS_REJECT_UNAUTH=true
+OVERLEAF_EMAIL_SMTP_IGNORE_TLS=false
+OVERLEAF_CUSTOM_EMAIL_FOOTER=This system is run by department x
+
+OVERLEAF_PROXY_LEARN=true
+NAV_HIDE_POWERED_BY=true
+
+#################
+## OIDC for CE ##
+#################
+
+EXTERNAL_AUTH=oidc
+
+OVERLEAF_OIDC_PROVIDER_ID=oidc
+OVERLEAF_OIDC_ISSUER=https://keycloak.provider.com/realms/example
+OVERLEAF_OIDC_AUTHORIZATION_URL=https://keycloak.provider.com/realms/example/protocol/openid-connect/auth
+OVERLEAF_OIDC_TOKEN_URL=https://keycloak.provider.com/realms/example/protocol/openid-connect/token
+OVERLEAF_OIDC_USER_INFO_URL=https://keycloak.provider.com/realms/example/protocol/openid-connect/userinfo
+OVERLEAF_OIDC_LOGOUT_URL=https://keycloak.provider.com/realms/example/protocol/openid-connect/logout
+OVERLEAF_OIDC_CLIENT_ID=Overleaf-OIDC
+OVERLEAF_OIDC_CLIENT_SECRET=DoNotUseThisATGgaAcTgCcATgGATTACAagGtTCaGcGTAG
+OVERLEAF_OIDC_IDENTITY_SERVICE_NAME='Log in with Keycloak OIDC Provider'
+OVERLEAF_OIDC_PROVIDER_NAME=OIDC Keycloak Provider
+OVERLEAF_OIDC_PROVIDER_INFO_LINK=https://openid.net
+OVERLEAF_OIDC_IS_ADMIN_FIELD=email
+OVERLEAF_OIDC_IS_ADMIN_FIELD_VALUE=overleaf.admin@example.com
+OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN=false
 ```
 </details>
 </details>
