@@ -577,4 +577,5 @@ export default {
   expireDeletedUsersAfterDuration: expressify(expireDeletedUsersAfterDuration),
   ensureAffiliationMiddleware: expressify(ensureAffiliationMiddleware),
   ensureAffiliation,
+  doLogout,
 }
