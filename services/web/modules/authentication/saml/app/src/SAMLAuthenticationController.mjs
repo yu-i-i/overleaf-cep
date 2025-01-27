@@ -102,7 +102,7 @@ const SAMLAuthenticationController = {
   },
   async passportLogout(req, res, next) {
     passport._strategy('saml').logout(req, async (err, url) => {
-      await UserController.promises.doLogout(req)
+      await UserController.doLogout(req)
       if (err) return next(err)
       res.redirect(url)
     })

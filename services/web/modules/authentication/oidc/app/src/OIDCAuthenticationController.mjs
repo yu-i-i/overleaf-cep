@@ -158,7 +158,7 @@ const OIDCAuthenticationController = {
   async passportLogout(req, res, next) {
 // TODO: instead of storing idToken in session, use refreshToken to obtain a new idToken?
     const idTokenHint = req.session.idToken
-    await UserController.promises.doLogout(req)
+    await UserController.doLogout(req)
     const logoutUrl = process.env.OVERLEAF_OIDC_LOGOUT_URL
     const redirectUri = Settings.siteUrl
     res.redirect(`${logoutUrl}?id_token_hint=${idTokenHint}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`)
