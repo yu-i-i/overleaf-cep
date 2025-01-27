@@ -515,4 +515,5 @@ module.exports = {
   expireDeletedUsersAfterDuration: expressify(expireDeletedUsersAfterDuration),
   ensureAffiliationMiddleware: expressify(ensureAffiliationMiddleware),
   ensureAffiliation,
+  doLogout,
 }
