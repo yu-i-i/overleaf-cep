@@ -46,6 +46,8 @@ const SAMLModuleManager = {
       logoutUrl: process.env.OVERLEAF_SAML_LOGOUT_URL,
       logoutCallbackUrl: `${Settings.siteUrl.replace(/\/+$/, '')}/saml/logout/callback`,
       additionalLogoutParams: JSON.parse(process.env.OVERLEAF_SAML_ADDITIONAL_LOGOUT_PARAMS || '{}'),
+      wantAssertionsSigned: boolFromEnv(process.env.OVERLEAF_SAML_WANT_ASSERTIONS_SIGNED),
+      wantAuthnResponseSigned: boolFromEnv(process.env.OVERLEAF_SAML_WANT_AUTHN_RESPONSE_SIGNED),
       passReqToCallback: true,
     }
     try {
