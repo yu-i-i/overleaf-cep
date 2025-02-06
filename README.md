@@ -579,6 +579,10 @@ If no matching record is found, the database is searched for a user with the pri
     * If `never`, then InResponseTo  won't be validated (default).
     * If `ifPresent`, then InResponseTo will only be validated if present in the incoming SAML response.
 
+- `OVERLEAF_SAML_WANT_ASSERTIONS_SIGNED` and `OVERLEAF_SAML_WANT_AUTHN_RESPONSE_SIGNED`
+    * When set to `true` (default), Overleaf expects the SAML Assertions, respectively the entire SAML Authentication Response, to be signed by the IdP.
+      When both options are `false`, at least one of the assertions or the response must be signed.
+
 - `OVERLEAF_SAML_REQUEST_ID_EXPIRATION_PERIOD_MS`
     * Defines the expiration time when a Request ID generated for a SAML request will not be valid if seen
           in a SAML response in the `InResponseTo` field. Default: 28800000 (8 hours).
