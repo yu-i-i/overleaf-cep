@@ -539,6 +539,14 @@ If no matching record is found, the database is searched for a user with the pri
     * Optionally set the signature algorithm for signing requests,
           valid values are 'sha1' (default), 'sha256' (prefered), 'sha512' (most secure, check if your IdP supports it).
 
+- `OVERLEAF_SAML_WANT_ASSERTIONS_SIGNED`
+    * Optionally disable the requirement for assertion signature validation,
+          Either Assertion signature validation or SAMLResponse validation or both should be true to have secure communication.
+
+- `OVERLEAF_SAML_WANT_AUTHN_RESPONSE_SIGNED`
+    * Optionally disable the requirement for SAMLResponse signature validation,
+          Either Assertion signature validation or SAMLResponse validation or both should be true to have secure communication.
+
 - `OVERLEAF_SAML_ADDITIONAL_PARAMS`
     * JSON dictionary of additional query params to add to all requests.
 
