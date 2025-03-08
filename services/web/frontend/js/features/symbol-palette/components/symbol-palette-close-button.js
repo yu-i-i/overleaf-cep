@@ -5,14 +5,12 @@ export default function SymbolPaletteCloseButton() {
   const { toggleSymbolPalette } = useEditorContext()
 
   return (
+    <div className="symbol-palette-header-outer">
       <Button
-        bsStyle="link"
-        bsSize="small"
-        className="symbol-palette-close-button"
+        className="btn-close symbol-palette-close-button"
         onClick={toggleSymbolPalette} // Trigger closePanel on click
       >
-        &times;
       </Button>
+    </div>
   )
 }
-
