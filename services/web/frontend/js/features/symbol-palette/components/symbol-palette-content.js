@@ -9,7 +9,6 @@ import { buildCategorisedSymbols, createCategories } from '../utils/categories'
 import SymbolPaletteSearch from './symbol-palette-search'
 import SymbolPaletteBody from './symbol-palette-body'
 import SymbolPaletteTabs from './symbol-palette-tabs'
-// import SymbolPaletteInfoLink from './symbol-palette-info-link'
 import SymbolPaletteCloseButton from './symbol-palette-close-button'
 
 import '@reach/tabs/styles.css'
@@ -68,9 +67,7 @@ export default function SymbolPaletteContent({ handleSelect }) {
         <div className="symbol-palette-header-outer">
           <div className="symbol-palette-header">
             <SymbolPaletteTabs categories={categories} />
-            <div className="symbol-palette-header-group">
-              {/* Useless button (uncomment if you see any sense in it) */}
-              {/* <SymbolPaletteInfoLink /> */}
+            <div className="symbol-palette-header-group"> 
               <SymbolPaletteSearch setInput={setInput} inputRef={inputRef} />
             </div>
           </div>
