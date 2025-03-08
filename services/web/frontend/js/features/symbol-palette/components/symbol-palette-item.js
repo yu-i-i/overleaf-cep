@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { OverlayTrigger, Tooltip } from 'react-bootstrap'
+import { OverlayTrigger, Tooltip } from 'react-bootstrap-5'
 import PropTypes from 'prop-types'
 
 export default function SymbolPaletteItem({
