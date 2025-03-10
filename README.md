@@ -800,6 +800,7 @@ The values of the following two required variables will be provided by the admin
 
 - `OVERLEAF_OIDC_USER_ID_FIELD`
     * The value of this attribute will be used by Overleaf as the external user ID, defaults to `id`.
+      Other possible reasonable values are `email` and `username` (corresponding to `preferred_username` OIDC claim).
 
 - `OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN`
     * If set to `true`, updates the user `first_name` and `last_name` field on login,
