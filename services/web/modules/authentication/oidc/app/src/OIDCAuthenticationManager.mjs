@@ -13,8 +13,8 @@ const OIDCAuthenticationManager = {
       updateUserDetailsOnLogin,
       providerId,
     } = Settings.oidc
-    const oidcUserId = profile[attUserId]
     const email = profile.emails[0].value
+    const oidcUserId = (attUserId === 'email') ? email : profile[attUserId]
     const firstName = profile.name?.givenName || ""
     const lastName  = profile.name?.familyName || ""
     let isAdmin = false
@@ -83,7 +83,7 @@ const OIDCAuthenticationManager = {
       attUserId,
       providerId,
     } = Settings.oidc
-    const oidcUserId = profile[attUserId]
+    const oidcUserId = (attUserId === 'email') ? profile.emails[0].value : profile[attUserId]
     const oidcUserData = null // Possibly it can be used later
     await ThirdPartyIdentityManager.promises.link(userId, providerId, oidcUserId, oidcUserData, auditLog)
   },
