@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PropTypes from 'prop-types'
 import { matchSorter } from 'match-sorter'
-
 import symbols from '../data/symbols.json'
 import { buildCategorisedSymbols, createCategories } from '../utils/categories'
 import SymbolPaletteSearch from './symbol-palette-search'
@@ -67,11 +66,11 @@ export default function SymbolPaletteContent({ handleSelect }) {
         <div className="symbol-palette-header-outer">
           <div className="symbol-palette-header">
             <SymbolPaletteTabs categories={categories} />
-            <div className="symbol-palette-header-group"> 
+            <div className="symbol-palette-header-group">
               <SymbolPaletteSearch setInput={setInput} inputRef={inputRef} />
+              <SymbolPaletteCloseButton />
             </div>
           </div>
-          <SymbolPaletteCloseButton />
         </div>
         <div className="symbol-palette-body">
           <SymbolPaletteBody
