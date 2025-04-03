@@ -154,6 +154,8 @@
 
 .symbol-palette-close-button-outer {
   display: flex;
+  align-items: center;
+  margin-right: var(--spacing-01);
 }
 
 .symbol-palette-close-button {

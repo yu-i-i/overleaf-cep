@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PropTypes from 'prop-types'
-import { FormControl } from 'react-bootstrap'
+import OLFormControl from '@/features/ui/components/ol/ol-form-control'
 import useDebounce from '../../../shared/hooks/use-debounce'
 
 export default function SymbolPaletteSearch({ setInput, inputRef }) {
@@ -24,10 +24,10 @@ export default function SymbolPaletteSearch({ setInput, inputRef }) {
   )
 
   return (
-    <FormControl
+    <OLFormControl
       className="symbol-palette-search"
       type="search"
-      inputRef={inputRefCallback}
+      ref={inputRefCallback}
       id="symbol-palette-input"
       aria-label="Search"
       value={localInput}
@@ -38,7 +38,8 @@ export default function SymbolPaletteSearch({ setInput, inputRef }) {
     />
   )
 }
+
 SymbolPaletteSearch.propTypes = {
   setInput: PropTypes.func.isRequired,
   inputRef: PropTypes.object.isRequired,
-}
+};
