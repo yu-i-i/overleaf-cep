@@ -154,6 +154,8 @@
 
 .symbol-palette-close-button-outer {
   display: flex;
+  align-items: center;
+  margin-right: var(--spacing-01);
 }
 
 .symbol-palette-close-button {
@@ -162,10 +164,6 @@
   [data-theme='default'] & {
     filter: var(--bs-btn-close-white-filter);
   }
-
-  margin-top: var(--spacing-05);
-  margin-left: var(--spacing-02);
-  margin-right: var(--spacing-03);
 
   .symbol-palette-unavailable & {
     visibility: hidden;
