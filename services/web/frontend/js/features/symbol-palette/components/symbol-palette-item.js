@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { OverlayTrigger, Tooltip } from 'react-bootstrap-5'
 import PropTypes from 'prop-types'
+import OLTooltip from '@/features/ui/components/ol/ol-tooltip'
 
 export default function SymbolPaletteItem({
   focused,
@@ -22,20 +22,24 @@ export default function SymbolPaletteItem({
   }, [focused])
 
   return (
-    <OverlayTrigger
-      placement="top"
-      trigger={['hover', 'focus']}
-      overlay={
-        <Tooltip id={`tooltip-symbol-${symbol.codepoint}`}>
+    <OLTooltip
+      id={`symbol-${symbol.codepoint}`}
+      description={
+        <div>
           <div className="symbol-palette-item-description">
             {symbol.description}
           </div>
-          <div className="symbol-palette-item-command">{symbol.command}</div>
+          <div className="symbol-palette-item-command">
+            {symbol.command}
+          </div>
           {symbol.notes && (
-            <div className="symbol-palette-item-notes">{symbol.notes}</div>
+            <div className="symbol-palette-item-notes">
+              {symbol.notes}
+            </div>
           )}
-        </Tooltip>
+        </div>
       }
+      overlayProps={{ placement: 'top', trigger: ['hover', 'focus'] }}
     >
       <button
         key={symbol.codepoint}
@@ -50,9 +54,10 @@ export default function SymbolPaletteItem({
       >
         {symbol.character}
       </button>
-    </OverlayTrigger>
+    </OLTooltip>
   )
 }
+
 SymbolPaletteItem.propTypes = {
   symbol: PropTypes.shape({
     codepoint: PropTypes.string.isRequired,
