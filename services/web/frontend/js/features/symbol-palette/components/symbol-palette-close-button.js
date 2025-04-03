@@ -1,16 +1,19 @@
-import { Button } from 'react-bootstrap'
 import { useEditorContext } from '../../../shared/context/editor-context'
+import { useTranslation } from 'react-i18next'
 
 export default function SymbolPaletteCloseButton() {
   const { toggleSymbolPalette } = useEditorContext()
+  const { t } = useTranslation()
 
   return (
-    <div className="symbol-palette-header-outer">
-      <Button
+    <div className="symbol-palette-close-button-outer">
+      <button
+        type="button"
         className="btn-close symbol-palette-close-button"
-        onClick={toggleSymbolPalette} // Trigger closePanel on click
+        onClick={toggleSymbolPalette}
+        aria-label={t('clear_search')}
       >
-      </Button>
+      </button>
     </div>
   )
 }
