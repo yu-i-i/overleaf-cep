@@ -1,5 +1,5 @@
 let ldapModule = {}
-if (process.env.EXTERNAL_AUTH.includes('ldap')) {
+if (process.env.EXTERNAL_AUTH?.includes('ldap')) {
   const { default: LDAPModuleManager } = await import('./app/src/LDAPModuleManager.mjs')
   const { default: router } = await import('./app/src/LDAPRouter.mjs')
   LDAPModuleManager.initSettings()
