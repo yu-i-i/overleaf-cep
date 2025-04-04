@@ -811,6 +811,8 @@ The values of the following two required variables will be provided by the admin
       `OVERLEAF_OIDC_IS_ADMIN_FIELD` and its value matches `OVERLEAF_OIDC_IS_ADMIN_FIELD_VALUE`, otherwise `user.isAdmin` is set to `false`.
       If `OVERLEAF_OIDC_IS_ADMIN_FIELD` is `email` then the value of the attribute `emails[0].value` is used for match checking.
 
+The redirect URL for your OpenID Provider is `https://my-overleaf-instance.com/oidc/login/callback`.
+
 <details>
 <summary><h4>Sample variables.env file</h4></summary>
 
