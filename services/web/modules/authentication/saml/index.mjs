@@ -1,5 +1,5 @@
 let samlModule = {}
-if (process.env.EXTERNAL_AUTH.includes('saml')) {
+if (process.env.EXTERNAL_AUTH?.includes('saml')) {
   const { default: SAMLModuleManager } = await import('./app/src/SAMLModuleManager.mjs')
   const { default: router } = await import('./app/src/SAMLRouter.mjs')
   const { default: nonCsrfRouter } = await import('./app/src/SAMLNonCsrfRouter.mjs')
