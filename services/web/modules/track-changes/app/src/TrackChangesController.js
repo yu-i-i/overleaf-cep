@@ -3,6 +3,7 @@ const ChatManager = require('../../../../app/src/Features/Chat/ChatManager')
 const EditorRealTimeController = require('../../../../app/src/Features/Editor/EditorRealTimeController')
 const SessionManager = require('../../../../app/src/Features/Authentication/SessionManager')
 const UserInfoManager = require('../../../../app/src/Features/User/UserInfoManager')
+const UserInfoController = require('../../../../app/src/Features/User/UserInfoController')
 const DocstoreManager = require('../../../../app/src/Features/Docstore/DocstoreManager')
 const DocumentUpdaterHandler = require('../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler')
 const CollaboratorsGetter = require('../../../../app/src/Features/Collaborators/CollaboratorsGetter')
@@ -11,10 +12,10 @@ const pLimit = require('p-limit')
 
 function _transformId(doc) {
   if (doc._id) {
-    doc.id = doc._id;
-    delete doc._id;
+    doc.id = doc._id
+    delete doc._id
   }
-  return doc;
+  return doc
 }
 
 const TrackChangesController = {
@@ -44,7 +45,6 @@ const TrackChangesController = {
   async getAllRanges(req, res, next) {
     try {
       const { project_id } = req.params
-      // Flushing the project to mongo is not ideal. Is it possible to fetch the ranges from redis?
       await DocumentUpdaterHandler.promises.flushProjectToMongo(project_id)
       const ranges = await DocstoreManager.promises.getAllRanges(project_id)
       res.json(ranges.map(_transformId))
@@ -53,31 +53,12 @@ const TrackChangesController = {
     }
   },
   async getChangesUsers(req, res, next) {
+// This route was previously used by the frontend to retrieve names of users who made changes or comments.
+// review-panel-new no longer needs this for comments, but still relies on it for changes -
+// although the frontend knows the names of the current owner and members, it depends on the data
+// provided here to assign names to authors who have left the project but still have unaccepted changes.
     try {
       const { project_id } = req.params
-      const memberIds = await CollaboratorsGetter.promises.getMemberIds(project_id)
-      // FIXME: Fails to display names in changes made by former project collaborators.
-      // See the alternative below. However, it requires flushing the project to mongo, which is not ideal.
-      const limit = pLimit(3)
-      const users = await Promise.all(
-        memberIds.map(memberId =>
-          limit(async () => {
-            const user = await UserInfoManager.promises.getPersonalInfo(memberId)
-            return user
-          })
-        )
-      )
-      users.push({_id: null}) // An anonymous user won't cause any harm
-      res.json(users.map(_transformId))
-    } catch (err) {
-      next(err)
-    }
-  },
-/*
-  async getChangesUsers(req, res, next) {
-    try {
-      const { project_id } = req.params
-      await DocumentUpdaterHandler.promises.flushProjectToMongo(project_id)
       const memberIds = new Set()
       const ranges = await DocstoreManager.promises.getAllRanges(project_id)
       ranges.forEach(range => {
@@ -89,20 +70,16 @@ const TrackChangesController = {
       const users = await Promise.all(
         [...memberIds].map(memberId =>
           limit(async () => {
-	    if( memberId !== "anonymous-user") {
-              return await UserInfoManager.promises.getPersonalInfo(memberId)
-	    } else {
-	      return {_id: null}
-	    }
+            const user = await UserInfoManager.promises.getPersonalInfo(memberId)
+            return UserInfoController.formatPersonalInfo(user)
           })
         )
       )
-      res.json(users.map(_transformId))
+      res.json(users)
     } catch (err) {
       next(err)
     }
   },
-*/
   async getThreads(req, res, next) {
     try {
       const { project_id } = req.params
@@ -120,11 +97,12 @@ const TrackChangesController = {
       const user_id = SessionManager.getLoggedInUserId(req.session)
       if (!user_id) throw new Error('no logged-in user')
       const message = await ChatApiHandler.promises.sendComment(project_id, thread_id, user_id, content)
-      message.user = await UserInfoManager.promises.getPersonalInfo(user_id)
+      const user = await UserInfoManager.promises.getPersonalInfo(user_id)
+      message.user = UserInfoController.formatPersonalInfo(user)
       EditorRealTimeController.emitToRoom(project_id, 'new-comment', thread_id, message)
       res.sendStatus(204)
     } catch (err) {
-      next(err);
+      next(err)
     }
   },
   async editMessage(req, res, next) {
@@ -157,11 +135,16 @@ const TrackChangesController = {
       if (!user_id) throw new Error('no logged-in user')
       const user = await UserInfoManager.promises.getPersonalInfo(user_id)
       await ChatApiHandler.promises.resolveThread(project_id, thread_id, user_id)
-      EditorRealTimeController.emitToRoom(project_id, 'resolve-thread', thread_id, user)
+      EditorRealTimeController.emitToRoom(
+        project_id,
+        'resolve-thread',
+        thread_id,
+        UserInfoController.formatPersonalInfo(user)
+      )
       await DocumentUpdaterHandler.promises.resolveThread(project_id, doc_id, thread_id, user_id)
-      res.sendStatus(204);
+      res.sendStatus(204)
     } catch (err) {
-      next(err);
+      next(err)
     }
   },
   async reopenThread(req, res, next) {
