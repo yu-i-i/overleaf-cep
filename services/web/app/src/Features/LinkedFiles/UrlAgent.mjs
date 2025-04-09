@@ -72,7 +72,6 @@ function _getUrl(projectId, data, currentUserId) {
   if (!urlValidator.isWebUri(url)) {
     throw new InvalidUrlError(`invalid url: ${url}`)
   }
-  url = UrlHelper.wrapUrlWithProxy(url)
   return url
 }
 
