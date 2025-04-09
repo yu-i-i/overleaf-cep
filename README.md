@@ -34,6 +34,7 @@ The present "extended" version of Overleaf CE includes:
 - Real-time track changes and comments
 - Autocomplete of reference keys
 - Symbol Palette
+- "From External URL" feature
 
 ## Enterprise
 
@@ -108,7 +109,7 @@ file during compilation. This is required for packages like `minted`. For this p
 ```
 OVERLEAF_APP_NAME="Our Overleaf Instance"
 
-ENABLED_LINKED_FILE_TYPES=project_file,project_output_file
+ENABLED_LINKED_FILE_TYPES=project_file,project_output_file,url
 
 # Enables Thumbnail generation using ImageMagick
 ENABLE_CONVERSIONS=true
@@ -157,6 +158,16 @@ TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
 TEX_COMPILER_EXTRA_FLAGS=-shell-escape
 ```
 </details>
+
+## "From External URL" feature
+
+To enable the ["From External URL"](https://www.overleaf.com/learn/how-to/How_to_upload_a_file_using_an_external_URL) feature the variable
+`ENABLED_LINKED_FILE_TYPES` must include `url` type:
+```
+ENABLED_LINKED_FILE_TYPES=project_file,project_output_file,url
+```
+This will extend both the *Add Files* menu and the *Insert Figure* dropdown in the toolbar: the *Add Files* menu allows you to add a 
+file to your project using its URL, while the *Insert Figure* dropdown lets you insert an image into your document directly from its URL.
 
 ## Authentication Methods
 
@@ -325,7 +336,7 @@ The above example results in loading into the contacts of the current LDAP user 
 ```
 OVERLEAF_APP_NAME="Our Overleaf Instance"
 
-ENABLED_LINKED_FILE_TYPES=project_file,project_output_file
+ENABLED_LINKED_FILE_TYPES=project_file,project_output_file,url
 
 # Enables Thumbnail generation using ImageMagick
 ENABLE_CONVERSIONS=true
@@ -662,7 +673,7 @@ and set as appropriate in your IdP configuration, or send the metadata file to t
 ```
 OVERLEAF_APP_NAME="Our Overleaf Instance"
 
-ENABLED_LINKED_FILE_TYPES=project_file,project_output_file
+ENABLED_LINKED_FILE_TYPES=project_file,project_output_file,url
 
 # Enables Thumbnail generation using ImageMagick
 ENABLE_CONVERSIONS=true
@@ -818,7 +829,7 @@ The redirect URL for your OpenID Provider is `https://my-overleaf-instance.com/o
 ```
 OVERLEAF_APP_NAME="Our Overleaf Instance"
 
-ENABLED_LINKED_FILE_TYPES=project_file,project_output_file
+ENABLED_LINKED_FILE_TYPES=project_file,project_output_file,url
 
 # Enables Thumbnail generation using ImageMagick
 ENABLE_CONVERSIONS=true

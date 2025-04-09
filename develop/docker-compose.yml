@@ -147,7 +147,7 @@ services:
       - dev.env
     environment:
       - APP_NAME=Overleaf Community Edition
-      - ENABLED_LINKED_FILE_TYPES=project_file,project_output_file
+      - ENABLED_LINKED_FILE_TYPES=project_file,project_output_file,url
       - EMAIL_CONFIRMATION_DISABLED=true
       - NODE_ENV=development
       - OVERLEAF_ALLOW_PUBLIC_ACCESS=true
