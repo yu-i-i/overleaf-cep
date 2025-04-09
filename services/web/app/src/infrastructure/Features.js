@@ -12,8 +12,6 @@ const trackChangesModuleAvailable =
 /**
  * @typedef {Object} Settings
  * @property {Object | undefined}  apis
- * @property {Object | undefined}  apis.linkedUrlProxy
- * @property {string | undefined}  apis.linkedUrlProxy.url
  * @property {Object | undefined}  apis.references
  * @property {string | undefined}  apis.references.url
  * @property {boolean | undefined} enableGithubSync
@@ -85,8 +83,7 @@ const Features = {
         )
       case 'link-url':
         return Boolean(
-          _.get(Settings, ['apis', 'linkedUrlProxy', 'url']) &&
-            Settings.enabledLinkedFileTypes.includes('url')
+          Settings.enabledLinkedFileTypes.includes('url')
         )
       case 'support':
         return supportModuleAvailable
