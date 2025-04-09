@@ -46,7 +46,6 @@ To run a custom image, add a file named docker-compose.override.yml with the fol
 
 ```yml
 ---
-version: '2.2'
 services:
     sharelatex:
         image: sharelatex/sharelatex:ext-ce
@@ -55,14 +54,14 @@ services:
 ```
 Here, the attached volume provides convenient access for the container to the certificates needed for SAML or LDAP authentication.
 
-If you want to build a Docker image of the extended CE based on the upstream v5.3.1 codebase, you can check out the corresponding tag by running:
+If you want to build a Docker image of the extended CE based on the upstream v5.4.0 codebase, you can check out the corresponding tag by running:
 ```
-git checkout v5.3.1-ext-v1
+git checkout v5.4.0-ext-v1
 ```
-After building the image, switch to the latest state of the repository and check the `server-ce/hotfix` directory. If a subdirectory matching your version (e.g., `5.3.1`) exists, build a patched image.
+After building the image, switch to the latest state of the repository and check the `server-ce/hotfix` directory. If a subdirectory matching your version (e.g., `5.4.0`) exists, build a patched image.
 Alternatively, you can download a prebuilt image from Docker Hub:
 ```
-docker pull overleafcep/sharelatex:5.3.1-ext-v1
+docker pull overleafcep/sharelatex:5.4.0-ext-v1
 ```
 Make sure to update the image name in overleaf-toolkit/config/docker-compose.override.yml accordingly.
 
@@ -87,10 +86,10 @@ The following environment variables are used to specify which TeX Live images to
 
 Users can select the image for their project in the project menu.
 
-Here is an example where the default TeX Live image is `latest-full` from Docker Hub, but the `TL2023-historic` image can be used for older projects:
+Here is an example where the default TeX Live image is `latest-full` from Docker Hub, but the `TL2024-historic` image can be used for older projects:
 ```
-ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2023-historic
-ALL_TEX_LIVE_DOCKER_IMAGE_NAMES=TeXLive 2024, TeXLive 2023
+ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2024-historic
+ALL_TEX_LIVE_DOCKER_IMAGE_NAMES=TeXLive 2025, TeXLive 2024
 TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
 ```
 For additional details refer to
