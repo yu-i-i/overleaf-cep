@@ -131,7 +131,7 @@ services:
       dockerfile: services/real-time/Dockerfile
     env_file:
       - dev.env
-
+ 
   redis:
     image: redis:7
     ports:
