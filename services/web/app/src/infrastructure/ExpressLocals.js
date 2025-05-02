@@ -397,7 +397,7 @@ module.exports = function (webRouter, privateApiRouter, publicApiRouter) {
       labsEnabled: Settings.labs && Settings.labs.enable,
       wikiEnabled: Settings.overleaf != null || Settings.proxyLearn,
       templatesEnabled:
-        Settings.overleaf != null || Boolean(Settings.moduleImportSequence.includes('template-gallery')),
+        Settings.overleaf != null || Boolean(Settings.templates),
       cioWriteKey: Settings.analytics?.cio?.writeKey,
       cioSiteId: Settings.analytics?.cio?.siteId,
     }
