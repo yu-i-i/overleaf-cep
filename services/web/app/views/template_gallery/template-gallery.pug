@@ -1,0 +1,18 @@
+extends ../layout-react
+
+block entrypointVar
+	- entrypoint = 'pages/template-gallery'
+
+block vars
+block vars
+	- const suppressNavContentLinks = true
+	- const suppressNavbar = true
+	- const suppressFooter = true
+	- bootstrap5PageStatus = 'enabled' // One of 'disabled', 'enabled', and 'queryStringOnly'
+	- isWebsiteRedesign = false
+
+block append meta
+	meta(name="ol-templateCategory" data-type="string" content=category)
+
+block content
+	#template-gallery-root

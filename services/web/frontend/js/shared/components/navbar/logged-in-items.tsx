@@ -19,6 +19,9 @@ export default function LoggedInItems({
       <NavLinkItem href="/project" className="nav-item-projects">
         {t('projects')}
       </NavLinkItem>
+      <NavLinkItem href="/templates" className="nav-item-templates">
+        {t('templates')}
+      </NavLinkItem>
       <NavDropdownMenu
         title={t('Account')}
         className="nav-item-account"
