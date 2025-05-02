@@ -24,6 +24,7 @@ import {
 } from '../../../types/project/dashboard/notification'
 import { Survey } from '../../../types/project/dashboard/survey'
 import { GetProjectsResponseBody } from '../../../types/project/dashboard/api'
+import { GetTemplatesResponseBody } from '../../../types/template/dashboard/api'
 import { Tag } from '../../../app/src/Features/Tags/types'
 import { Institution } from '../../../types/institution'
 import {
@@ -184,6 +185,7 @@ export interface Meta {
   'ol-postCheckoutRedirect': string
   'ol-postUrl': string
   'ol-prefetchedProjectsBlob': GetProjectsResponseBody | undefined
+  'ol-prefetchedTemplatesBlob': GetTemplatesResponseBody | undefined
   'ol-preventCompileOnLoad'?: boolean
   'ol-primaryEmail': { email: string; confirmed: boolean }
   'ol-project': any // TODO

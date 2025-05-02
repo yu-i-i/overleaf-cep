@@ -11,21 +11,22 @@ const TemplatesController = {
     // Read split test assignment so that it's available for Pug to read
     await SplitTestHandler.promises.getAssignment(req, res, 'core-pug-bs5')
 
-    const templateVersionId = req.params.Template_version_id
-    const templateId = req.query.id
-    if (!/^[0-9]+$/.test(templateVersionId) || !/^[0-9]+$/.test(templateId)) {
-      logger.err(
-        { templateVersionId, templateId },
-        'invalid template id or version'
-      )
-      return res.sendStatus(400)
-    }
+    const templateId = req.params.Template_version_id
+    const templateVersionId = req.query.version
+//    if (!/^[0-9]+$/.test(templateVersionId) || !/^[0-9]+$/.test(templateId)) {
+//      logger.err(
+//        { templateVersionId, templateId },
+//        'invalid template id or version'
+//      )
+//      return res.sendStatus(400)
+//    }
     const data = {
       templateVersionId,
       templateId,
-      name: req.query.templateName,
-      compiler: ProjectHelper.compilerFromV1Engine(req.query.latexEngine),
-      imageName: req.query.texImage,
+      name: req.query.name,
+      compiler: req.query.compiler,
+      language: req.query.language,
+      imageName: req.query.imageName,
       mainFile: req.query.mainFile,
       brandVariationId: req.query.brandVariationId,
     }
@@ -40,6 +41,7 @@ const TemplatesController = {
 
   async createProjectFromV1Template(req, res) {
     const userId = SessionManager.getLoggedInUserId(req.session)
+
     const project = await TemplatesManager.promises.createProjectFromV1Template(
       req.body.brandVariationId,
       req.body.compiler,
@@ -48,7 +50,8 @@ const TemplatesController = {
       req.body.templateName,
       req.body.templateVersionId,
       userId,
-      req.body.imageName
+      req.body.imageName,
+      req.body.language
     )
     delete req.session.templateData
     if (!project) {
