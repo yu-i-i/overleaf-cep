@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import NavLinkItem from '@/shared/components/navbar/nav-link-item'
 import { useSendProjectListMB } from '@/features/project-list/components/project-list-events'
+import getMeta from '@/utils/meta'
 
 export default function LoggedOutItems({
   showSignUpLink,
@@ -9,12 +10,15 @@ export default function LoggedOutItems({
 }) {
   const { t } = useTranslation()
   const sendMB = useSendProjectListMB()
+  const { templatesEnabled } = getMeta('ol-ExposedSettings')
 
   return (
     <>
-      <NavLinkItem href="/templates" className="nav-item-templates">
-        {t('templates')}
-      </NavLinkItem>
+      {templatesEnabled && (
+        <NavLinkItem href="/templates" className="nav-item-templates">
+          {t('templates')}
+        </NavLinkItem>
+      )}
       {showSignUpLink ? (
         <NavLinkItem
           href="/register"

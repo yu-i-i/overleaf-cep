@@ -29,7 +29,7 @@ function TemplatePageContent() {
   const footerProps = getMeta('ol-footer')
   const { template } = useTemplateContext()
   const { templateLinks } = getMeta('ol-ExposedSettings') || []
-  const categoryName = templateLinks?.find(link => link.url === template.category)?.name || t('all_templates')
+  const categoryName = templateLinks?.find(link => link.url === template.category)?.name
 
   return (
     <>
@@ -38,15 +38,15 @@ function TemplatePageContent() {
         <div className="container">
           <OLRow className="previous-page-link-container">
             <OLCol lg={6}>
-              <a className="previous-page-link" href={template.category}>
+              <a className="previous-page-link" href={'/templates/all'}>
                 <i className="material-symbols material-symbols-rounded" aria-hidden="true">arrow_left_alt</i>
-                {categoryName}
+                {t('all_templates')}
               </a>
-              {template.category !== '/templates/all' && (
+              {categoryName && template.category !== '/templates/all' && (
                 <>
                   <span className="mx-2">/</span>
-                  <a className="previous-page-link" href={'/templates/all'}>
-                    {t('all_templates')}
+                  <a className="previous-page-link" href={template.category}>
+                    {categoryName}
                   </a>
                 </>
               )}
