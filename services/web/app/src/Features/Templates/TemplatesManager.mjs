@@ -20,6 +20,7 @@ import OError from '@overleaf/o-error'
 
 const { promises: ProjectRootDocManager } = ProjectRootDocManagerModule
 const { promises: ProjectOptionsHandler } = ProjectOptionsHandlerModule
+const TIMEOUT = 30000  // 30 sec
 
 const TemplatesManager = {
   async createProjectFromV1Template(
@@ -30,34 +31,19 @@ const TemplatesManager = {
     templateName,
     templateVersionId,
     userId,
-    imageName
+    imageName,
+    language
   ) {
-    compiler = ProjectOptionsHandler.normalizeCompiler(compiler || 'pdflatex')
-    imageName = ProjectOptionsHandler.normalizeImageName(
-      imageName || 'wl_texlive:2018.1'
-    )
-
-    const zipUrl = `${settings.apis.v1.url}/api/v1/overleaf/templates/${templateVersionId}`
+    const zipUrl = `${settings.apis.filestore.url}/template/${templateId}/v/${templateVersionId}/zip`
     const zipReq = await fetchStreamWithResponse(zipUrl, {
-      basicAuth: {
-        user: settings.apis.v1.user,
-        password: settings.apis.v1.pass,
-      },
-      signal: AbortSignal.timeout(settings.apis.v1.timeout),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
 
     const projectName = ProjectDetailsHandler.fixProjectName(templateName)
     const dumpPath = `${settings.path.dumpFolder}/${crypto.randomUUID()}`
     const writeStream = fs.createWriteStream(dumpPath)
     try {
-      const attributes = {
-        fromV1TemplateId: templateId,
-        fromV1TemplateVersionId: templateVersionId,
-        compiler,
-        imageName,
-      }
-      if (brandVariationId) attributes.brandVariationId = brandVariationId
-
+      const attributes = {}
       await pipeline(zipReq.stream, writeStream)
 
       if (zipReq.response.status !== 200) {
@@ -87,22 +73,13 @@ const TemplatesManager = {
         return undefined
       })
 
-      await TemplatesManager._setMainFile(project, mainFile)
+      await TemplatesManager._setCompiler(project._id, compiler)
+      await TemplatesManager._setImage(project._id, imageName)
+      await TemplatesManager._setMainFile(project._id, mainFile)
+      await TemplatesManager._setSpellCheckLanguage(project._id, language)
+      await TemplatesManager._setBrandVariationId(project._id, brandVariationId)
 
-      const found = await prepareClsiCacheInBackground
-      if (found === false && project.rootDoc_id) {
-        ClsiCacheManager.createTemplateClsiCache({
-          templateVersionId,
-          project,
-          fileEntries,
-          docEntries,
-        }).catch(err => {
-          logger.error(
-            { err, templateVersionId },
-            'failed to create template clsi-cache'
-          )
-        })
-      }
+      await prepareClsiCacheInBackground
 
       return project
     } finally {
@@ -110,15 +87,41 @@ const TemplatesManager = {
     }
   },
 
-  async _setMainFile(project, mainFile) {
+  async _setCompiler(projectId, compiler) {
+    if (compiler == null) {
+      return
+    }
+    await ProjectOptionsHandler.setCompiler(projectId, compiler)
+  },
+
+  async _setImage(projectId, imageName) {
+    try {
+      await ProjectOptionsHandler.setImageName(projectId, imageName)
+    } catch {
+      logger.warn({ imageName: imageName }, 'not available')
+      await ProjectOptionsHandler.setImageName(projectId, process.env.TEX_LIVE_DOCKER_IMAGE)
+    }
+  },
+
+  async _setMainFile(projectId, mainFile) {
     if (mainFile == null) {
       return
     }
-    const rootDocId = await ProjectRootDocManager.setRootDocFromName(
-      project._id,
-      mainFile
-    )
-    if (rootDocId) project.rootDoc_id = rootDocId
+    await ProjectRootDocManager.setRootDocFromName(projectId, mainFile)
+  },
+
+  async _setSpellCheckLanguage(projectId, language) {
+    if (language == null) {
+      return
+    }
+    await ProjectOptionsHandler.setSpellCheckLanguage(projectId, language)
+  },
+
+  async _setBrandVariationId(projectId, brandVariationId) {
+    if (brandVariationId == null) {
+      return
+    }
+    await ProjectOptionsHandler.setBrandVariationId(projectId, brandVariationId)
   },
 
   async fetchFromV1(templateId) {

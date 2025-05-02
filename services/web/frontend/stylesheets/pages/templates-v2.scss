@@ -25,6 +25,32 @@
 }
 
 .gallery {
+  padding-top: calc($header-height + var(--spacing-10)) !important;
+
+  .gallery-header-sort-btn {
+    border: 0;
+    text-align: left;
+    color: var(--content-secondary);
+    background-color: transparent;
+    padding: 0;
+    font-weight: bold;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+
+    &:hover,
+    &:focus {
+      color: var(--content-secondary);
+      text-decoration: none;
+    }
+
+    .material-symbols {
+      vertical-align: bottom;
+      font-size: var(--font-size-06);
+    }
+  }
+
   .gallery-tagged-tags-container-spacing {
     padding: 0 var(--spacing-09);
     margin-bottom: var(--spacing-16);

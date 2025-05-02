@@ -275,6 +275,8 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
     '/read-only/one-time-login'
   )
 
+  await Modules.applyRouter(webRouter, privateApiRouter, publicApiRouter)
+
   webRouter.get('/logout', UserPagesController.logout)
   webRouter.post('/logout', UserController.logout)
 
