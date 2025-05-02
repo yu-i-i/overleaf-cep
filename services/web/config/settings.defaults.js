@@ -980,7 +980,7 @@ module.exports = {
     importProjectFromGithubModalWrapper: [],
     importProjectFromGithubMenu: [],
     editorLeftMenuSync: [],
-    editorLeftMenuManageTemplate: [],
+    editorLeftMenuManageTemplate: ['@/features/editor-left-menu/components/actions-manage-template'],
     oauth2Server: [],
     managedGroupSubscriptionEnrollmentNotification: [],
     managedGroupEnrollmentInvite: [],
@@ -1004,6 +1004,7 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    'template-gallery',
   ],
   viewIncludes: {},
 
