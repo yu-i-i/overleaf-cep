@@ -161,15 +161,16 @@ nav.navbar.navbar-default.navbar-main(
 					// logged out
 					if !getSessionUser()
 						// templates link
-						li
-							a(
-								href="/templates"
-								event-tracking="menu-click"
-								event-tracking-action="clicked"
-								event-tracking-trigger="click"
-								event-tracking-mb="true"
-								event-segmentation={ page: currentUrl, item: 'templates', location: 'top-menu' }
-							) #{translate('templates')}
+						if settings.templates
+							li
+								a(
+									href="/templates"
+									event-tracking="menu-click"
+									event-tracking-action="clicked"
+									event-tracking-trigger="click"
+									event-tracking-mb="true"
+									event-segmentation={ page: currentUrl, item: 'templates', location: 'top-menu' }
+								) #{translate('templates')}
 
 						// register link
 						if hasFeature('registration-page')
