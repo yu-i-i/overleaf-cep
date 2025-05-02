@@ -122,14 +122,14 @@ services:
       dockerfile: services/real-time/Dockerfile
     env_file:
       - dev.env
-
+ 
   redis:
     image: redis:5
     ports:
       - "127.0.0.1:6379:6379" # for debugging
     volumes:
       - redis-data:/data
-
+ 
   web:
     build:
       context: ..

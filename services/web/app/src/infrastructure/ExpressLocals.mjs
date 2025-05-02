@@ -407,7 +407,7 @@ export default async function (webRouter, privateApiRouter, publicApiRouter) {
       labsEnabled: Settings.labs && Settings.labs.enable,
       wikiEnabled: Settings.overleaf != null || Settings.proxyLearn,
       templatesEnabled:
-        Settings.overleaf != null || Settings.templates?.user_id != null,
+        Settings.overleaf != null || Boolean(Settings.moduleImportSequence.includes('template-gallery')),
       cioWriteKey: Settings.analytics?.cio?.writeKey,
       cioSiteId: Settings.analytics?.cio?.siteId,
     }
