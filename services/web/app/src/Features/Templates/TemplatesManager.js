@@ -18,6 +18,7 @@ const crypto = require('crypto')
 const Errors = require('../Errors/Errors')
 const { pipeline } = require('stream/promises')
 const ClsiCacheManager = require('../Compile/ClsiCacheManager')
+const TIMEOUT = 30000  // 30 sec
 
 const TemplatesManager = {
   async createProjectFromV1Template(
@@ -28,25 +29,19 @@ const TemplatesManager = {
     templateName,
     templateVersionId,
     userId,
-    imageName
+    imageName,
+    language
   ) {
-    const zipUrl = `${settings.apis.v1.url}/api/v1/overleaf/templates/${templateVersionId}`
+    const zipUrl = `${settings.apis.filestore.url}/template/${templateId}/v/${templateVersionId}/zip`
     const zipReq = await fetchStreamWithResponse(zipUrl, {
-      basicAuth: {
-        user: settings.apis.v1.user,
-        password: settings.apis.v1.pass,
-      },
-      signal: AbortSignal.timeout(settings.apis.v1.timeout),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
 
     const projectName = ProjectDetailsHandler.fixProjectName(templateName)
     const dumpPath = `${settings.path.dumpFolder}/${crypto.randomUUID()}`
     const writeStream = fs.createWriteStream(dumpPath)
     try {
-      const attributes = {
-        fromV1TemplateId: templateId,
-        fromV1TemplateVersionId: templateVersionId,
-      }
+      const attributes = {}
       await pipeline(zipReq.stream, writeStream)
 
       if (zipReq.response.status !== 200) {
@@ -78,13 +73,8 @@ const TemplatesManager = {
       await TemplatesManager._setCompiler(project._id, compiler)
       await TemplatesManager._setImage(project._id, imageName)
       await TemplatesManager._setMainFile(project._id, mainFile)
+      await TemplatesManager._setSpellCheckLanguage(project._id, language)
       await TemplatesManager._setBrandVariationId(project._id, brandVariationId)
-
-      const update = {
-        fromV1TemplateId: templateId,
-        fromV1TemplateVersionId: templateVersionId,
-      }
-      await Project.updateOne({ _id: project._id }, update, {})
 
       await prepareClsiCacheInBackground
 
@@ -102,11 +92,12 @@ const TemplatesManager = {
   },
 
   async _setImage(projectId, imageName) {
-    if (!imageName) {
-      imageName = 'wl_texlive:2018.1'
+    try {
+      await ProjectOptionsHandler.setImageName(projectId, imageName)
+    } catch {
+      logger.warn({ imageName: imageName }, 'not available')
+      await ProjectOptionsHandler.setImageName(projectId, process.env.TEX_LIVE_DOCKER_IMAGE)
     }
-
-    await ProjectOptionsHandler.setImageName(projectId, imageName)
   },
 
   async _setMainFile(projectId, mainFile) {
@@ -114,6 +105,13 @@ const TemplatesManager = {
       return
     }
     await ProjectRootDocManager.setRootDocFromName(projectId, mainFile)
+  },
+
+  async _setSpellCheckLanguage(projectId, language) {
+    if (language == null) {
+      return
+    }
+    await ProjectOptionsHandler.setSpellCheckLanguage(projectId, language)
   },
 
   async _setBrandVariationId(projectId, brandVariationId) {
