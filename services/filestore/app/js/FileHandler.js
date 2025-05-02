@@ -150,7 +150,9 @@ async function _getConvertedFileAndCache(bucket, key, convertedKey, opts) {
   let convertedFsPath
   try {
     convertedFsPath = await _convertFile(bucket, key, opts)
-    await ImageOptimiser.promises.compressPng(convertedFsPath)
+    if (convertedFsPath.toLowerCase().endsWith(".png")) {
+      await ImageOptimiser.promises.compressPng(convertedFsPath)
+    }
     await PersistorManager.sendFile(bucket, convertedKey, convertedFsPath)
   } catch (err) {
     LocalFileWriter.deleteFile(convertedFsPath, () => {})
