@@ -5,11 +5,11 @@ import ProjectHelper from '../Project/ProjectHelper.mjs'
 import { expressify } from '@overleaf/promise-utils'
 import { parseReq, z } from '../../infrastructure/Validation.mjs'
 
-// numeric v1 ids (template id / template version id)
 const numericId = z.string().regex(/^[0-9]+$/)
+const objectId = z.string().regex(/^[a-fA-F0-9]{24}$/)
 
 const getV1TemplateSchema = z.object({
-  params: z.strictObject({ Template_version_id: numericId }),
+  params: z.strictObject({ Template_version_id: objectId }),
   query: z.object({
     id: numericId,
     templateName: z.string().optional(),
@@ -17,25 +17,27 @@ const getV1TemplateSchema = z.object({
     texImage: z.string().optional(),
     mainFile: z.string().optional(),
     brandVariationId: z.coerce.number().int().positive().optional(),
+    language: z.string().optional(),
   }),
 })
 
 // Rollout-temporary fallback (pre-refinement schema from main); delete
 // when this route's REQ_VALIDATION_MODE instrumentation is removed.
 const getV1TemplateFallbackSchema = z.object({
-  params: z.object({ Template_version_id: numericId }).passthrough(),
+  params: z.object({ Template_version_id: objectId }).passthrough(),
   query: z.object({ id: numericId }).passthrough(),
 })
 
 const createProjectFromV1TemplateSchema = z.object({
   body: z.strictObject({
-    templateId: numericId,
+    templateId: objectId,
     templateVersionId: numericId,
     brandVariationId: z.coerce.number().int().positive().optional(),
     compiler: z.string().optional(),
     mainFile: z.string().optional(),
     templateName: z.string().optional(),
     imageName: z.string().optional(),
+    language: z.string().optional(),
   }),
 })
 
@@ -44,7 +46,7 @@ const createProjectFromV1TemplateSchema = z.object({
 const createProjectFromV1TemplateFallbackSchema = z.object({
   body: z
     .object({
-      templateId: numericId,
+      templateId: objectId,
       templateVersionId: numericId,
     })
     .passthrough(),
@@ -59,14 +61,16 @@ const TemplatesController = {
       fallbackSchema: getV1TemplateFallbackSchema,
     })
     const data = {
-      templateVersionId,
-      templateId: query.id,
+      templateVersionId: query.id,
+      templateId: templateVersionId,
       name: query.templateName,
       compiler: ProjectHelper.compilerFromV1Engine(query.latexEngine),
       imageName: query.texImage,
       mainFile: query.mainFile,
       brandVariationId: query.brandVariationId,
+      language: query.language,
     }
+
     res.render(
       path.resolve(
         import.meta.dirname,
@@ -81,6 +85,9 @@ const TemplatesController = {
       fallbackSchema: createProjectFromV1TemplateFallbackSchema,
     })
     const userId = SessionManager.getLoggedInUserId(req.session)
+
+console.log("BODY = ", body)
+
     const project = await TemplatesManager.promises.createProjectFromV1Template(
       body.brandVariationId,
       body.compiler,
@@ -89,7 +96,8 @@ const TemplatesController = {
       body.templateName,
       body.templateVersionId,
       userId,
-      body.imageName
+      body.imageName,
+      body.language
     )
     delete req.session.templateData
     if (!project) {

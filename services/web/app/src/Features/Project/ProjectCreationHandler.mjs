@@ -274,7 +274,7 @@ async function _createBlankProject(
     _id: 1,
     ...SplitTestUserGetter.getProjection('history-ranges-support'),
   })
-  project.spellCheckLanguage = user.ace.spellCheckLanguage
+  project.spellCheckLanguage = attributes.spellCheckLanguage || user.ace.spellCheckLanguage
   const historyRangesSupportAssignment =
     await SplitTestHandler.promises.getAssignmentForMongoUser(
       user,

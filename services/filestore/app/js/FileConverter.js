@@ -6,7 +6,7 @@ import Errors from './Errors.js'
 
 const { ConversionError } = Errors
 
-const APPROVED_FORMATS = ['png']
+const APPROVED_FORMATS = ['png', 'jpg']
 const FOURTY_SECONDS = 40 * 1000
 const KILL_SIGNAL = 'SIGTERM'
 

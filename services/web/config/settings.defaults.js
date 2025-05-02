@@ -1027,8 +1027,18 @@ module.exports = {
     importProjectFromGithubModalWrapper: [],
     importProjectFromGithubMenu: [],
     editorLeftMenuSync: [],
-    editorLeftMenuManageTemplate: [],
-    menubarExtraComponents: [],
+    editorLeftMenuManageTemplate: [
+      Path.resolve(
+        __dirname,
+        '../modules/template-gallery/frontend/js/features/template/components/actions-manage-template'
+      ),
+    ],
+    menubarExtraComponents: [
+      Path.resolve(
+        __dirname,
+        '../modules/template-gallery/frontend/js/features/template/components/menubar-manage-template'
+      ),
+    ],
     insertMenuSections: [],
     oauth2Server: [],
     managedGroupSubscriptionEnrollmentNotification: [],
@@ -1091,6 +1101,7 @@ module.exports = {
     'authentication/ldap',
     'authentication/saml',
     'authentication/oidc',
+    'template-gallery',
   ],
   viewIncludes: {},
 

@@ -20,6 +20,7 @@ import OError from '@overleaf/o-error'
 
 const { promises: ProjectRootDocManager } = ProjectRootDocManagerModule
 const { promises: ProjectOptionsHandler } = ProjectOptionsHandlerModule
+const TIMEOUT = 30000  // 30 sec
 
 const TemplatesManager = {
   async createProjectFromV1Template(
@@ -30,33 +31,33 @@ const TemplatesManager = {
     templateName,
     templateVersionId,
     userId,
-    imageName
+    imageName,
+    spellCheckLanguage
   ) {
     compiler = ProjectOptionsHandler.normalizeCompiler(
       compiler || settings.defaultLatexCompiler
     )
-    imageName = ProjectOptionsHandler.normalizeImageName(
-      imageName || 'wl_texlive:2018.1'
-    )
+    try {
+       imageName = ProjectOptionsHandler.normalizeImageName(imageName)
+    } catch {
+      logger.warn( { templateId, imageName }, 'cannot use the image required by the template, using the default image')
+      imageName = null
+    }
 
-    const zipUrl = `${settings.apis.v1.url}/api/v1/overleaf/templates/${templateVersionId}`
+    const zipUrl = `${settings.apis.filestore.url}/template/${templateId}/v/${templateVersionId}/zip`
     const zipReq = await fetchStreamWithResponse(zipUrl, {
-      basicAuth: {
-        user: settings.apis.v1.user,
-        password: settings.apis.v1.pass,
-      },
-      signal: AbortSignal.timeout(settings.apis.v1.timeout),
+      signal: AbortSignal.timeout(TIMEOUT),
     })
 
     const projectName = ProjectDetailsHandler.fixProjectName(templateName)
     const dumpPath = `${settings.path.dumpFolder}/${crypto.randomUUID()}_templates-manager`
     const writeStream = fs.createWriteStream(dumpPath)
+
     try {
       const attributes = {
-        fromV1TemplateId: templateId,
-        fromV1TemplateVersionId: templateVersionId,
         compiler,
         imageName,
+        spellCheckLanguage
       }
       if (brandVariationId) attributes.brandVariationId = brandVariationId
 
