@@ -5,6 +5,8 @@ export default function GalleryPopularTags() {
   const { t } = useTranslation()
   const { templateLinks } = getMeta('ol-ExposedSettings') || []
 
+  if(!templateLinks || templateLinks.length < 2) return null
+
   return (
     <div className="popular-tags">
       <h1>{t('categories')}</h1>
