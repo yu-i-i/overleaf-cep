@@ -27,11 +27,6 @@
 .gallery {
   padding-top: calc($header-height + var(--spacing-10)) !important;
 
-  .gallery-search-form-control {
-    padding-top: 0px;
-    padding-bottom: 0px;
-  }
-
   .gallery-header-sort-btn {
     font-size: var(--font-size-02);
     border: 0;

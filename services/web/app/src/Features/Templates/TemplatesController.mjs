@@ -86,8 +86,6 @@ const TemplatesController = {
     })
     const userId = SessionManager.getLoggedInUserId(req.session)
 
-console.log("BODY = ", body)
-
     const project = await TemplatesManager.promises.createProjectFromV1Template(
       body.brandVariationId,
       body.compiler,
