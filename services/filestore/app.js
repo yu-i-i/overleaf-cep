@@ -108,6 +108,11 @@ app.post(
   keyBuilder.templateFileKeyMiddleware,
   fileController.insertFile
 )
+app.delete(
+  '/template/:template_id/v/:version/:format',
+  keyBuilder.templateFileKeyMiddleware,
+  fileController.deleteFile
+)
 
 app.get(
   '/bucket/:bucket/key/*',

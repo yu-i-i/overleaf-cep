@@ -263,6 +263,8 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
     '/read-only/one-time-login'
   )
 
+  await Modules.applyRouter(webRouter, privateApiRouter, publicApiRouter)
+
   webRouter.post('/logout', UserController.logout)
 
   webRouter.get('/restricted', AuthorizationMiddleware.restricted)
