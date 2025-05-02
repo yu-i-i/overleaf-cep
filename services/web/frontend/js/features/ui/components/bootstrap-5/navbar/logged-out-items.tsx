@@ -12,6 +12,9 @@ export default function LoggedOutItems({
 
   return (
     <>
+      <NavLinkItem href="/templates" className="nav-item-templates">
+        {t('templates')}
+      </NavLinkItem>
       {showSignUpLink ? (
         <NavLinkItem
           href="/register"

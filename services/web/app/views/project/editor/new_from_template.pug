@@ -31,8 +31,10 @@ block content
     input(type="hidden" name="templateVersionId" value=templateVersionId)
     input(type="hidden" name="templateName" value=name)
     input(type="hidden" name="compiler" value=compiler)
-    input(type="hidden" name="imageName" value=imageName)
+    if imageName
+      input(type="hidden" name="imageName" value=imageName)
     input(type="hidden" name="mainFile" value=mainFile)
+    input(type="hidden" name="language" value=language)
     if brandVariationId
       input(type="hidden" name="brandVariationId" value=brandVariationId)
     input(hidden type="submit")
