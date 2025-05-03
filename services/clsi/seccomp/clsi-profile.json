@@ -829,13 +829,19 @@
             "args": []
         },
         {
-          "name": "gettimeofday",
-          "action": "SCMP_ACT_ALLOW",
-          "args": []
-        }, {
-          "name": "epoll_pwait",
-          "action": "SCMP_ACT_ALLOW",
-          "args": []
+            "name": "gettimeofday",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
+            "name": "epoll_pwait",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
+            "name": "poll",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
         }
     ]
 }
