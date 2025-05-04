@@ -1,4 +1,3 @@
-import { Tabs } from '@reach/tabs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PropTypes from 'prop-types'
@@ -10,8 +9,6 @@ import SymbolPaletteBody from './symbol-palette-body'
 import SymbolPaletteTabs from './symbol-palette-tabs'
 import SymbolPaletteCloseButton from './symbol-palette-close-button'
 
-import '@reach/tabs/styles.css'
-
 export default function SymbolPaletteContent({ handleSelect }) {
   const [input, setInput] = useState('')
 
@@ -19,6 +16,7 @@ export default function SymbolPaletteContent({ handleSelect }) {
 
   // build the list of categories with translated labels
   const categories = useMemo(() => createCategories(t), [t])
+  const [activeCategoryId, setActiveCategoryId] = useState(categories[0]?.id)
 
   // group the symbols by category
   const categorisedSymbols = useMemo(
@@ -59,17 +57,22 @@ export default function SymbolPaletteContent({ handleSelect }) {
       inputRef.current.focus()
     }
   }, [])
-
   return (
-    <Tabs className="symbol-palette-container">
+    <div className="symbol-palette-container">
       <div className="symbol-palette">
         <div className="symbol-palette-header-outer">
           <div className="symbol-palette-header">
-            <SymbolPaletteTabs categories={categories} />
+            <SymbolPaletteTabs 
+              categories={categories} 
+              activeCategoryId={activeCategoryId}
+              setActiveCategoryId={setActiveCategoryId}
+            />
             <div className="symbol-palette-header-group">
               <SymbolPaletteSearch setInput={setInput} inputRef={inputRef} />
-              <SymbolPaletteCloseButton />
             </div>
+          </div>
+          <div className="symbol-palette-header-group">
+            <SymbolPaletteCloseButton />
           </div>
         </div>
         <div className="symbol-palette-body">
@@ -79,10 +82,11 @@ export default function SymbolPaletteContent({ handleSelect }) {
             filteredSymbols={filteredSymbols}
             handleSelect={handleSelect}
             focusInput={focusInput}
+            activeCategoryId={activeCategoryId}
           />
         </div>
       </div>
-    </Tabs>
+    </div>
   )
 }
 SymbolPaletteContent.propTypes = {
