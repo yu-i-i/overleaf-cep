@@ -42,4 +42,4 @@ export default function SymbolPaletteSearch({ setInput, inputRef }) {
 SymbolPaletteSearch.propTypes = {
   setInput: PropTypes.func.isRequired,
   inputRef: PropTypes.object.isRequired,
-};
+}

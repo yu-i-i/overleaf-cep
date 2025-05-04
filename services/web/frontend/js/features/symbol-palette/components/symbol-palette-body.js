@@ -1,4 +1,3 @@
-import { TabPanels, TabPanel } from '@reach/tabs'
 import { useTranslation } from 'react-i18next'
 import PropTypes from 'prop-types'
 import SymbolPaletteItems from './symbol-palette-items'
@@ -9,6 +8,7 @@ export default function SymbolPaletteBody({
   filteredSymbols,
   handleSelect,
   focusInput,
+  activeCategoryId,
 }) {
   const { t } = useTranslation()
 
@@ -17,7 +17,7 @@ export default function SymbolPaletteBody({
   // note: include empty tab panels so that aria-controls on tabs can still reference the panel ids
   if (filteredSymbols) {
     return (
-      <>
+      <div className="symbol-palette-panels">
         {filteredSymbols.length ? (
           <SymbolPaletteItems
             items={filteredSymbols}
@@ -28,29 +28,43 @@ export default function SymbolPaletteBody({
           <div className="symbol-palette-empty">{t('no_symbols_found')}</div>
         )}
 
-        <TabPanels>
-          {categories.map(category => (
-            <TabPanel key={category.id} tabIndex={-1} />
-          ))}
-        </TabPanels>
-      </>
+        {categories.map(category => (
+          <div
+            key={category.id}
+            role="tabpanel"
+            className="symbol-palette-panel"
+            id={`symbol-palette-panel-${category.id}`}
+            aria-labelledby={`symbol-palette-tab-${category.id}`}
+            hidden
+          />
+        ))}
+      </div>
     )
   }
 
   // not searching: show the symbols grouped by category
   return (
-    <TabPanels>
-      {categories.map(category => (
-        <TabPanel key={category.id} tabIndex={-1}>
+    <div className="symbol-palette-panels">
+      {categories.map((category) => (
+        <div
+          key={category.id}
+          id={`symbol-palette-panel-${category.id}`}
+          className="symbol-palette-panel"
+          role="tabpanel"
+          aria-labelledby={`symbol-palette-tab-${category.id}`}
+          hidden={category.id !== activeCategoryId}
+        >
           <SymbolPaletteItems
             items={categorisedSymbols[category.id]}
             handleSelect={handleSelect}
             focusInput={focusInput}
           />
-        </TabPanel>
+        </div>
       ))}
-    </TabPanels>
+    </div>
   )
+
+
 }
 SymbolPaletteBody.propTypes = {
   categories: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -58,4 +72,5 @@ SymbolPaletteBody.propTypes = {
   filteredSymbols: PropTypes.arrayOf(PropTypes.object),
   handleSelect: PropTypes.func.isRequired,
   focusInput: PropTypes.func.isRequired,
+  activeCategoryId: PropTypes.string.isRequired,
 }
