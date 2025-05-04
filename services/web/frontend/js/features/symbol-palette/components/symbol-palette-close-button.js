@@ -11,7 +11,7 @@ export default function SymbolPaletteCloseButton() {
         type="button"
         className="btn-close symbol-palette-close-button"
         onClick={toggleSymbolPalette}
-        aria-label={t('clear_search')}
+        aria-label={t('close')}
       >
       </button>
     </div>
