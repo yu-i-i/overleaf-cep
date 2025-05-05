@@ -1,16 +1,27 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, forwardRef } from 'react'
 import PropTypes from 'prop-types'
 import OLTooltip from '@/features/ui/components/ol/ol-tooltip'
 
-export default function SymbolPaletteItem({
+const SymbolPaletteItem = forwardRef(function ({ 
   focused,
   handleSelect,
   handleKeyDown,
   symbol,
-}) {
+}, ref) {
   const buttonRef = useRef(null)
 
-  // call focus() on this item when appropriate
+  // Forward internal ref to parent
+  useEffect(() => {
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(buttonRef.current)
+      } else {
+        ref.current = buttonRef.current
+      }
+    }
+  }, [ref])
+
+  // Focus the item when it becomes focused
   useEffect(() => {
     if (
       focused &&
@@ -56,7 +67,7 @@ export default function SymbolPaletteItem({
       </button>
     </OLTooltip>
   )
-}
+})
 
 SymbolPaletteItem.propTypes = {
   symbol: PropTypes.shape({
@@ -70,3 +81,4 @@ SymbolPaletteItem.propTypes = {
   handleSelect: PropTypes.func.isRequired,
   focused: PropTypes.bool,
 }
+export default SymbolPaletteItem
