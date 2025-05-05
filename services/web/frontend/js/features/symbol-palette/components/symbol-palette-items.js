@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useEditorContext } from '../../../shared/context/editor-context'
 import SymbolPaletteItem from './symbol-palette-item'
 
 export default function SymbolPaletteItems({
@@ -8,54 +9,80 @@ export default function SymbolPaletteItems({
   focusInput,
 }) {
   const [focusedIndex, setFocusedIndex] = useState(0)
+  const itemRefs = useRef([])
 
-  // reset the focused item when the list of items changes
   useEffect(() => {
+    itemRefs.current = items.map((_, i) => itemRefs.current[i] || null)
     setFocusedIndex(0)
   }, [items])
 
-  // navigate through items with left and right arrows
+  const getItemRects = () => {
+    return itemRefs.current.map(ref => ref?.getBoundingClientRect?.() ?? null)
+  }
+  const { toggleSymbolPalette } = useEditorContext()
+
   const handleKeyDown = useCallback(
     event => {
-      if (event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) {
-        return
-      }
+      if (event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return
+
+      const rects = getItemRects()
+      const currentRect = rects[focusedIndex]
+      if (!currentRect) return
+
+      let newIndex = focusedIndex
 
       switch (event.key) {
-        // focus previous item
         case 'ArrowLeft':
-        case 'ArrowUp':
-          setFocusedIndex(index => (index > 0 ? index - 1 : items.length - 1))
+          newIndex = focusedIndex > 0 ? focusedIndex - 1 : items.length - 1
           break
-
-        // focus next item
         case 'ArrowRight':
-        case 'ArrowDown':
-          setFocusedIndex(index => (index < items.length - 1 ? index + 1 : 0))
+          newIndex = focusedIndex < items.length - 1 ? focusedIndex + 1 : 0
           break
+        case 'ArrowUp':
+        case 'ArrowDown': {
+          const direction = event.key === 'ArrowUp' ? -1 : 1
+          const candidates = rects
+            .map((rect, i) => ({ rect, i }))
+            .filter(({ rect }, i) =>
+              i !== focusedIndex &&
+              rect &&
+              Math.abs(rect.x - currentRect.x) < currentRect.width * 0.8 &&
+              (direction === -1 ? rect.y < currentRect.y : rect.y > currentRect.y)
+            )
 
-        // focus first item
+          if (candidates.length > 0) {
+            const closest = candidates.reduce((a, b) =>
+              Math.abs(b.rect.y - currentRect.y) < Math.abs(a.rect.y - currentRect.y) ? b : a
+            )
+            newIndex = closest.i
+          }
+          break
+        }
         case 'Home':
-          setFocusedIndex(0)
+          newIndex = 0
           break
-
-        // focus last item
         case 'End':
-          setFocusedIndex(items.length - 1)
+          newIndex = items.length - 1
           break
-
-        // allow the default action
         case 'Enter':
         case ' ':
+          handleSelect(items[focusedIndex])
+          toggleSymbolPalette()
+          break
+        case 'Escape':
+          toggleSymbolPalette()
+          window.dispatchEvent(new CustomEvent('editor:focus'))
           break
 
-        // any other key returns focus to the input
         default:
           focusInput()
-          break
+          return
       }
+
+      event.preventDefault()
+      setFocusedIndex(newIndex)
     },
-    [focusInput, items.length]
+    [focusedIndex, items, focusInput, handleSelect]
   )
 
   return (
@@ -70,11 +97,15 @@ export default function SymbolPaletteItems({
           }}
           handleKeyDown={handleKeyDown}
           focused={index === focusedIndex}
+          ref={el => {
+            itemRefs.current[index] = el
+          }}
         />
       ))}
     </div>
   )
 }
+
 SymbolPaletteItems.propTypes = {
   items: PropTypes.arrayOf(
     PropTypes.shape({
@@ -84,3 +115,4 @@ SymbolPaletteItems.propTypes = {
   handleSelect: PropTypes.func.isRequired,
   focusInput: PropTypes.func.isRequired,
 }
+
