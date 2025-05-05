@@ -58,14 +58,21 @@ Here, the attached volume provides convenient access for the container to the ce
 
 If you want to build a Docker image of the extended CE based on the upstream v5.4.0 codebase, you can check out the corresponding tag by running:
 ```
-git checkout v5.4.0-ext-v1
+git checkout v5.4.0-ext-v2
 ```
 After building the image, switch to the latest state of the repository and check the `server-ce/hotfix` directory. If a subdirectory matching your version (e.g., `5.4.0`) exists, build a patched image.
 Alternatively, you can download a prebuilt image from Docker Hub:
 ```
-docker pull overleafcep/sharelatex:5.4.0-ext-v1
+docker pull overleafcep/sharelatex:5.4.0-ext-v2
 ```
 Make sure to update the image name in overleaf-toolkit/config/docker-compose.override.yml accordingly.
+
+### New in `v5.4.0-ext-v2`:
+
+- Added "From External URL" feature
+- Introduced Template Gallery
+- Improved keyboard input experience in the Symbol Palette
+- Fixed compilation error when using the `minted` package
 
 ## Sandboxed Compiles
 
