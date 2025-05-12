@@ -1,8 +1,7 @@
+import { ChangeEventHandler, useCallback, useRef, useEffect } from 'react'
 import OLFormGroup from '@/features/ui/components/ol/ol-form-group'
 import OLFormLabel from '@/features/ui/components/ol/ol-form-label'
 import OLFormSelect from '@/features/ui/components/ol/ol-form-select'
-import { ChangeEventHandler, useCallback, useRef } from 'react'
-import { Spinner } from 'react-bootstrap-5'
 
 type PossibleValue = string | number | boolean
 
@@ -19,26 +18,27 @@ export type Optgroup<T extends PossibleValue = string> = {
 }
 
 type SettingsMenuSelectProps<T extends PossibleValue = string> = {
-  label: string
   name: string
   options: Array<Option<T>>
   optgroup?: Optgroup<T>
-  loading?: boolean
   onChange: (val: T) => void
   value?: T
   disabled?: boolean
 }
 
-export default function SettingsMenuSelect<T extends PossibleValue = string>({
-  label,
-  name,
-  options,
-  optgroup,
-  loading,
-  onChange,
-  value,
-  disabled = false,
-}: SettingsMenuSelectProps<T>) {
+export default function SettingsMenuSelect<T extends PossibleValue = string>(
+  props: SettingsMenuSelectProps<T>
+) {
+
+ const { name, options, optgroup, onChange, value, disabled = false } = props
+ const defaultApplied = useRef(false)
+
+  useEffect(() => {
+    if (value === undefined || value === null) {
+      onChange(options?.[0]?.value || optgroup?.options?.[0]?.value)
+    }
+  }, [value, options, onChange])
+
   const handleChange: ChangeEventHandler<HTMLSelectElement> = useCallback(
     event => {
       const selectedValue = event.target.value
@@ -55,23 +55,9 @@ export default function SettingsMenuSelect<T extends PossibleValue = string>({
   const selectRef = useRef<HTMLSelectElement | null>(null)
 
   return (
-    <OLFormGroup
-      controlId={`settings-menu-${name}`}
-      className="left-menu-setting"
-    >
-      <OLFormLabel>{label}</OLFormLabel>
-      {loading ? (
-        <p className="mb-0">
-          <Spinner
-            animation="border"
-            aria-hidden="true"
-            size="sm"
-            role="status"
-          />
-        </p>
-      ) : (
+    <>
+
         <OLFormSelect
-          size="sm"
           onChange={handleChange}
           value={value?.toString()}
           disabled={disabled}
@@ -100,7 +86,6 @@ export default function SettingsMenuSelect<T extends PossibleValue = string>({
             </optgroup>
           ) : null}
         </OLFormSelect>
-      )}
-    </OLFormGroup>
+    </>
   )
 }
