@@ -5,14 +5,19 @@ import RateLimiterMiddleware from '../../../../app/src/Features/Security/RateLim
 import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.js'
 import TemplateGalleryController from './TemplateGalleryController.mjs'
 
-const rateLimiter = new RateLimiter('create-project-from-template', {
+const rateLimiterNewTemplate = new RateLimiter('create-template-from-project', {
   points: 20,
   duration: 60,
 })
-const rateLimiterThumbnails = new RateLimiter('gallery-thumbnails', {
-  points: 360,
+const rateLimiter = new RateLimiter('template-gallery', {
+  points: 60,
   duration: 60,
 })
+const rateLimiterThumbnails = new RateLimiter('template-gallery-thumbnails', {
+  points: 240,
+  duration: 60,
+})
+
 
 export default {
   rateLimiter,
@@ -22,7 +27,7 @@ export default {
     webRouter.post(
       '/template/new/:Project_id',
       AuthenticationController.requireLogin(),
-      RateLimiterMiddleware.rateLimit(rateLimiter),
+      RateLimiterMiddleware.rateLimit(rateLimiterNewTemplate),
       TemplateGalleryController.createTemplateFromProject
     )
 
