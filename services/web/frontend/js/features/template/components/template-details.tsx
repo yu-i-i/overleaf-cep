@@ -8,6 +8,7 @@ import { cleanHtml } from '../../../../../modules/template-gallery/app/src/Clean
 import { useTemplateContext } from '../context/template-context'
 import DeleteTemplateButton from './delete-template-button'
 import EditTemplateButton from './edit-template-button'
+import { licensesMap } from './settings/settings-license'
 
 function TemplateDetails() {
   const { t } = useTranslation()
@@ -73,7 +74,7 @@ function TemplateDetails() {
           <b>{t('license')}:</b>
         </div>
         <div>
-          {template.license}
+          {licensesMap[template.license]}
         </div>
       </div>
         {sanitizedDescription && (

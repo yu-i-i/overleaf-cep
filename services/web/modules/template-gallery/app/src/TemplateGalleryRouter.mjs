@@ -19,6 +19,7 @@ const rateLimiterThumbnails = new RateLimiter('template-gallery-thumbnails', {
   duration: 60,
 })
 
+
 export default {
   rateLimiter,
   apply(webRouter) {

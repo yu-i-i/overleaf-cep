@@ -932,15 +932,10 @@ const _ProjectController = {
           )
       }
 
-console.log("Features.hasFeature('templates-server-pro') = ", Features.hasFeature('templates-server-pro'))
-console.log("Settings.templates?.nonAdminCanManage", Settings.templates?.nonAdminCanManage)
-
       const isAdminOrTemplateOwner =
         hasAdminAccess(user) || Settings.templates?.nonAdminCanManage || Settings.templates?.user_id === userId
       const showTemplatesServerPro =
         Features.hasFeature('templates-server-pro') && isAdminOrTemplateOwner
-
-console.log("showTemplatesServerPro = ", showTemplatesServerPro )
 
       const debugPdfDetach = shouldDisplayFeature('debug_pdf_detach')
 

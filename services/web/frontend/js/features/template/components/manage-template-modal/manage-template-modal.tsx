@@ -1,7 +1,15 @@
 import React, { memo, useCallback, useState } from 'react'
-import PropTypes from 'prop-types'
 import OLModal from '@/features/ui/components/ol/ol-modal'
 import ManageTemplateModalContent from './manage-template-modal-content'
+import type { Template } from '../../../../../../types/template'
+
+interface ManageTemplateModalProps {
+  show: boolean
+  handleHide: () => void
+  handleAfterPublished: (data: Template) => void
+  projectId: string
+  projectName: string
+}
 
 function ManageTemplateModal({
   show,
@@ -9,7 +17,7 @@ function ManageTemplateModal({
   handleAfterPublished,
   projectId,
   projectName,
-}) {
+}: ManageTemplateModalProps) {
   const [inFlight, setInFlight] = useState(false)
 
   const onHide = useCallback(() => {
@@ -20,6 +28,7 @@ function ManageTemplateModal({
 
   return (
     <OLModal
+      size="lg"
       animation
       show={show}
       onHide={onHide}
@@ -38,14 +47,6 @@ function ManageTemplateModal({
       />
     </OLModal>
   )
-}
-
-ManageTemplateModal.propTypes = {
-  show: PropTypes.bool.isRequired,
-  handleHide: PropTypes.func.isRequired,
-  handleAfterPublished: PropTypes.func.isRequired,
-  projectId: PropTypes.string,
-  projectName: PropTypes.string,
 }
 
 export default memo(ManageTemplateModal)
