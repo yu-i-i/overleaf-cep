@@ -2,8 +2,17 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import getMeta from '../../../../utils/meta'
 import SettingsMenuSelect from './settings-menu-select'
+import type { Optgroup } from './settings-menu-select'
 
-export default function SettingsLanguage({ value, onChange }) {
+interface SettingsLanguageProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+export default function SettingsLanguage({
+  value,
+  onChange,
+}: SettingsLanguageProps) {
   const { t } = useTranslation()
 
   const optgroup: Optgroup = useMemo(() => {

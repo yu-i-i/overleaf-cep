@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import withErrorBoundary from '../../../infrastructure/error-boundary'
+import withErrorBoundary from '@/infrastructure/error-boundary'
 import Notification from '@/shared/components/notification'
 import TemplateActionModal from './template-action-modal'
 
