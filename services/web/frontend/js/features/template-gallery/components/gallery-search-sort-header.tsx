@@ -52,7 +52,7 @@ export default function GallerySearchSortHeader( { gotoAllLink }: { boolean } ) 
           </a>
         </OLCol>
       )}
-        <OLCol className="d-flex justify-content-center gap-2">
+      <OLCol className="d-flex justify-content-center gap-2">
         <SortByButton
           column="lastUpdated"
           text={t('last_updated')}

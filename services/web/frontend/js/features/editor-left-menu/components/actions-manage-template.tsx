@@ -4,7 +4,7 @@ import * as eventTracking from '../../../infrastructure/event-tracking'
 import getMeta from '../../../utils/meta'
 import OLTooltip from '@/features/ui/components/ol/ol-tooltip'
 import { useDetachCompileContext } from '../../../shared/context/detach-compile-context'
-import EditorManageTemplateModalWrapper from '../../manage-template-modal/components/editor-manage-template-modal-wrapper'
+import EditorManageTemplateModalWrapper from '../../template/components/manage-template-modal/editor-manage-template-modal-wrapper'
 import LeftMenuButton from './left-menu-button'
 
 type TemplateManageResponse = {
