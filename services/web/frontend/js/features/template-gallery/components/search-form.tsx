@@ -35,6 +35,8 @@ export default function SearchForm({
       onSubmit={e => e.preventDefault()}
     >
       <OLFormControl
+        className="gallery-search-form-control"
+        id="gallery-search-form-control"
         type="text"
         value={inputValue}
         onChange={handleChange}

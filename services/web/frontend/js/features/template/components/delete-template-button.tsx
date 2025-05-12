@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import useIsMounted from '@/shared/hooks/use-is-mounted'
 import OLButton from '@/features/ui/components/ol/ol-button'
-import DeleteTemplateModal from './delete-template-modal'
-import { Template } from '../../../../../types/template'
+import DeleteTemplateModal from './modals/delete-template-modal'
 import { useTemplateContext } from '../context/template-context'
-import { deleteTemplate } from '@/features/template/util/api'
+import { deleteTemplate } from '../util/api'
+import type { Template } from '../../../../../types/template'
 
 function DeleteTemplateButton() {
   const { t } = useTranslation()
