@@ -1,8 +1,8 @@
 export type Template = {
   id: string
-  version: string
+  version: number
   name: string
-  lastUpdated: string
+  lastUpdated: Date
   author: string
   authorMD: string
   description: string
@@ -10,7 +10,7 @@ export type Template = {
   license: string
   category: string
   compiler?: string
-  language: string
+  language?: string
   owner: string
 }
 

@@ -97,7 +97,7 @@ const TemplatesManager = {
       await ProjectOptionsHandler.setImageName(projectId, imageName)
     } catch {
       logger.warn({ imageName: imageName }, 'not available')
-      await ProjectOptionsHandler.setImageName(projectId, process.env.TEX_LIVE_DOCKER_IMAGE)
+      await ProjectOptionsHandler.setImageName(projectId, settings.currentImageName)
     }
   },
 
