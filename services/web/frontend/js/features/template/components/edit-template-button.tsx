@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import useIsMounted from '@/shared/hooks/use-is-mounted'
 import OLButton from '@/features/ui/components/ol/ol-button'
-import EditTemplateModal from './edit-template-modal'
+import EditTemplateModal from './modals/edit-template-modal'
 import { useTemplateContext } from '../context/template-context'
-import { updateTemplate } from '@/features/template/util/api'
+import { updateTemplate } from '../util/api'
 import type { Template } from '../../../../../types/template'
 
 export default function EditTemplateButton() {
