@@ -107,7 +107,7 @@ if ((process.env.DOCKER_RUNNER || process.env.SANDBOXED_COMPILES) === 'true') {
         CLSI: 1,
       },
       socketPath: '/var/run/docker.sock',
-      user: process.env.TEXLIVE_IMAGE_USER || 'tex',
+      user: process.env.TEXLIVE_IMAGE_USER || 'www-data',
     },
     optimiseInDocker: true,
     expireProjectAfterIdleMs: 24 * 60 * 60 * 1000,
