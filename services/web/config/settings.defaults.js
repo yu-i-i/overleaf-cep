@@ -1043,6 +1043,7 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    'sandboxed-compiles',
   ],
   viewIncludes: {},
 
@@ -1070,14 +1071,6 @@ module.exports = {
     enabled: false,
   },
 
-  allowedImageNames: process.env.SANDBOXED_COMPILES === 'true'
-    ? parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGES)
-        .map((imageName, index) => ({
-          imageName,
-          imageDesc: parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGE_NAMES)[index]
-            || imageName.split(':')[1],
-        }))
-    : undefined,
 }
 
 module.exports.mergeWith = function (overrides) {
