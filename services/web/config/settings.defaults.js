@@ -1114,6 +1114,7 @@ module.exports = {
     'launchpad',
     'server-ce-scripts',
     'user-activate',
+    'sandboxed-compiles',
     'symbol-palette',
     'track-changes',
     'authentication/ldap',
@@ -1148,15 +1149,6 @@ module.exports = {
   },
 
   enablePandocConversions: process.env.ENABLE_PANDOC_CONVERSIONS === 'true',
-
-  allowedImageNames: process.env.SANDBOXED_COMPILES === 'true'
-    ? parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGES)
-        .map((imageName, index) => ({
-          imageName,
-          imageDesc: parseTextExtensions(process.env.ALL_TEX_LIVE_DOCKER_IMAGE_NAMES)[index]
-            || imageName.split(':')[1],
-        }))
-    : undefined,
 
   oauthProviders: {
     ...(process.env.EXTERNAL_AUTH && process.env.EXTERNAL_AUTH.includes('oidc') && {
