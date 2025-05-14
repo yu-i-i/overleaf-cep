@@ -87,11 +87,12 @@ The following environment variables are used to specify which TeX Live images to
 
 - `ALL_TEX_LIVE_DOCKER_IMAGES` **(required)**
     * A comma-separated list of TeX Live images to use. These images will be downloaded or updated.
-      To skip downloading the images, set `SIBLING_CONTAINERS_PULL=false` in `config/overleaf.rc`.
+      To skip downloading, set `SIBLING_CONTAINERS_PULL=false` in `config/overleaf.rc`.
 - `ALL_TEX_LIVE_DOCKER_IMAGE_NAMES`
     * A comma-separated list of friendly names for the images. If omitted, the version name will be used (e.g., `latest-full`).
-- `TEX_LIVE_DOCKER_IMAGE` **(required)**
-    * The default TeX Live image that will be used for compiling new projects. The environment variable `ALL_TEX_LIVE_DOCKER_IMAGES` must include this image.
+- `TEX_LIVE_DOCKER_IMAGE`
+    * The default TeX Live image used for compiling new projects. This image must be included in `ALL_TEX_LIVE_DOCKER_IMAGES`. If not set,
+       the first image in `ALL_TEX_LIVE_DOCKER_IMAGES` will be used as the default image.
 
 Users can select the image for their project in the project menu.
 
@@ -160,7 +161,7 @@ NAV_HIDE_POWERED_BY=true
 ## Sandboxed Compiles ##
 ########################
 
-ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2023-historic
+ALL_TEX_LIVE_DOCKER_IMAGES=texlive/texlive:latest-full, texlive/texlive:TL2024-historic
 ALL_TEX_LIVE_DOCKER_IMAGE_NAMES=TeXLive 2024, TeXLive 2023
 TEX_LIVE_DOCKER_IMAGE=texlive/texlive:latest-full
 TEX_COMPILER_EXTRA_FLAGS=-shell-escape
@@ -178,6 +179,42 @@ This will extend both the *Add Files* menu and the *Insert Figure* dropdown in t
 file to your project using its URL, while the *Insert Figure* dropdown lets you insert an image into your document directly from its URL.
 
 ## Template Gallery
+
+<details>
+<summary><h4><em>Breaking change</em></h4></summary>
+
+In [this commit](https://github.com/overleaf/overleaf/commit/6ac0a46dfe537904e30951c137629ae9aca3c445) the free-text license field in the Template Gallery code has been replaced with a dropdown (select box).
+To update your template database, run the following command:
+```
+overleaf-toolkit/bin/docker-compose" exec -T mongo mongosh sharelatex < updateLicenses.js
+```
+The `updateLicenses.js` script is as follows:
+```
+db.templates.updateMany({ license: { $nin: ["cc_by_4.0", "lppl_1.3c", "other"] } },
+  [
+    {
+      $set: {
+        license: {
+          $switch: {
+            branches: [
+              {
+                case: { $eq: ["$license", "Creative Commons CC BY 4.0"] },
+                then: "cc_by_4.0"
+              },
+              {
+                case: { $eq: ["$license", "LaTeX Project Public License 1.3c"] },
+                then: "lppl_1.3c"
+              }
+            ],
+            default: "other"
+          }
+        }
+      }
+    }
+  ]
+)
+```
+</details>
 
 The Template Gallery feature is controlled using the following environment variables:
 
