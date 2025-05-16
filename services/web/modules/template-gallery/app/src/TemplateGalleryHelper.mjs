@@ -1,4 +1,4 @@
-import MarkdownIt from 'markdown-it'
+import { marked } from 'marked'
 import request from 'request'
 import logger from '@overleaf/logger'
 import settings from '@overleaf/settings'
@@ -21,7 +21,19 @@ const MAX_PROJECT_NAME_LENGTH = 150
 const MAX_FORM_INPUT_LENGTH = 512
 const MAX_TEMPLATE_DESCRIPTION_LENGTH = 4096
 
-const markdownIt = new MarkdownIt({ html: false, linkify: true })
+// Configure marked for CommonMark-only parsing
+marked.setOptions({
+  gfm: false,
+  breaks: false,
+  headerIds: false,
+  mangle: false,
+})
+
+marked.use({
+  renderer: {
+    html: () => '' // strips any HTML tags
+  }
+})
 
 function _createZipStreamForProjectAsync(projectId) {
   return new Promise((resolve, reject) => {
@@ -216,11 +228,11 @@ export async function deleteTemplateAssets(templateId, version, deleteFromDb) {
 
 export function renderTemplateHtmlFields(updates) {
   if (updates.descriptionMD !== undefined) {
-    const descriptionRawHTML = markdownIt.render(updates.descriptionMD)
+    const descriptionRawHTML = marked.parse(updates.descriptionMD)
     updates.description = cleanHtml(descriptionRawHTML, "reachText")
   }
   if (updates.authorMD !== undefined) {
-    const authorRawHTML = markdownIt.render(updates.authorMD)
+    const authorRawHTML = marked.parse(updates.authorMD)
     updates.author = cleanHtml(authorRawHTML, "linksOnly")
   }
 }
