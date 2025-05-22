@@ -165,5 +165,7 @@ if (process.env.DOCKER_RUNNER) {
 
   module.exports.path.synctexBaseDir = () => '/compile'
 
-  module.exports.path.sandboxedCompilesHostDir = process.env.COMPILES_HOST_DIR
+  module.exports.path.sandboxedCompilesHostDir =
+    process.env.SANDBOXED_COMPILES_HOST_DIR ||
+    process.env.COMPILES_HOST_DIR
 }
