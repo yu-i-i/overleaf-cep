@@ -48,20 +48,20 @@ block content
 									hr
 									p.text-center !{login_support_text}	
 							if settings.saml && settings.saml.enable
-								form(data-ol-async-form, name="samlLoginForm")
-									.actions(style='margin-top: 30px;')
-										a.btn.btn-secondary.btn-block(
-											href='/saml/login',
-											data-ol-disabled-inflight
-										)
-											span(data-ol-inflight="idle") #{settings.saml.identityServiceName}
-											span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
+								.actions(style='margin-top: 30px;')
+									a.button.btn-secondary.btn(
+									href='/saml/login',
+										style="width: 100%;"
+										data-ol-disabled-inflight
+									)
+										span(data-ol-inflight="idle") #{settings.saml.identityServiceName}
+										span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
 							if settings.oidc && settings.oidc.enable
-								form(data-ol-async-form, name="oidcLoginForm")
-									.actions(style='margin-top: 30px;')
-										a.btn.btn-secondary.btn-block(
-											href='/oidc/login',
-											data-ol-disabled-inflight
-										)
-											span(data-ol-inflight="idle") #{settings.oidc.identityServiceName}
-											span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
+								.actions(style='margin-top: 30px;')
+									a.button.btn-secondary.btn(
+										href='/oidc/login',
+										style="width: 100%;"
+										data-ol-disabled-inflight
+									)
+										span(data-ol-inflight="idle") #{settings.oidc.identityServiceName}
+										span(hidden data-ol-inflight="pending") #{translate("logging_in")}…
