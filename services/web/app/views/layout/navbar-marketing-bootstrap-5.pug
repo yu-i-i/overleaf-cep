@@ -146,6 +146,18 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(class={
 									event-segmentation={ page: currentUrl, item: 'register', location: 'top-menu' }
 								) #{translate('sign_up')}
 
+						// templates link
+						if settings.templates
+							+nav-item
+								+nav-link(
+									href="/templates"
+									event-tracking="menu-click"
+									event-tracking-action="clicked"
+									event-tracking-trigger="click"
+									event-tracking-mb="true"
+									event-segmentation={ page: currentUrl, item: 'templates', location: 'top-menu' }
+								) #{translate('templates')}
+
 						// login link
 						+nav-item
 							+nav-link(
