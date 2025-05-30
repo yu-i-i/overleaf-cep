@@ -56,14 +56,14 @@ services:
 ```
 Here, the attached volume provides convenient access for the container to the certificates needed for SAML or LDAP authentication.
 
-If you want to build a Docker image of the extended CE based on the upstream v5.4.0 codebase, you can check out the corresponding tag by running:
+If you want to build a Docker image of the extended CE based on the upstream v5.5.0 codebase, you can check out the corresponding tag by running:
 ```
-git checkout v5.4.1-ext-v3
+git checkout v5.5.0-ext-v3
 ```
-After building the image, switch to the latest state of the repository and check the `server-ce/hotfix` directory. If a subdirectory matching your version (e.g., `5.4.1`) exists, build a patched image.
+After building the image, switch to the latest state of the repository and check the `server-ce/hotfix` directory. If a subdirectory matching your version (e.g., `5.5.1`) exists, build a patched image.
 Alternatively, you can download a prebuilt image from Docker Hub:
 ```
-docker pull overleafcep/sharelatex:5.4.1-ext-v3
+docker pull overleafcep/sharelatex:5.5.0-ext-v3
 ```
 Make sure to update the image name in overleaf-toolkit/config/docker-compose.override.yml accordingly.
 
@@ -80,14 +80,15 @@ Make sure to update the image name in overleaf-toolkit/config/docker-compose.ove
 - Sandboxed compiles: Made the `TEX_LIVE_DOCKER_IMAGE` environment variable optional
 - Template Gallery: Fixed bugs
 - Template Gallery: improved visual presentation of modals and enhanced keyboard interactions
-- Template Gallery **breaking change**: Replaced the free-text license field with a dropdown (select box).
+- Template Gallery **breaking change**: Replaced the free-text license field with a dropdown (select box)
+
 <details>
 <summary><h4><em>Details</em></h4></summary>
-
-In [this commit](https://github.com/overleaf/overleaf/commit/6ac0a46dfe537904e30951c137629ae9aca3c445) the free-text license field in the Template Gallery code has been replaced with a dropdown (select box).
+The free-text license field in the Template Gallery code has been replaced with a dropdown (select box).
 To update your template database, run the following command:
+
 ```
-overleaf-toolkit/bin/docker-compose" exec -T mongo mongosh sharelatex < updateLicenses.js
+overleaf-toolkit/bin/docker-compose exec -T mongo mongosh sharelatex < updateLicenses.js
 ```
 The `updateLicenses.js` script is as follows:
 ```
@@ -116,6 +117,10 @@ db.templates.updateMany({ license: { $nin: ["cc_by_4.0", "lppl_1.3c", "other"] }
 )
 ```
 </details>
+
+### New in `v5.5.0-ext-v3`:
+
+- Based on upstream codebase v5.5.0
 
 
 ## Sandboxed Compiles
