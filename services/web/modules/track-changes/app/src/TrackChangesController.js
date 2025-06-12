@@ -59,16 +59,10 @@ const TrackChangesController = {
 // provided here to assign names to authors who have left the project but still have unaccepted changes.
     try {
       const { project_id } = req.params
-      const memberIds = new Set()
-      const ranges = await DocstoreManager.promises.getAllRanges(project_id)
-      ranges.forEach(range => {
-        ;[...range.ranges?.changes || [], ...range.ranges?.comments || []].forEach(item => {
-          memberIds.add(item.metadata?.user_id)
-        })
-      })
+      const memberIds = await DocstoreManager.promises.getTrackedChangesUserIds(project_id)
       const limit = pLimit(3)
       const users = await Promise.all(
-        [...memberIds].map(memberId =>
+        memberIds.map(memberId =>
           limit(async () => {
             const user = await UserInfoManager.promises.getPersonalInfo(memberId)
             return UserInfoController.formatPersonalInfo(user)
