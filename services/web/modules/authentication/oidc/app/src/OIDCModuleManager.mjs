@@ -64,18 +64,18 @@ const OIDCModuleManager = {
       logger.info({}, error.message)
     }
   },
-  async getGroupPolicyForUser(user, callback) {
-    try {
-      const userValidationMap = await PermissionsManager.promises.getUserValidationStatus({
-        user,
-        groupPolicy : { 'oidcPolicy' : true },
-        subscription : null
-      })
+
+  getGroupPolicyForUser(user, callback) {
+    PermissionsManager.promises.getUserValidationStatus({
+      user,
+      groupPolicy : { 'oidcPolicy' : true },
+      subscription : null
+    }).then(userValidationMap => {
       let groupPolicy = Object.fromEntries(userValidationMap)
-      callback(null,  {'groupPolicy' : groupPolicy })
-    } catch (error) {
+      callback(null, { groupPolicy })
+    }).catch(error => {
       callback(error)
-    }
+    })
   },
 }
 
