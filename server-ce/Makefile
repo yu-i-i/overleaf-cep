@@ -24,6 +24,7 @@ build-base:
 	  --cache-from $(OVERLEAF_BASE_BRANCH) \
 	  --tag $(OVERLEAF_BASE_TAG) \
 	  --tag $(OVERLEAF_BASE_BRANCH) \
+	  --network=host \
 	  $(MONOREPO_ROOT)
 
 
@@ -39,6 +40,7 @@ build-community:
 	  --file Dockerfile \
 	  --tag $(OVERLEAF_TAG) \
 	  --tag $(OVERLEAF_BRANCH) \
+	  --network=host \
 	  $(MONOREPO_ROOT)
 
 SHELLCHECK_OPTS = \
