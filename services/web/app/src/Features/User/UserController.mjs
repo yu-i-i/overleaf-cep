@@ -515,6 +515,12 @@ async function expireDeletedUsersAfterDuration(req, res, next) {
   res.sendStatus(204)
 }
 
+async function listAllUsers(req, res, next) {
+  const users = await UserGetter.promises.getAllUsers()
+  
+  res.json(users)
+}
+
 export default {
   clearSessions: expressify(clearSessions),
   changePassword: expressify(changePassword),
@@ -527,4 +533,5 @@ export default {
   expireDeletedUsersAfterDuration: expressify(expireDeletedUsersAfterDuration),
   ensureAffiliationMiddleware: expressify(ensureAffiliationMiddleware),
   ensureAffiliation,
+  listAllUsers: expressify(listAllUsers),
 }

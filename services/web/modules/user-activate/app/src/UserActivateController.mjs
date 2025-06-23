@@ -62,8 +62,88 @@ async function activateAccountPage(req, res, next) {
   })
 }
 
+// 
+async function listAllUsers(req, res, next) {
+  const users = await UserGetter.promises.getAllUsers()
+
+  res.render(Path.resolve(__dirname, '../views/user/list'), {
+    title: 'Users list',
+    users,
+    currentUserId: req.user._id,
+    _csrf: req.csrfToken(),
+  })
+}
+
+import UserUpdater from '../../../../app/src/Features/User/UserUpdater.js'
+/* 
+ * it is a modified copy of /overleaf/services/web/scripts/suspend_users.mjs
+ * @param {request} req
+ * @param {response} res
+ */
+async function suspendUser(req, res) {
+  const userId = req.params.userId
+
+  try {
+    await UserUpdater.promises.suspendUser(userId, {
+      initiatorId: userId,
+      ip: req.ip,
+      info: { script: false },
+    })
+  } catch (error) {
+    console.log(`Failed to suspend ${userId}`, error)
+  }
+
+  res.redirect('/admin/users')
+}
+
+/* 
+  * it is a modified copy of UserUpdater.suspendUser
+  * @param {request} req
+  * @param {response} res
+  */
+async function unsuspendUser(req, res) {  
+  const userId = req.params.userId
+  const upd = await UserUpdater.promises.updateUser(
+    { _id: userId, suspended: { $ne: false } },
+    { $set: { suspended: false } }
+  )
+  if (upd.matchedCount !== 1) {
+    console.log('user id not found or already unsuspended')
+  }
+
+  res.redirect('/admin/users')
+}
+
+/* 
+ * it is a modified copy of UserUpdater.suspendUser
+ * It is used to update user first and last name
+ * @param {request} req.body.userId
+ * @param {request} req.body.first_name
+ * @param {request} req.body.last_name    
+ * @param {response} res  
+ */
+async function updateUser(req, res) {
+  const { userId, first_name, last_name } = req.body;
+  const upd = await UserUpdater.promises.updateUser(
+    { _id: userId },
+    { $set: { 
+      first_name: first_name, 
+      last_name: last_name,
+      } }
+  )
+  if (upd.matchedCount !== 1) {
+    console.log(`user id not found ${userId}`) 
+  } else {
+    res.json({ success: true });
+  }  
+}
+
 export default {
   registerNewUser,
   register: expressify(register),
   activateAccountPage: expressify(activateAccountPage),
+  listAllUsers: expressify(listAllUsers),
+  suspendUser: expressify(suspendUser),
+  unsuspendUser: expressify(unsuspendUser),
+  updateUser: expressify(updateUser),
 }

@@ -26,5 +26,21 @@ export default {
       AuthorizationMiddleware.ensureUserIsSiteAdmin,
       UserActivateController.register
     )
+    webRouter.get('/admin/users', 
+      AuthorizationMiddleware.ensureUserIsSiteAdmin,
+      UserActivateController.listAllUsers
+    )
+    webRouter.post('/admin/users/:userId/suspend',
+      AuthorizationMiddleware.ensureUserIsSiteAdmin,
+      UserActivateController.suspendUser
+    )
+    webRouter.post('/admin/users/:userId/unsuspend',
+      AuthorizationMiddleware.ensureUserIsSiteAdmin,
+      UserActivateController.unsuspendUser
+    )
+    webRouter.post('/admin/users/settings',
+      AuthorizationMiddleware.ensureUserIsSiteAdmin,
+      UserActivateController.updateUser
+    )
   },
 }

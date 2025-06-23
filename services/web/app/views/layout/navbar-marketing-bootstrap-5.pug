@@ -9,13 +9,16 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 )
 	.container-fluid.navbar-container
 		.navbar-header
-			a.navbar-brand(href='/' aria-label=settings.appName)
-				if settings.nav.custom_logo
-					.navbar-logo(style=`background-image:url("${settings.nav.custom_logo}")`)
-				if nav.title
-					.navbar-title #{nav.title}
-				if !nav.title && !settings.nav.custom_logo
-					.navbar-logo
+			if settings.nav.custom_logo
+				a.navbar-brand(
+					href='/'
+					aria-label=settings.appName
+					style='background-image:url("' + settings.nav.custom_logo + '")'
+				)
+			else if nav.title
+				a.navbar-title(href='/' aria-label=settings.appName) #{nav.title}
+			else
+				a.navbar-brand(href='/' aria-label=settings.appName)
 
 			- var enableUpgradeButton = projectDashboardReact && usersBestSubscription && (usersBestSubscription.type === 'free' || usersBestSubscription.type === 'standalone-ai-add-on')
 			if enableUpgradeButton
@@ -30,10 +33,9 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 
 		- var canDisplayAdminMenu = hasAdminAccess()
 		- var canDisplayAdminRedirect = canRedirectToAdminDomain()
-		- var canDisplayProjectUrlLookup = settings.adminPrivilegeAvailable && canDisplayAdminMenu && hasAdminCapability('view-project-setting', false)
-		- var canDisplaySplitTestMenu = hasFeature('saas') && ((canDisplayAdminMenu && hasAdminCapability('view-split-test')) || (getSessionUser() && getSessionUser().staffAccess && (getSessionUser().staffAccess.splitTestMetrics || getSessionUser().staffAccess.splitTestManagement)))
-		- var canDisplaySurveyMenu = hasFeature('saas') && canDisplayAdminMenu && hasAdminCapability('manage-survey', false)
-		- var canDisplayScriptLogMenu = hasFeature('saas') && hasAdminCapability('view-script-log', false) && canDisplayAdminMenu
+		- var canDisplaySplitTestMenu = hasFeature('saas') && (canDisplayAdminMenu || (getSessionUser() && getSessionUser().staffAccess && (getSessionUser().staffAccess.splitTestMetrics || getSessionUser().staffAccess.splitTestManagement)))
+		- var canDisplaySurveyMenu = hasFeature('saas') && canDisplayAdminMenu
+		- var canDisplayScriptLogMenu = hasFeature('saas') && canDisplayAdminMenu
 
 		if typeof suppressNavbarRight === 'undefined'
 			button#navbar-toggle-btn.navbar-toggler.collapsed(
@@ -48,7 +50,7 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 
 			#navbar-main-collapse.navbar-collapse.collapse
 				ul.nav.navbar-nav.navbar-right.ms-auto(role='menubar')
-					if canDisplayAdminMenu || canDisplayAdminRedirect || canDisplayProjectUrlLookup || canDisplaySplitTestMenu
+					if canDisplayAdminMenu || canDisplayAdminRedirect || canDisplaySplitTestMenu
 						+nav-item.dropdown.subdued
 							button.dropdown-toggle(
 								aria-haspopup='true'
@@ -65,8 +67,7 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 								if canDisplayAdminMenu
 									+dropdown-menu-link-item(href='/admin') Manage Site
 									+dropdown-menu-link-item(href='/admin/user') Manage Users
-									+dropdown-menu-link-item(href='/admin/users') Manage Users
-								if canDisplayProjectUrlLookup
+									+dropdown-menu-link-item(href="/admin/users") List Users
 									+dropdown-menu-link-item(href='/admin/project') Project URL Lookup
 								if canDisplayAdminRedirect
 									+dropdown-menu-link-item(href=settings.adminUrl) Switch to Admin
