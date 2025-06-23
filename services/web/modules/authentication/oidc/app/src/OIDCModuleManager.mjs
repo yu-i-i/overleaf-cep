@@ -17,6 +17,7 @@ const OIDCModuleManager = {
       attAdmin:     process.env.OVERLEAF_OIDC_IS_ADMIN_FIELD,
       valAdmin:     process.env.OVERLEAF_OIDC_IS_ADMIN_FIELD_VALUE,
       updateUserDetailsOnLogin: boolFromEnv(process.env.OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN),
+      disableJITAccountCreation: boolFromEnv(process.env.OVERLEAF_OIDC_DISABLE_JIT_ACCOUNT_CREATION),
     }
   },
   passportSetup(passport, callback) {
