@@ -42,7 +42,8 @@ const OIDCAuthenticationController = {
           }
         } else {
           if (info.redir != null) {
-            return res.json({ redir: info.redir })
+            await UserController.doLogout(req)
+            return res.redirect(info.redir)
           } else {
             res.status(info.status || 401)
             delete info.status
@@ -95,20 +96,19 @@ const OIDCAuthenticationController = {
         info: {
           type: 'error',
           text: error.message,
-          status: 401,
+          status: 500,
         },
       }
     }
     if (user) {
       return { user, info: undefined }
-    } else { // we cannot be here, something is terribly wrong
-      logger.debug({ email : profile.emails[0].value }, 'failed OIDC log in')
+    } else { // user account is not created
+      logger.debug({ email : profile.emails[0].value }, 'OIDC users JIT account creation is off')
       return {
         user: false,
         info: {
-          type: 'error',
-          text: 'Unknown error',
-          status: 500,
+          redir: '/register',
+          status: 401,
         },
       }
     }
