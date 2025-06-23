@@ -37,6 +37,9 @@ const OIDCAuthenticationManager = {
 // (Is it safe? Concider: If an account from the specified provider is already linked to this user, throw an error)
       user = await User.findOne({ 'email': email }).exec()
       if (!user) {
+        if (Settings.oidc.disableJITAccountCreation) {
+          return null
+        }
         user = await UserCreator.promises.createNewUser(
           {
             email: email,
