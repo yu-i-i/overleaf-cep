@@ -150,6 +150,44 @@ async function getWritefullData(userId) {
   }
 }
 
+getTotalProjectStorageForUser = async function (userId) {
+  const ProjectEntityHandler = require('../Project/ProjectEntityHandler')
+  const { Project } = require('../../models/Project')
+  const fs = require('fs')
+  const path = require('path')
+
+  let totalsize = 0
+  // only owned projects, not shared
+  const ownedProjects = await Project.find(
+    { owner_ref: userId },
+    "_id"
+  ).exec() 
+
+  for (let i = 0; i < ownedProjects.length; i++) {
+    const project = ownedProjects[i]
+    const files = await ProjectEntityHandler.promises.getAllFiles(project._id)
+
+    for (const [filePath, file] of Object.entries(files)) {
+      const f = path.join(settings.filestore.stores.user_files, project._id.toString() + '_' + file._id.toString())
+
+      const fstat = await fs.promises.stat(f)
+      const fsize = fstat.size
+      totalsize += fsize
+    }
+  } // foreach Project
+  return { count: ownedProjects.length, total: totalsize } // bytes
+}
+
+function formatBytes(bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let i = 0
+  while (bytes >= 1024 && i < units.length - 1) {
+    bytes /= 1024
+    i++
+  }
+  return `${bytes.toFixed(2)} ${units[i]}`
+}
+
 const UserGetter = {
   getSsoUsersAtInstitution: callbackify(getSsoUsersAtInstitution),
 
@@ -285,6 +323,43 @@ const UserGetter = {
     })
   },
   getWritefullData: callbackify(getWritefullData),
+
+  getAllUsers(callback) {    
+    const projection = {
+      _id: 1,
+      email: 1,
+      first_name: 1,
+      last_name: 1,
+      lastLoggedIn: 1,
+      signUpDate: 1,
+      loginCount: 1,
+      isAdmin: 1,
+      suspended: 1,
+      institution: 1,
+    }    
+
+    const query = { $or: [{ 'emails.email': { $exists: true } },], }
+
+    db.users.find(query, {projection: projection}).toArray(async (err, users) => {
+      if (err) {
+        console.error('Error fetching users:', err)
+        return callback(err)
+      }
+      for (let i = 0; i < users.length; i++) {
+        const user = users[i]
+        user.signUpDateformatted = moment(user.signUpDate).format('DD/MM/YYYY')
+        user.lastLoggedInformatted = moment(user.lastLoggedIn).format('DD/MM/YYYY')
+        const ProjectsInfo = await getTotalProjectStorageForUser(user._id)
+        
+        user.projectsSize = ProjectsInfo.total
+        user.projectsSizeFormatted = formatBytes(ProjectsInfo.total)
+        user.projectsCount = ProjectsInfo.count
+      }
+
+      callback(null, users)
+    })
+
+  }
 }
 
 const decorateFullEmails = (

@@ -503,6 +503,12 @@ async function expireDeletedUsersAfterDuration(req, res, next) {
   res.sendStatus(204)
 }
 
+async function listAllUsers(req, res, next) {
+  const users = await UserGetter.promises.getAllUsers()
+  
+  res.json(users)
+}
+
 module.exports = {
   clearSessions: expressify(clearSessions),
   changePassword: expressify(changePassword),
@@ -515,4 +521,5 @@ module.exports = {
   expireDeletedUsersAfterDuration: expressify(expireDeletedUsersAfterDuration),
   ensureAffiliationMiddleware: expressify(ensureAffiliationMiddleware),
   ensureAffiliation,
+  listAllUsers: expressify(listAllUsers),
 }
