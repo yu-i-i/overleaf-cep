@@ -40,7 +40,7 @@ export default function AdminMenu({
             Manage Users
           </NavDropdownLinkItem>
           <NavDropdownLinkItem href="/admin/users">
-            List Users
+            Admin Panel
           </NavDropdownLinkItem>
           <NavDropdownLinkItem href="/admin/project">
             Project URL lookup

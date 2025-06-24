@@ -71,7 +71,7 @@ block content
           .card
             .card-body
               .page-header
-                h1 Users list
+                h1 #{translate('admin_panel')}
                 if users.length
                   table.table.table-striped
                     thead
@@ -84,7 +84,7 @@ block content
                         th #{translate('last_logged_in')}
                         th #{translate('projects_count')}
                         th #{translate('file_size')}
-                        th #{translate('admin')}
+                        th #{translate('role')}
                         th #{translate('status')}
                     tbody
                       each user in users
@@ -109,7 +109,7 @@ block content
                           td
                             span.me-2 #{user.projectsCount || 0}                
                           td #{user.projectsSizeFormatted || 0}
-                          td #{user.isAdmin ? translate('yes') : translate('no')}
+                          td #{user.isAdmin ? translate('admin') : ''}
                           td
                             span.badge(class=(user.suspended ? 'bg-secondary' : 'bg-success')) 
                               #{user.suspended ? translate('suspended') : translate('active')}
@@ -117,7 +117,7 @@ block content
                               form.d-inline(method="POST", action=`/admin/users/${user._id}/${user.suspended ? 'unsuspend' : 'suspend'}`)
                                 input(type="hidden", name="_csrf", value=csrfToken)
                                 button.btn.btn-sm(
-                                  class=(user.suspended ? 'btn-success' : 'btn-danger'),
+                                  class=(user.suspended ? 'btn-danger' : 'btn-success'),
                                   type="submit",
                                   data-bs-toggle="tooltip",
                                   title=(user.suspended ? translate('activate') : translate('suspend')),
