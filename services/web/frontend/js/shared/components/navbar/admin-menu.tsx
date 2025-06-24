@@ -42,7 +42,7 @@ export default function AdminMenu({
             Manage Users
           </NavDropdownLinkItem>
           <NavDropdownLinkItem href="/admin/users">
-            List Users
+            Admin Panel
           </NavDropdownLinkItem>
         </>
       ) : null}
