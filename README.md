@@ -965,6 +965,11 @@ The values of the following two required variables will be provided by the admin
     * The value of this attribute will be used by Overleaf as the external user ID, defaults to `id`.
       Other possible reasonable values are `email` and `username` (corresponding to `preferred_username` OIDC claim).
 
+- `OVERLEAF_OIDC_DISABLE_JIT_ACCOUNT_CREATION`
+    * If set to `true`, disables Just-in-Time (JIT) account creation for OIDC users. Only users with pre-existing accounts can log in.
+      An admin must manually create the user account using the OIDC user’s email address, with either a strong random password or, preferably,
+      without the `hashedPassword` field at all. The OIDC user will be able to log in only after that. Default: `false`.
+
 - `OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN`
     * If set to `true`, updates the user `first_name` and `last_name` field on login,
       and disables the user details form on `/user/settings` page.
