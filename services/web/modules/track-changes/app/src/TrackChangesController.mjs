@@ -1,14 +1,14 @@
-const ChatApiHandler = require('../../../../app/src/Features/Chat/ChatApiHandler')
-const ChatManager = require('../../../../app/src/Features/Chat/ChatManager')
-const EditorRealTimeController = require('../../../../app/src/Features/Editor/EditorRealTimeController')
-const SessionManager = require('../../../../app/src/Features/Authentication/SessionManager')
-const UserInfoManager = require('../../../../app/src/Features/User/UserInfoManager')
-const UserInfoController = require('../../../../app/src/Features/User/UserInfoController')
-const DocstoreManager = require('../../../../app/src/Features/Docstore/DocstoreManager')
-const DocumentUpdaterHandler = require('../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler')
-const CollaboratorsGetter = require('../../../../app/src/Features/Collaborators/CollaboratorsGetter')
-const { Project } = require('../../../../app/src/models/Project')
-const pLimit = require('p-limit')
+import ChatApiHandler from '../../../../app/src/Features/Chat/ChatApiHandler.js'
+import ChatManager from '../../../../app/src/Features/Chat/ChatManager.js'
+import EditorRealTimeController from '../../../../app/src/Features/Editor/EditorRealTimeController.js'
+import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.js'
+import UserInfoManager from '../../../../app/src/Features/User/UserInfoManager.js'
+import UserInfoController from '../../../../app/src/Features/User/UserInfoController.js'
+import DocstoreManager from '../../../../app/src/Features/Docstore/DocstoreManager.js'
+import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.js'
+import CollaboratorsGetter from '../../../../app/src/Features/Collaborators/CollaboratorsGetter.js'
+import { Project } from '../../../../app/src/models/Project.js'
+import pLimit from 'p-limit'
 
 function _transformId(doc) {
   if (doc._id) {
@@ -168,4 +168,5 @@ const TrackChangesController = {
     }
   },
 }
-module.exports = TrackChangesController
+
+export default TrackChangesController
