@@ -1,28 +1,32 @@
-const logger = require('@overleaf/logger')
-const AuthorizationMiddleware = require('../../../../app/src/Features/Authorization/AuthorizationMiddleware')
-const TrackChangesController = require('./TrackChangesController')
+import logger from '@overleaf/logger'
+import AuthorizationMiddleware from '../../../../app/src/Features/Authorization/AuthorizationMiddleware.js'
+import TrackChangesController from './TrackChangesController.mjs'
 
-module.exports = {
+export default {
   apply(webRouter) {
     logger.debug({}, 'Init track-changes router')
 
-    webRouter.post('/project/:project_id/track_changes',
+    webRouter.post(
+      '/project/:project_id/track_changes',
       AuthorizationMiddleware.blockRestrictedUserFromProject,
       AuthorizationMiddleware.ensureUserCanReadProject,
       TrackChangesController.trackChanges
     )
-    webRouter.post('/project/:project_id/doc/:doc_id/changes/accept',
+    webRouter.post(
+      '/project/:project_id/doc/:doc_id/changes/accept',
       AuthorizationMiddleware.blockRestrictedUserFromProject,
       AuthorizationMiddleware.ensureUserCanReadProject,
       TrackChangesController.acceptChanges
     )
-    webRouter.get('/project/:project_id/ranges',
+    webRouter.get(
+      '/project/:project_id/ranges',
       AuthorizationMiddleware.blockRestrictedUserFromProject,
       AuthorizationMiddleware.ensureUserCanReadProject,
       TrackChangesController.getAllRanges
     )
-    webRouter.get('/project/:project_id/changes/users',
-     AuthorizationMiddleware.blockRestrictedUserFromProject,
+    webRouter.get(
+      '/project/:project_id/changes/users',
+      AuthorizationMiddleware.blockRestrictedUserFromProject,
       AuthorizationMiddleware.ensureUserCanReadProject,
       TrackChangesController.getChangesUsers
     )
@@ -68,5 +72,5 @@ module.exports = {
       AuthorizationMiddleware.ensureUserCanReadProject,
       TrackChangesController.deleteThread
     )
-  },
+  }
 }
