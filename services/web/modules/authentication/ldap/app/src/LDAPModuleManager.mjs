@@ -76,6 +76,7 @@ const LDAPModuleManager = {
   initPolicy() {
     try {
       PermissionsManager.registerCapability('change-password', { default : true })
+      PermissionsManager.registerCapability('use-ai', { default : false })
     } catch (error) {
       logger.info({}, error.message)
     }
