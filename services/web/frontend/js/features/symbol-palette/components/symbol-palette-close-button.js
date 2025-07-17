@@ -1,9 +1,9 @@
-import { useEditorContext } from '../../../shared/context/editor-context'
+import { useEditorPropertiesContext } from '@/features/ide-react/context/editor-properties-context'
 import { useTranslation } from 'react-i18next'
 import PropTypes from 'prop-types'
 
 export default function SymbolPaletteCloseButton() {
-  const { toggleSymbolPalette } = useEditorContext()
+  const { toggleSymbolPalette } = useEditorPropertiesContext()
   const { t } = useTranslation()
 
   const handleClick = () => {
