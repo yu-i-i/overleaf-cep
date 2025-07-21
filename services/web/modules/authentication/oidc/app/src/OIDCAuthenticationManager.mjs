@@ -37,6 +37,13 @@ const OIDCAuthenticationManager = {
 // (Is it safe? Concider: If an account from the specified provider is already linked to this user, throw an error)
       user = await User.findOne({ 'email': email }).exec()
       if (!user) {
+        let allowedDomains = Settings.oidc.allowedOIDCEmailDomains;
+          allowedDomains = allowedDomains.split(',').map(d => d.trim()); // Make sure it's an array
+          const domain = email.split('@')[1];
+
+          if (!allowedDomains.includes(domain)) {
+            return null;
+          }
         if (Settings.oidc.disableJITAccountCreation) {
           return null
         }
