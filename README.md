@@ -965,6 +965,9 @@ The values of the following two required variables will be provided by the admin
       An admin must manually create the user account using the OIDC user’s email address, with either a strong random password or, preferably,
       without the `hashedPassword` field at all. The OIDC user will be able to log in only after that. Default: `false`.
 
+- `OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS`
+    * If set to a comma-separated list of email address domains, an OIDC user will be created if its email address domain matches one of the list. This does not override `OVERLEAF_OIDC_DISABLE_JIT_ACCOUNT_CREATION` when it is set to `false`.
+
 - `OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN`
     * If set to `true`, updates the user `first_name` and `last_name` field on login,
       and disables the user details form on `/user/settings` page.
