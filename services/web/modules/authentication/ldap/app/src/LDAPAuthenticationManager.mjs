@@ -30,9 +30,8 @@ const LDAPAuthenticationManager = {
     if (!firstName && !lastName) lastName = email
     let isAdmin = false
     if( attAdmin && valAdmin ) {
-      isAdmin = (profile._groups?.length > 0) ||
-                (Array.isArray(profile[attAdmin]) ? profile[attAdmin].includes(valAdmin) :
-                                                    profile[attAdmin] === valAdmin)
+      isAdmin = Array.isArray(profile[attAdmin]) ? profile[attAdmin].includes(valAdmin) :
+                                                   profile[attAdmin] === valAdmin
     }
     let user = await User.findOne({ 'email': email }).exec()
 
