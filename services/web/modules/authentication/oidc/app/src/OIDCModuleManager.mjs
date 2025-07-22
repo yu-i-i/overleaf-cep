@@ -16,9 +16,10 @@ const OIDCModuleManager = {
       attUserId:    process.env.OVERLEAF_OIDC_USER_ID_FIELD || 'id',
       attAdmin:     process.env.OVERLEAF_OIDC_IS_ADMIN_FIELD,
       valAdmin:     process.env.OVERLEAF_OIDC_IS_ADMIN_FIELD_VALUE,
-      allowedOIDCEmailDomains:     process.env.OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS,
       updateUserDetailsOnLogin: boolFromEnv(process.env.OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN),
-      disableJITAccountCreation: boolFromEnv(process.env.OVERLEAF_OIDC_DISABLE_JIT_ACCOUNT_CREATION),
+      allowedOIDCEmailDomains: process.env.OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS === undefined
+        ? null
+        : process.env.OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS.split(',').map(s => s.trim()).filter(Boolean),
     }
   },
   passportSetup(passport, callback) {
