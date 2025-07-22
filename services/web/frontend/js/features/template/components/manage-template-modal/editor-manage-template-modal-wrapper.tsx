@@ -16,12 +16,9 @@ const EditorManageTemplateModalWrapper = React.memo(
     handleHide,
     openTemplate,
   }: EditorManageTemplateModalWrapperProps) {
-    const {
-      _id: projectId,
-      name: projectName,
-    } = useProjectContext()
+    const { project } = useProjectContext()
 
-    if (!projectName) {
+    if (!project) {
       // wait for useProjectContext
       return null
     }
@@ -30,8 +27,8 @@ const EditorManageTemplateModalWrapper = React.memo(
         handleHide={handleHide}
         show={show}
         handleAfterPublished={openTemplate}
-        projectId={projectId}
-        projectName={projectName}
+        projectId={project._id}
+        projectName={project.name}
       />
     )
   }
