@@ -137,7 +137,7 @@ function compile(req, res, next) {
                   compiler: request.compiler,
                   draft: request.draft,
                   imageName: request.imageName
-                    ? Path.basename(request.imageName)
+                    ? request.imageName
                     : undefined,
                   rootResourcePath: request.rootResourcePath,
                   stopOnFirstError: request.stopOnFirstError,
