@@ -960,13 +960,16 @@ The values of the following two required variables will be provided by the admin
     * The value of this attribute will be used by Overleaf as the external user ID, defaults to `id`.
       Other possible reasonable values are `email` and `username` (corresponding to `preferred_username` OIDC claim).
 
-- `OVERLEAF_OIDC_DISABLE_JIT_ACCOUNT_CREATION`
-    * If set to `true`, disables Just-in-Time (JIT) account creation for OIDC users. Only users with pre-existing accounts can log in.
-      An admin must manually create the user account using the OIDC user’s email address, with either a strong random password or, preferably,
-      without the `hashedPassword` field at all. The OIDC user will be able to log in only after that. Default: `false`.
-
 - `OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS`
-    * If set to a comma-separated list of email address domains, an OIDC user will be created if its email address domain matches one of the list. This does not override `OVERLEAF_OIDC_DISABLE_JIT_ACCOUNT_CREATION` when it is set to `false`.
+    * Restricts Just-in-Time (JIT) account creation for users authenticating via OIDC. If set to a comma-separated list of domain names, a new account
+      will be created only if the domain of the user's email address matches one in the listed domains. If the domain does not match, an admin must
+      manually create the user account using the OIDC user’s email address, with either a strong random password or, preferably, without the `hashedPassword` field at all.
+      Domain names may include a leading `*.` wildcard to match subdomains.
+
+      - Example: To allow JIT account creation for users with email address like `name@example.com` and `name@math.example.com`:  
+        `OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS=example.com, *.example.com`
+      - Example: To completely disable JIT account creation:  
+        `OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS=`
 
 - `OVERLEAF_OIDC_UPDATE_USER_DETAILS_ON_LOGIN`
     * If set to `true`, updates the user `first_name` and `last_name` field on login,
