@@ -27,7 +27,7 @@ module.exports = ProjectEditorHandler = {
       deletedByExternalDataSource: project.deletedByExternalDataSource || false,
       imageName:
         project.imageName != null
-          ? Path.basename(project.imageName)
+          ? project.imageName
           : undefined,
     }
 
