@@ -31,20 +31,24 @@ const OIDCAuthenticationManager = {
       user = await ThirdPartyIdentityManager.promises.login(providerId, oidcUserId, oidcUserData)
     } catch {
 // A user with the specified OIDC ID and provider ID is not found. Search for a user with the given email.
-// If no user exists with this email, create a new user and link the OIDC account to it.
+// If no user exists with this email, create a new user and link the OIDC account to it (provided this is allowed by allowedOIDCEmailDomains).
 // If a user exists but no account from the specified OIDC provider is linked to this user, link the OIDC account to this user.
 // If an account from the specified provider is already linked to this user, unlink it, and link the OIDC account to this user.
 // (Is it safe? Concider: If an account from the specified provider is already linked to this user, throw an error)
       user = await User.findOne({ 'email': email }).exec()
       if (!user) {
-        let allowedDomains = Settings.oidc.allowedOIDCEmailDomains;
-          allowedDomains = allowedDomains.split(',').map(d => d.trim()); // Make sure it's an array
-          const domain = email.split('@')[1];
-
-          if (!allowedDomains.includes(domain)) {
-            return null;
-          }
-        if (Settings.oidc.disableJITAccountCreation) {
+        const allowedDomains = Settings.oidc.allowedOIDCEmailDomains
+        if (
+          allowedDomains &&
+          !allowedDomains.some(pattern => {
+            const domain = email.split('@')[1]
+            if (pattern.startsWith('*.')) {
+              const base = pattern.slice(2)
+              return domain.endsWith(`.${base}`)
+            }
+            return domain === pattern
+          })
+        ) {
           return null
         }
         user = await UserCreator.promises.createNewUser(
