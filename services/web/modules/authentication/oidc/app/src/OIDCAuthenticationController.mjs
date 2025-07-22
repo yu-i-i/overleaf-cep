@@ -103,7 +103,7 @@ const OIDCAuthenticationController = {
     if (user) {
       return { user, info: undefined }
     } else { // user account is not created
-      logger.debug({ email : profile.emails[0].value }, 'OIDC users JIT account creation is off')
+      logger.debug({ email : profile.emails[0].value }, 'OIDC JIT account creation is not allowed for this email')
       return {
         user: false,
         info: {

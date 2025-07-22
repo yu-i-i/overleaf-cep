@@ -61,7 +61,7 @@ const Features = {
       case 'registration-page':
         return (
           !Features.externalAuthenticationSystemUsed() ||
-          Boolean(Settings.overleaf) || Settings.oidc?.disableJITAccountCreation
+          Boolean(Settings.overleaf) || Settings.oidc?.allowedOIDCEmailDomains
         )
       case 'registration':
         return Boolean(Settings.overleaf)
