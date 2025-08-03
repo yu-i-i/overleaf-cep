@@ -26,7 +26,7 @@ const SAMLModuleManager = {
       callbackUrl: `${Settings.siteUrl.replace(/\/+$/, '')}/saml/login/callback`,
       issuer: process.env.OVERLEAF_SAML_ISSUER,
       audience: process.env.OVERLEAF_SAML_AUDIENCE,
-      cert: readFilesContentFromEnv(process.env.OVERLEAF_SAML_IDP_CERT),
+      idpCert: readFilesContentFromEnv(process.env.OVERLEAF_SAML_IDP_CERT),
       privateKey:  readFilesContentFromEnv(process.env.OVERLEAF_SAML_PRIVATE_KEY),
       decryptionPvk:  readFilesContentFromEnv(process.env.OVERLEAF_SAML_DECRYPTION_PVK),
       signatureAlgorithm: process.env.OVERLEAF_SAML_SIGNATURE_ALGORITHM,
