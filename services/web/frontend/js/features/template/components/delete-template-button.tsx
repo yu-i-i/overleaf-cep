@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import useIsMounted from '@/shared/hooks/use-is-mounted'
-import OLButton from '@/features/ui/components/ol/ol-button'
+import OLButton from '@/shared/components/ol/ol-button'
 import DeleteTemplateModal from './modals/delete-template-modal'
 import { useTemplateContext } from '../context/template-context'
 import { deleteTemplate } from '../util/api'

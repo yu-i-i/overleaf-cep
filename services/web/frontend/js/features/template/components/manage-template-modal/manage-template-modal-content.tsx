@@ -8,9 +8,9 @@ import {
   OLModalFooter,
   OLModalHeader,
   OLModalTitle,
-} from '@/features/ui/components/ol/ol-modal'
-import OLForm from '@/features/ui/components/ol/ol-form'
-import OLButton from '@/features/ui/components/ol/ol-button'
+} from '@/shared/components/ol/ol-modal'
+import OLForm from '@/shared/components/ol/ol-form'
+import OLButton from '@/shared/components/ol/ol-button'
 import { useDetachCompileContext } from '@/shared/context/detach-compile-context'
 import { useUserContext } from '@/shared/context/user-context'
 import { useFocusTrap } from '../../hooks/use-focus-trap'
