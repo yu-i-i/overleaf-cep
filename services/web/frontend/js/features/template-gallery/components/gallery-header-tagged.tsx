@@ -1,6 +1,6 @@
 import getMeta from '@/utils/meta'
-import OLCol from '@/features/ui/components/ol/ol-col'
-import OLRow from '@/features/ui/components/ol/ol-row'
+import OLCol from '@/shared/components/ol/ol-col'
+import OLRow from '@/shared/components/ol/ol-row'
 import GallerySearchSortHeader from './gallery-search-sort-header'
 
 export default function GalleryHeaderTagged({ category }) {
