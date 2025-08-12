@@ -5,13 +5,13 @@ import * as eventTracking from '@/infrastructure/event-tracking'
 import { isSmallDevice } from '@/infrastructure/event-tracking'
 import useIsMounted from '@/shared/hooks/use-is-mounted'
 import Notification from '@/shared/components/notification'
-import OLButton from '@/features/ui/components/ol/ol-button'
+import OLButton from '@/shared/components/ol/ol-button'
 import OLModal, {
   OLModalBody,
   OLModalFooter,
   OLModalHeader,
   OLModalTitle,
-} from '@/features/ui/components/ol/ol-modal'
+} from '@/shared/components/ol/ol-modal'
 import type { Template } from '../../../../../../types/template'
 import { useFocusTrap } from '../../hooks/use-focus-trap'
 
