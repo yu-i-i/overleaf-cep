@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PropTypes from 'prop-types'
-import OLFormControl from '@/features/ui/components/ol/ol-form-control'
+import OLFormControl from '@/shared/components/ol/ol-form-control'
 import useDebounce from '@/shared/hooks/use-debounce'
 
 export default function SymbolPaletteSearch({ setInput, inputRef }) {
