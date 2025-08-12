@@ -1,6 +1,6 @@
 import { useEffect, useRef, forwardRef } from 'react'
 import PropTypes from 'prop-types'
-import OLTooltip from '@/features/ui/components/ol/ol-tooltip'
+import OLTooltip from '@/shared/components/ol/ol-tooltip'
 
 const SymbolPaletteItem = forwardRef(function ({ 
   focused,
