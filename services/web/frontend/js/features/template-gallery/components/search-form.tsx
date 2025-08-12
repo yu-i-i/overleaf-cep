@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { MergeAndOverride } from '../../../../../types/utils'
-import OLForm from '@/features/ui/components/ol/ol-form'
-import OLFormControl from '@/features/ui/components/ol/ol-form-control'
+import OLForm from '@/shared/components/ol/ol-form'
+import OLFormControl from '@/shared/components/ol/ol-form-control'
 import MaterialIcon from '@/shared/components/material-icon'
 
 type SearchFormOwnProps = {

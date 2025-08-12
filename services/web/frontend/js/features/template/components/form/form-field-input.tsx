@@ -1,5 +1,5 @@
 import React from 'react'
-import OLFormControl from '@/features/ui/components/ol/ol-form-control'
+import OLFormControl from '@/shared/components/ol/ol-form-control'
 
 interface FormFieldInputProps extends React.ComponentProps<typeof OLFormControl> {
   value: string

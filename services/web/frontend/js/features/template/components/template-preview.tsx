@@ -1,5 +1,5 @@
-import OLCol from '@/features/ui/components/ol/ol-col'
-import OLRow from '@/features/ui/components/ol/ol-row'
+import OLCol from '@/shared/components/ol/ol-col'
+import OLRow from '@/shared/components/ol/ol-row'
 import { useTemplateContext } from '../context/template-context'
 
 

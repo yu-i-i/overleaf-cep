@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import OLRow from '@/features/ui/components/ol/ol-row'
+import OLRow from '@/shared/components/ol/ol-row'
 import { useTemplateGalleryContext } from '../context/template-gallery-context'
 import TemplateGalleryEntry from './template-gallery-entry'
 import Pagination from './pagination'
