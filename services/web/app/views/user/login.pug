@@ -12,38 +12,39 @@ block content
 									h1 !{login_support_title}
 								else
 									h1 #{translate("log_in")} 
-							form(name='loginForm' data-ol-async-form action='/login' method='POST')
-								input(name='_csrf' type='hidden' value=csrfToken)
-								+formMessagesNewStyle
-								+customFormMessageNewStyle('invalid-password-retry-or-reset', 'danger')
-									| !{translate('email_or_password_wrong_try_again_or_reset', {}, [{ name: 'a', attrs: { href: '/user/password/reset', 'aria-describedby': 'resetPasswordDescription' } }])}
-									span.visually-hidden(id='resetPasswordDescription')
-										| #{translate('reset_password_link')}
-								+customFormMessageNewStyle('password-compromised')
-									| !{translate('password_compromised_try_again_or_use_known_device_or_reset', {}, [{name: 'a', attrs: {href: 'https://haveibeenpwned.com/passwords', rel: 'noopener noreferrer', target: '_blank'}}, {name: 'a', attrs: {href: '/user/password/reset', target: '_blank'}}])}.
-								.form-group
-									input.form-control(
-										name='email'
-										type=(settings.ldap && settings.ldap.enable) ? 'text' : 'email'
-										required
-										placeholder=(settings.ldap && settings.ldap.enable) ? settings.ldap.placeholder : 'email@example.com'
-										autofocus='true'
-									)
-								.form-group
-									input.form-control(
-										name='password'
-										type='password'
-										required
-										placeholder='********'
-									)
-								.actions
-									button.btn-primary.btn(type='submit' data-ol-disabled-inflight)
-										span(data-ol-inflight='idle') #{translate("login")}
-										span(hidden data-ol-inflight='pending') #{translate("logging_in")}…
-									a.float-end(href='/user/password/reset') #{translate("forgot_your_password")}?
-								if login_support_text
-									hr
-									p.text-center !{login_support_text}
+							if local_login_enabled
+								form(name='loginForm' data-ol-async-form action='/login' method='POST')
+									input(name='_csrf' type='hidden' value=csrfToken)
+									+formMessagesNewStyle
+									+customFormMessageNewStyle('invalid-password-retry-or-reset', 'danger')
+										| !{translate('email_or_password_wrong_try_again_or_reset', {}, [{ name: 'a', attrs: { href: '/user/password/reset', 'aria-describedby': 'resetPasswordDescription' } }])}
+										span.visually-hidden(id='resetPasswordDescription')
+											| #{translate('reset_password_link')}
+									+customFormMessageNewStyle('password-compromised')
+										| !{translate('password_compromised_try_again_or_use_known_device_or_reset', {}, [{name: 'a', attrs: {href: 'https://haveibeenpwned.com/passwords', rel: 'noopener noreferrer', target: '_blank'}}, {name: 'a', attrs: {href: '/user/password/reset', target: '_blank'}}])}.
+									.form-group
+										input.form-control(
+											name='email'
+											type=(settings.ldap && settings.ldap.enable) ? 'text' : 'email'
+											required
+											placeholder=(settings.ldap && settings.ldap.enable) ? settings.ldap.placeholder : 'email@example.com'
+											autofocus='true'
+										)
+									.form-group
+										input.form-control(
+											name='password'
+											type='password'
+											required
+											placeholder='********'
+										)
+									.actions
+										button.btn-primary.btn(type='submit' data-ol-disabled-inflight)
+											span(data-ol-inflight='idle') #{translate("login")}
+											span(hidden data-ol-inflight='pending') #{translate("logging_in")}…
+										a.float-end(href='/user/password/reset') #{translate("forgot_your_password")}?
+									if login_support_text
+										hr
+										p.text-center !{login_support_text}
 							if settings.saml && settings.saml.enable
 								.actions(style='margin-top: 30px;')
 									a.button.btn-secondary.btn(

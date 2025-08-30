@@ -231,6 +231,17 @@ module.exports = function (webRouter, privateApiRouter, publicApiRouter) {
       return staticFilesBase + path
     }
 
+    res.locals.local_login_enabled =
+      (process.env.OVERLEAF_ENABLE_LOCAL_LOGIN || 'true') === 'true'
+    res.locals.saml_login_button_text =
+      process.env.OVERLEAF_SAML_LOGIN_BUTTON || 'Log in with SAML'
+    res.locals.saml_login_in_navbar =
+      process.env.OVERLEAF_SAML_LOGIN_IN_NAVBAR === 'true'
+    res.locals.oidc_login_button_text =
+      process.env.OVERLEAF_OIDC_LOGIN_BUTTON || 'Log in with OIDC'
+    res.locals.oidc_login_in_navbar =
+      process.env.OVERLEAF_OIDC_LOGIN_IN_NAVBAR === 'true'
+
     next()
   })
 

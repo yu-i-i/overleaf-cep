@@ -151,16 +151,17 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 					// logged out
 					if !getSessionUser()
 						// register link
-						if hasFeature('registration-page')
-							+nav-item.primary
-								+nav-link(
-									href='/register'
-									event-tracking='menu-click'
-									event-tracking-action='clicked'
-									event-tracking-trigger='click'
-									event-tracking-mb='true'
-									event-segmentation={page: currentUrl, item: 'register', location: 'top-menu'}
-								) #{translate('sign_up')}
+						if local_login_enabled
+							if hasFeature('registration-page')
+								+nav-item.primary
+									+nav-link(
+										href='/register'
+										event-tracking='menu-click'
+										event-tracking-action='clicked'
+										event-tracking-trigger='click'
+										event-tracking-mb='true'
+										event-segmentation={page: currentUrl, item: 'register', location: 'top-menu'}
+									) #{translate('sign_up')}
 
 						// templates link
 						if settings.templates
@@ -175,15 +176,40 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 								) #{translate('templates')}
 
 						// login link
-						+nav-item
-							+nav-link(
-								href='/login'
-								event-tracking='menu-click'
-								event-tracking-action='clicked'
-								event-tracking-trigger='click'
-								event-tracking-mb='true'
-								event-segmentation={page: currentUrl, item: 'login', location: 'top-menu'}
-							) #{translate('log_in')}
+						if local_login_enabled
+							+nav-item
+								+nav-link(
+									href='/login'
+									event-tracking='menu-click'
+									event-tracking-action='clicked'
+									event-tracking-trigger='click'
+									event-tracking-mb='true'
+									event-segmentation={page: currentUrl, item: 'login', location: 'top-menu'}
+								) #{translate('log_in')}
+
+						// SAML login link
+						if (settings.saml && settings.saml.enable) && (saml_login_in_navbar || !local_login_enabled)
+							+nav-item.primary
+								+nav-link(
+									href='/oidc/login'
+									event-tracking='menu-click'
+									event-tracking-action='clicked'
+									event-tracking-trigger='click'
+									event-tracking-mb='true'
+									event-segmentation={page: currentUrl, item: 'login', location: 'top-menu'}
+								) #{saml_login_button_text}
+
+						// OIDC login link
+						if (settings.oidc && settings.oidc.enable) && (oidc_login_in_navbar || !local_login_enabled)
+							+nav-item.primary
+								+nav-link(
+									href='/oidc/login'
+									event-tracking='menu-click'
+									event-tracking-action='clicked'
+									event-tracking-trigger='click'
+									event-tracking-mb='true'
+									event-segmentation={page: currentUrl, item: 'login', location: 'top-menu'}
+								) #{oidc_login_button_text}
 
 					// projects link and account menu
 					if getSessionUser()
