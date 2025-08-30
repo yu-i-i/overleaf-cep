@@ -191,7 +191,7 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 						if (settings.saml && settings.saml.enable) && (saml_login_in_navbar || !local_login_enabled)
 							+nav-item.primary
 								+nav-link(
-									href='/oidc/login'
+									href='/saml/login'
 									event-tracking='menu-click'
 									event-tracking-action='clicked'
 									event-tracking-trigger='click'
