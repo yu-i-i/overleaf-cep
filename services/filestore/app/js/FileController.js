@@ -10,6 +10,7 @@ module.exports = {
   getFile,
   getFileHead,
   insertFile,
+  deleteFile,
 }
 
 function getFile(req, res, next) {
@@ -81,6 +82,22 @@ function getFile(req, res, next) {
         }
       })
     })
+  })
+}
+
+function deleteFile(req, res, next) {
+  metrics.inc('deleteFile')
+  const { key, bucket } = req
+
+  req.requestLogger.addFields({ key, bucket })
+  req.requestLogger.setMessage('deleting file')
+
+  FileHandler.deleteFile(bucket, key, function (err) {
+    if (err) {
+      next(err)
+    } else {
+      res.sendStatus(204)
+    }
   })
 }
 
