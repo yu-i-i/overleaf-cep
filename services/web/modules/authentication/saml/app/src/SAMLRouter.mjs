@@ -1,6 +1,6 @@
 import logger from '@overleaf/logger'
 import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.js'
-import UserController from '../../../../../app/src/Features/User/UserController.js'
+import UserController from '../../../../../app/src/Features/User/UserController.mjs'
 import SAMLAuthenticationController from './SAMLAuthenticationController.mjs'
 import logout from '../../../logout.mjs'
 
