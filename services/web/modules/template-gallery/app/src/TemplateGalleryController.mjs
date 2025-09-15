@@ -1,5 +1,5 @@
 import logger from '@overleaf/logger'
-import ErrorController from '../../../../app/src/Features/Errors/ErrorController.js'
+import ErrorController from '../../../../app/src/Features/Errors/ErrorController.mjs'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.js'
 import TemplateGalleryManager from'./TemplateGalleryManager.mjs'
