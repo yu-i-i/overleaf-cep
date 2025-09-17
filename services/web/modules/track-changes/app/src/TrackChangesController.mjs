@@ -10,14 +10,6 @@ import CollaboratorsGetter from '../../../../app/src/Features/Collaborators/Coll
 import { Project } from '../../../../app/src/models/Project.js'
 import pLimit from 'p-limit'
 
-function _transformId(doc) {
-  if (doc._id) {
-    doc.id = doc._id
-    delete doc._id
-  }
-  return doc
-}
-
 const TrackChangesController = {
   async trackChanges(req, res, next) {
     try {
@@ -45,9 +37,8 @@ const TrackChangesController = {
   async getAllRanges(req, res, next) {
     try {
       const { project_id } = req.params
-      await DocumentUpdaterHandler.promises.flushProjectToMongo(project_id)
-      const ranges = await DocstoreManager.promises.getAllRanges(project_id)
-      res.json(ranges.map(_transformId))
+      const ranges = await DocumentUpdaterHandler.promises.getProjectRanges(project_id)
+      res.json(ranges)
     } catch (err) {
       next(err)
     }
