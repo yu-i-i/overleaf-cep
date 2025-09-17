@@ -1,5 +1,5 @@
 import logger from '@overleaf/logger'
-import AuthorizationMiddleware from '../../../../app/src/Features/Authorization/AuthorizationMiddleware.js'
+import AuthorizationMiddleware from '../../../../app/src/Features/Authorization/AuthorizationMiddleware.mjs'
 import TrackChangesController from './TrackChangesController.mjs'
 
 export default {
