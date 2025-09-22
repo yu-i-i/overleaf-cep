@@ -18,7 +18,7 @@ export const ReviewPanelResolvedThreadsMenu: FC = () => {
   const { projectRanges, loading } = useProjectRanges()
 
   const docNameForThread = useMemo(() => {
-    const docNameForThread = new Map<string, string>()
+    const docNameForThread = new Map<string, { docId: string; docName: string }>()
     const otMigrationStage = getMeta('ol-otMigrationStage')
 
     for (const [docId, ranges] of projectRanges?.entries() ?? []) {
@@ -28,7 +28,7 @@ export const ReviewPanelResolvedThreadsMenu: FC = () => {
       if (docName !== undefined) {
         for (const comment of ranges.comments) {
           const threadId = comment.op.t
-          docNameForThread.set(threadId, docName)
+          docNameForThread.set(threadId, { docId, docName })
         }
       }
     }
@@ -112,7 +112,8 @@ export const ReviewPanelResolvedThreadsMenu: FC = () => {
             key={thread.id}
             id={thread.id as ThreadId}
             comment={comment}
-            docName={docNameForThread.get(thread.id) ?? t('unknown')}
+            docName={docNameForThread.get(thread.id)?.docName ?? t('unknown')}
+            docId={docNameForThread.get(thread.id)?.docId}
           />
         )
       })}
