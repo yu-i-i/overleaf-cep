@@ -289,23 +289,24 @@ export const ThreadsProvider: FC<React.PropsWithChildren> = ({ children }) => {
 
         currentDocument.submitOp(op)
       },
-      async resolveThread(threadId: string) {
+      async resolveThread(threadId: string, docId: string) {
         await postJSON(
-          `/project/${projectId}/doc/${currentDocument.doc_id}/thread/${threadId}/resolve`
+          `/project/${projectId}/doc/${docId}/thread/${threadId}/resolve`
         )
         sendEvent('rp-comment-resolve', { view: reviewPanelView })
       },
-      async reopenThread(threadId: string) {
+      async reopenThread(threadId: string, docId: string) {
         await postJSON(
-          `/project/${projectId}/doc/${currentDocument.doc_id}/thread/${threadId}/reopen`
+          `/project/${projectId}/doc/${docId}/thread/${threadId}/reopen`
         )
         sendEvent('rp-comment-reopen')
       },
-      async deleteThread(threadId: string) {
+      async deleteThread(threadId: string, docId: string) {
         await deleteJSON(
-          `/project/${projectId}/doc/${currentDocument.doc_id}/thread/${threadId}`
+          `/project/${projectId}/doc/${docId}/thread/${threadId}`
         )
-        currentDocument.ranges?.removeCommentId(threadId)
+        // Is looks like it's not necessary
+        // currentDocument.ranges?.removeCommentId(threadId)
         sendEvent('rp-comment-delete')
       },
       async addMessage(threadId: ThreadId, content: string) {
