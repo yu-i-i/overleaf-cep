@@ -151,8 +151,8 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 					if !getSessionUser()
 						// templates link
 						if settings.templates
-							li
-								a(
+							+nav-item
+								+nav-link(
 									href="/templates"
 									event-tracking="menu-click"
 									event-tracking-action="clicked"
