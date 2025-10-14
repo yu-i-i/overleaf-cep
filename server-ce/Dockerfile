@@ -111,6 +111,19 @@ ENV GRACEFUL_SHUTDOWN_DELAY_SECONDS=1
 ENV NODE_ENV="production"
 ENV LOG_LEVEL="info"
 
+# Set environment variable for max upload zip file
+# ------------------------------------------------
+# Increase the zip content file from 300MB to 2000MB by default with an environment variable MAX_ZIP_CONTENT_SIZE that can be configured.
+ENV MAX_ZIP_CONTENT_SIZE=2000
+RUN sed -i 's/ONE_MEG \* 300/ONE_MEG \* process.env.MAX_ZIP_CONTENT_SIZE/g'  /overleaf/services/web/app/src/Features/Uploads/ArchiveManager.js
+
+# Increase the zip upload file from 50MB to 1024MB by default with an environment variable MAX_ZIP_UPLOAD_SIZE that can be configured.
+ENV MAX_ZIP_UPLOAD_SIZE=1024
+RUN sed -i 's/client_max_body_size 50/client_max_body_size ${MAX_ZIP_UPLOAD_SIZE}/g' /etc/nginx/templates/nginx.conf.template
+RUN sed -i 's/maxUploadSize: 50 \* 1024 \* 1024/maxUploadSize: process.env.MAX_ZIP_UPLOAD_SIZE \* 1024 \* 1024/g' /overleaf/services/web/config/settings.defaults.js
+# For templating the nginx.conf file add the env MAX_ZIP_UPLOAD_SIZE !
+RUN sed -i 's/${NGINX_WORKER_PROCESSES}/${NGINX_WORKER_PROCESSES} ${MAX_ZIP_UPLOAD_SIZE}/g' /etc/my_init.d/*_nginx_config_template.sh
+
 
 EXPOSE 80
 
