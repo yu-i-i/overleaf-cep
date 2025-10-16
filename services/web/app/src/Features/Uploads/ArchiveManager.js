@@ -69,7 +69,7 @@ const ArchiveManager = {
             new InvalidZipFileError({ info: { totalSizeInBytes } })
           )
         }
-        const isTooLarge = totalSizeInBytes > ONE_MEG * 300
+        const isTooLarge = totalSizeInBytes > ONE_MEG * 6 * Settings.maxUploadSize // 6 * 50 MB = 300 MB
         return callback(null, isTooLarge)
       })
     })
