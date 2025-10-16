@@ -96,7 +96,7 @@ function _isZipTooLarge(source) {
           )
           return done(new InvalidZipFileError({ info: { totalSizeInBytes } }))
         }
-        done(null, totalSizeInBytes > ONE_MEG * 300)
+        done(null, totalSizeInBytes > ONE_MEG * 6 * Settings.maxUploadSize)
       })
     })
   })
