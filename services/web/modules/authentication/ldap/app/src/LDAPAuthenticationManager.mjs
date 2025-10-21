@@ -1,6 +1,6 @@
 import Settings from '@overleaf/settings'
 import { callbackify } from '@overleaf/promise-utils'
-import UserCreator from '../../../../../app/src/Features/User/UserCreator.js'
+import UserCreator from '../../../../../app/src/Features/User/UserCreator.mjs'
 import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.js'
 import { User } from '../../../../../app/src/models/User.js'
 import { splitFullName } from '../../../utils.mjs'
