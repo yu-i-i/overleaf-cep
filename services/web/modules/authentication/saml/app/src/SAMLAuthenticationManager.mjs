@@ -1,7 +1,7 @@
 import Settings from '@overleaf/settings'
-import UserCreator from '../../../../../app/src/Features/User/UserCreator.js'
+import UserCreator from '../../../../../app/src/Features/User/UserCreator.mjs'
 import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.js'
-import SAMLIdentityManager from '../../../../../app/src/Features/User/SAMLIdentityManager.js'
+import SAMLIdentityManager from '../../../../../app/src/Features/User/SAMLIdentityManager.mjs'
 import { User } from '../../../../../app/src/models/User.js'
 
 const SAMLAuthenticationManager = {
