@@ -2,7 +2,7 @@ import logger from '@overleaf/logger'
 import passport from 'passport'
 import Settings from '@overleaf/settings'
 import { readFilesContentFromEnv, numFromEnv, boolFromEnv } from '../../../utils.mjs'
-import PermissionsManager from '../../../../../app/src/Features/Authorization/PermissionsManager.js'
+import PermissionsManager from '../../../../../app/src/Features/Authorization/PermissionsManager.mjs'
 import SAMLAuthenticationController from './SAMLAuthenticationController.mjs'
 import { Strategy as SAMLStrategy } from '@node-saml/passport-saml'
 
