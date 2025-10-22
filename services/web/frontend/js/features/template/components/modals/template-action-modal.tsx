@@ -6,7 +6,8 @@ import { isSmallDevice } from '@/infrastructure/event-tracking'
 import useIsMounted from '@/shared/hooks/use-is-mounted'
 import Notification from '@/shared/components/notification'
 import OLButton from '@/shared/components/ol/ol-button'
-import OLModal, {
+import {
+  OLModal,
   OLModalBody,
   OLModalFooter,
   OLModalHeader,
@@ -100,7 +101,7 @@ function TemplateActionModal({
       backdrop="static"
     >
       <div ref={modalRef}>
-        <OLModalHeader closeButton>
+        <OLModalHeader>
           <OLModalTitle>{title}</OLModalTitle>
         </OLModalHeader>
 
