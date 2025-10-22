@@ -125,7 +125,7 @@ export default function ManageTemplateModalContent({
 
   return (
     <div ref={modalRef}>
-      <OLModalHeader closeButton>
+      <OLModalHeader>
         <OLModalTitle>{t('publish_as_template')}</OLModalTitle>
       </OLModalHeader>
 
