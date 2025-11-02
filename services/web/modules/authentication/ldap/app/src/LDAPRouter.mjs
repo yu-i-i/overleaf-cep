@@ -1,7 +1,7 @@
 import logger from '@overleaf/logger'
 import RateLimiterMiddleware from '../../../../../app/src/Features/Security/RateLimiterMiddleware.mjs'
 import CaptchaMiddleware from '../../../../../app/src/Features/Captcha/CaptchaMiddleware.mjs'
-import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.js'
+import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import { overleafLoginRateLimiter } from '../../../../../app/src/infrastructure/RateLimiter.js'
 import LDAPAuthenticationController from './LDAPAuthenticationController.mjs'
 
