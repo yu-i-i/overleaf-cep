@@ -1,6 +1,6 @@
 import logger from '@overleaf/logger'
 
-import AuthenticationController from '../../../../app/src/Features/Authentication/AuthenticationController.js'
+import AuthenticationController from '../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import RateLimiterMiddleware from '../../../../app/src/Features/Security/RateLimiterMiddleware.mjs'
 import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.js'
 import TemplateGalleryController from './TemplateGalleryController.mjs'
