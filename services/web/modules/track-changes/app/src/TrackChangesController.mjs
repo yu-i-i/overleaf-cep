@@ -5,8 +5,8 @@ import SessionManager from '../../../../app/src/Features/Authentication/SessionM
 import UserInfoManager from '../../../../app/src/Features/User/UserInfoManager.mjs'
 import UserInfoController from '../../../../app/src/Features/User/UserInfoController.mjs'
 import DocstoreManager from '../../../../app/src/Features/Docstore/DocstoreManager.js'
-import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.js'
-import CollaboratorsGetter from '../../../../app/src/Features/Collaborators/CollaboratorsGetter.js'
+import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.mjs'
+import CollaboratorsGetter from '../../../../app/src/Features/Collaborators/CollaboratorsGetter.mjs'
 import { Project } from '../../../../app/src/models/Project.js'
 import pLimit from 'p-limit'
 
