@@ -1,0 +1,19 @@
+{
+  "name": "@overleaf/linked-url-proxy",
+  "description": "An API for providing linked url proxy",
+  "private": true,
+  "type": "module",
+  "main": "app.mjs",
+  "scripts": {
+    "start": "node app.mjs"
+  },
+  "version": "0.1.0",
+  "dependencies": {
+    "@overleaf/settings": "*",
+    "@overleaf/logger": "*",
+    "@overleaf/metrics": "*",
+    "async": "^3.2.5",
+    "express": "^4.21.2"
+    "ipaddr.js": "^1.9.1"
+  }
+}
