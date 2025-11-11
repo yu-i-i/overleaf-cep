@@ -87,6 +87,13 @@ services:
     volumes:
         - history-v1-buckets:/buckets
 
+  linked-url-proxy:
+    build:
+      context: ..
+      dockerfile: services/linked-url-proxy/Dockerfile
+    env_file:
+      - dev.env
+
   mongo:
     image: mongo:6.0
     command: --replSet overleaf
@@ -165,6 +172,7 @@ services:
       - document-updater
       - filestore
       - history-v1
+      - linked-url-proxy
       - notifications
       - project-history
       - real-time
