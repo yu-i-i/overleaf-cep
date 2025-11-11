@@ -271,6 +271,9 @@ module.exports = {
     realTime: {
       url: `http://${process.env.REALTIME_HOST || '127.0.0.1'}:3026`,
     },
+    linkedUrlProxy: {
+      url: `http://${process.env.LINKED_URL_PROXY_HOST || '127.0.0.1'}:3066`,
+    },
     notifications: {
       url: `http://${process.env.NOTIFICATIONS_HOST || '127.0.0.1'}:3042`,
     },
