@@ -842,6 +842,21 @@
             "name": "poll",
             "action": "SCMP_ACT_ALLOW",
             "args": []
+        },
+        {
+            "name": "openat2",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
+            "name": "statx",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
+            "name": "clone3",
+            "action": "SCMP_ACT_ALLOW",
+             "args": []
         }
     ]
 }
