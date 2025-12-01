@@ -1,0 +1,256 @@
+diff --git a/package.json b/package.json
+index 64fbd258ed..7cc3c7f9b3 100644
+--- a/package.json
++++ b/package.json
+@@ -66,6 +66,7 @@
+     "services/history-v1",
+     "services/idp",
+     "services/latexqc",
++    "services/linked-url-proxy",
+     "services/notifications",
+     "services/project-history",
+     "services/real-time",
+diff --git a/services/linked-url-proxy/Dockerfile b/services/linked-url-proxy/Dockerfile
+index 677006182c..7f2053f614 100644
+--- a/services/linked-url-proxy/Dockerfile
++++ b/services/linked-url-proxy/Dockerfile
+@@ -2,7 +2,7 @@
+ # Instead run bin/update_build_scripts from
+ # https://github.com/overleaf/internal/
+ 
+-FROM node:20.18.2 AS base
++FROM node:22.18.0 AS base
+ 
+ WORKDIR /overleaf/services/linked-url-proxy
+ 
+@@ -13,16 +13,20 @@ RUN mkdir /home/node/.config && chown node:node /home/node/.config
+ FROM base AS app
+ 
+ COPY package.json package-lock.json /overleaf/
++COPY libraries/fetch-utils/package.json /overleaf/libraries/fetch-utils/package.json
+ COPY libraries/logger/package.json /overleaf/libraries/logger/package.json
+ COPY libraries/metrics/package.json /overleaf/libraries/metrics/package.json
++COPY libraries/o-error/package.json /overleaf/libraries/o-error/package.json
+ COPY libraries/settings/package.json /overleaf/libraries/settings/package.json
+ COPY services/linked-url-proxy/package.json /overleaf/services/linked-url-proxy/package.json
+ COPY patches/ /overleaf/patches/
+ 
+ RUN cd /overleaf && npm ci --quiet
+ 
++COPY libraries/fetch-utils/ /overleaf/libraries/fetch-utils/
+ COPY libraries/logger/ /overleaf/libraries/logger/
+ COPY libraries/metrics/ /overleaf/libraries/metrics/
++COPY libraries/o-error/ /overleaf/libraries/o-error/
+ COPY libraries/settings/ /overleaf/libraries/settings/
+ COPY services/linked-url-proxy/ /overleaf/services/linked-url-proxy/
+ 
+diff --git a/services/linked-url-proxy/app/js/LinkedUrlProxyController.mjs b/services/linked-url-proxy/app/js/LinkedUrlProxyController.mjs
+index 1269eede0d..ea82f65d16 100644
+--- a/services/linked-url-proxy/app/js/LinkedUrlProxyController.mjs
++++ b/services/linked-url-proxy/app/js/LinkedUrlProxyController.mjs
+@@ -1,4 +1,6 @@
+ import dns from 'dns/promises'
++import { sanitizeUrl } from 'strict-url-sanitise'
++import normalizeUrlPath from 'als-normalize-urlpath'
+ import ipaddr from 'ipaddr.js'
+ import { URL } from 'node:url'
+ import { Transform } from 'node:stream'
+@@ -18,15 +20,7 @@ function isBlockedIp(ipStr, targetUrl) {
+   }
+ 
+   const range = addr.range()
+-  if ([
+-    'loopback',
+-    'private',
+-    'linkLocal',
+-    'multicast',
+-    'reserved',
+-    'broadcast',
+-    'unspecified'
+-  ].includes(range)) {
++  if (!['unicast'].includes(addr.range())) {
+     return true
+   }
+ 
+@@ -44,7 +38,7 @@ function isBlockedIp(ipStr, targetUrl) {
+   return false
+ }
+ 
+-async function validateSourceUrl(hostname, targetUrl) {
++async function checkUrlAccess(hostname, targetUrl) {
+   const records = await dns.lookup(hostname, { all: true }).catch(() => [])
+   if (!records.length) {
+     const err = new Error(`DNS lookup failed for ${hostname}`)
+@@ -62,22 +56,40 @@ async function validateSourceUrl(hostname, targetUrl) {
+   }
+ }
+ 
+-async function fetchValidated(urlStr, redirectCount = 0) {
++async function validateAndFetch(rawUrl, redirectCount = 0) {
+   if (redirectCount > Settings.maxRedirects) {
+     const err = new Error('Too many redirects')
+     err.info = { status: 421 }
+     throw err
+   }
+ 
+-  const url = new URL(urlStr)
++  const sanitizedUrl = sanitizeUrl(rawUrl)
++  if (!sanitizedUrl) {
++    const err = new Error(`Invalid or unsafe URL: ${rawUrl}`)
++    err.info = { status: 400 }
++    throw err
++  }
++
++  const url = new URL(sanitizedUrl)
++
+   if (!['http:', 'https:'].includes(url.protocol)) {
+     const err = new Error(`${url.protocol} protocol is not allowed`)
+     err.info = { status: 400 }
+     throw err
+   }
+ 
+-  // Validate DNS and blocked IPs
+-  await validateSourceUrl(url.hostname, urlStr)
++  const normalizedPath = normalizeUrlPath(url.pathname).pathname
++
++  if (!normalizedPath) {
++    const err = new Error(`Invalid or unsafe URL path: ${url.pathname}`)
++    err.info = { status: 400 }
++    throw err
++  }
++
++  const normalizedUrl = url.toString()
++
++  // check DNS and allowed resources
++  await checkUrlAccess(url.hostname, normalizedUrl)
+ 
+   const opts = {
+     redirect: 'manual',
+@@ -86,7 +98,7 @@ async function fetchValidated(urlStr, redirectCount = 0) {
+   }
+ 
+   try {
+-    const { stream, response } = await fetchStreamWithResponse(urlStr, opts)
++    const { stream, response } = await fetchStreamWithResponse(normalizedUrl, opts)
+ 
+     const contentLengthHeader = response.headers.get('content-length')
+     if (contentLengthHeader) {
+@@ -112,8 +124,8 @@ async function fetchValidated(urlStr, redirectCount = 0) {
+       if (status >= 300 && status < 400) {
+         const location = err.response.headers.get('Location')
+         if (location) {
+-          const nextUrl = new URL(location, url).toString()
+-          return fetchValidated(nextUrl, redirectCount + 1)
++          const nextUrl = new URL(location, normalizedUrl).toString()
++          return validateAndFetch(nextUrl, redirectCount + 1)
+         } else {
+           const e = new Error('Redirect response missing Location header')
+ 	  e.info = { status: 421 }
+@@ -141,14 +153,14 @@ async function proxy(req, res) {
+       return
+     }
+ 
+-    const { stream: upstreamStream, response, headers } = await fetchValidated(targetUrl)
++    const { stream: upstreamStream, response, headers } = await validateAndFetch(targetUrl)
+ 
+     res.statusCode = response.status || 200
+     res.setHeader('Content-Type', headers['content-type'] || 'application/octet-stream')
+     res.setHeader('Cache-Control', 'no-store')
+ 
+     function onError(err) {
+-      logger.warn({ err, url: req.url }, 'linked-url-proxy request failed')
++      logger.info({ err, url: req.url }, 'linked-url-proxy request failed')
+       try { upstreamStream.destroy() } catch (_) {}
+       if (!res.headersSent) {
+ 	let body = `Error: ${err?.message ?? String(err)}`
+@@ -163,11 +175,9 @@ async function proxy(req, res) {
+     upstreamStream.pipe(res)
+ 
+   } catch (err) {
+-    logger.warn({ err, url: req.url }, 'linked-url-proxy request failed')
+-
+-    let status = err.info.status
++    const status = err.info?.status || 500
++    logger.info({ linkedUrl: err.message, status, url: req.url }, 'linked-url-proxy request failed')
+     let body = `Error: ${err.message || String(err)}`
+-
+     try {
+       res.writeHead(status, { 'Content-Type': 'text/plain' })
+       res.end(body)
+diff --git a/services/linked-url-proxy/package.json b/services/linked-url-proxy/package.json
+index 845551c8ef..8081a80822 100644
+--- a/services/linked-url-proxy/package.json
++++ b/services/linked-url-proxy/package.json
+@@ -2,18 +2,24 @@
+   "name": "@overleaf/linked-url-proxy",
+   "description": "An API for providing linked url proxy",
+   "private": true,
+-  "type": "module",
+   "main": "app.mjs",
+   "scripts": {
+-    "start": "node app.mjs"
++    "start": "node app.mjs",
++    "nodemon": "node --watch app.mjs"
+   },
+-  "version": "0.1.0",
++  "version": "0.1.1",
+   "dependencies": {
+     "@overleaf/settings": "*",
+     "@overleaf/logger": "*",
+     "@overleaf/metrics": "*",
+     "async": "^3.2.5",
+-    "express": "^4.21.2"
+-    "ipaddr.js": "^1.9.1"
++    "express": "^4.21.2",
++    "ipaddr.js": "^1.9.1",
++    "als-normalize-urlpath": "^2.3.0",
++    "strict-url-sanitise": "^0.0.1"
++  },
++  "devDependencies": {
++    "als-normalize-urlpath": "^2.3.0",
++    "strict-url-sanitise": "^0.0.1"
+   }
+ }
+diff --git a/services/linked-url-proxy/tsconfig.json b/services/linked-url-proxy/tsconfig.json
+index c018d6e682..0639496cc8 100644
+--- a/services/linked-url-proxy/tsconfig.json
++++ b/services/linked-url-proxy/tsconfig.json
+@@ -1,7 +1,7 @@
+ {
+   "extends": "../../tsconfig.backend.json",
+   "include": [
+-    "app.js",
++    "app.mjs",
+     "app.ts",
+     "app/js/**/*",
+     "benchmarks/**/*",
+diff --git a/services/web/package.json b/services/web/package.json
+index 21da1188a2..c2c4fcfaba 100644
+--- a/services/web/package.json
++++ b/services/web/package.json
+@@ -69,6 +69,7 @@
+     "last 1 year",
+     "safari > 14"
+   ],
++
+   "dependencies": {
+     "@contentful/rich-text-html-renderer": "^16.0.2",
+     "@contentful/rich-text-types": "^16.0.2",
+@@ -92,6 +93,7 @@
+     "@xmldom/xmldom": "^0.7.13",
+     "accepts": "^1.3.7",
+     "ajv": "^8.12.0",
++    "als-normalize-urlpath": "^2.3.0",
+     "archiver": "^5.3.0",
+     "async": "^3.2.5",
+     "base-x": "^4.0.1",
+@@ -166,7 +168,8 @@
+     "request": "^2.88.2",
+     "requestretry": "^7.1.0",
+     "sanitize-html": "^2.8.1",
+-    "stripe": "^18.1.0",
++    "strict-url-sanitise": "^0.0.1",
++    "stripe": "^18.4.0",
+     "tough-cookie": "^4.0.0",
+     "tsscmp": "^1.0.6",
+     "uid-safe": "^2.1.5",
