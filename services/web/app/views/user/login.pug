@@ -31,14 +31,29 @@ block content
 										autofocus='true'
 										autocomplete='username'
 									)
-								.form-group
+								.form-group.form-group-password
 									label(for='password') #{translate("password")}
-									input#password.form-control(
-										name='password'
-										type='password'
-										autocomplete='current-password'
-										required
-									)
+									.form-group-password-input
+										input#password.form-control(
+											name='password'
+											type='password'
+											autocomplete='current-password'
+											required
+											data-ol-password-visibility-target
+										)
+										button.visibility-toggle(
+											type='button'
+											data-ol-password-visibility-toggle='visibilityOn'
+											aria-label='Show password'
+										)
+											span.material-symbols.material-symbols-rounded(aria-hidden='true' translate='no') visibility
+										button.visibility-toggle(
+											type='button'
+											data-ol-password-visibility-toggle='visibilityOff'
+											hidden
+											aria-label='Hide password'
+										)
+											span.material-symbols.material-symbols-rounded#visibility-icon-off(aria-hidden='true' translate='no') visibility_off
 								.actions
 									button.btn-primary.btn(type='submit' data-ol-disabled-inflight)
 										span(data-ol-inflight='idle') #{translate("login")}

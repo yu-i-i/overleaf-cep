@@ -37,22 +37,31 @@
   flex-direction: column;
 
   .form-group-password-input {
+    position: relative;
+    
     input.form-control {
-      padding-right: 35px;
+      padding-right: 45px;
     }
   }
 
   .visibility-toggle {
     position: absolute;
-    right: 0;
-    top: 0;
-    width: 35px; // TODO: Should this be calculated ?
-    height: 35px; // TODO: Should this be calculated ?
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 35px;
+    height: 35px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: unset;
-    background-color: unset;
+    background-color: transparent;
+    cursor: pointer;
+    color: var(--content-secondary, #6c757d);
+
+    &:hover {
+      color: var(--content-primary, #212529);
+    }
 
     #visibility-icon-off {
       margin-top: 2px; // workaround for the icon not having the same center as the non-slashed one
