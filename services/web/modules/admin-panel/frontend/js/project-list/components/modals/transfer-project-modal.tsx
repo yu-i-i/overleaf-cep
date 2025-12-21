@@ -1,0 +1,124 @@
+import { useMemo, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import ProjectsActionModal from './projects-action-modal'
+import ProjectsList from './projects-list'
+import SelectOwnerForm from './select-owner-form'
+import { useUserListContext } from '../../../user-list/context/user-list-context'
+import { useProjectListContext } from '../../context/project-list-context'
+import { UserRef } from '../../../../../types/project/api'
+import OLRow from '@/shared/components/ol/ol-row'
+import OLCol from '@/shared/components/ol/ol-col'
+import OLForm from '@/shared/components/ol/ol-form'
+import OLFormGroup from '@/shared/components/ol/ol-form-group'
+import OLFormLabel from '@/shared/components/ol/ol-form-label'
+import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
+import OLSpinner from '@/shared/components/ol/ol-spinner'
+
+
+type TransferProjectModalProps = Pick<
+  React.ComponentProps<typeof ProjectsActionModal>,
+  'projects' | 'actionHandler' | 'showModal' | 'handleCloseModal'
+>
+
+function TransferProjectModal({
+  projects,
+  actionHandler,
+  showModal,
+  handleCloseModal,
+}: TransferProjectModalProps) {
+  const { t } = useTranslation()
+  const [projectsToDisplay, setProjectsToDisplay] = useState<typeof projects>(
+    []
+  )
+  const { loadedUsers } = useUserListContext()
+  const { userId } = useProjectListContext()
+
+
+  const potentialOwners = useMemo(() => {
+    if (!loadedUsers) return null;
+
+    const result: UserRef[] = []
+    for (const user of loadedUsers) {
+      if (user.id !== userId) {
+        result.push({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email
+        })
+      }
+    }
+    return result
+  }, [loadedUsers, userId])
+
+  const [newOwner, setNewOwner] = useState<UserRef | null>(null)
+  const [sendEmails, setSendEmails] = useState(false)
+
+  const options = useMemo(() => {
+    if (!newOwner) return null
+
+    return {
+      user_id: newOwner.id,
+      skipEmails: !sendEmails,
+    }
+  }, [newOwner, sendEmails])
+
+  useEffect(() => {
+    if (showModal) {
+      setNewOwner(null)
+      setSendEmails(false)
+    }
+  }, [showModal])
+
+  useEffect(() => {
+    if (showModal) {
+      setProjectsToDisplay(displayProjects => {
+        return displayProjects.length ? displayProjects : projects
+      })
+    } else {
+      setProjectsToDisplay([])
+    }
+  }, [showModal, projects])
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSendEmails(e.currentTarget.checked)
+  }
+
+  return (
+    <ProjectsActionModal
+      action="transfer"
+      actionHandler={actionHandler}
+      title={t('change_project_owner')}
+      showModal={showModal}
+      handleCloseModal={handleCloseModal}
+      projects={projects}
+      options={options}
+    >
+      <p>{t('ownership_of_projects_will_be_transferred')}</p>
+      <ProjectsList projects={projects} projectsToDisplay={projectsToDisplay} />
+
+      <OLForm className="add-collabs">
+        <OLFormGroup>
+          <SelectOwnerForm
+            loading={!potentialOwners}
+            users={potentialOwners || []}
+            value={newOwner}
+            onChange={setNewOwner}
+          />
+        </OLFormGroup>
+
+          <OLFormGroup controlId="send_notification_emails_checkbox">
+            <OLFormCheckbox
+              autoComplete="off"
+              onChange={handleCheckboxChange}
+              name="sendEmails"
+              label={t('send_notification_emails_to_users')}
+              checked={sendEmails}
+            />
+          </OLFormGroup>
+      </OLForm>
+    </ProjectsActionModal>
+  )
+}
+
+export default TransferProjectModal
