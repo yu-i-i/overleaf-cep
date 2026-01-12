@@ -383,7 +383,16 @@ if (process.env.OVERLEAF_EMAIL_FROM_ADDRESS != null) {
   }
 
   if (
-    process.env.OVERLEAF_EMAIL_SMTP_USER != null ||
+    process.env.OVERLEAF_EMAIL_SMTP_USER != null &&
+    process.env.OVERLEAF_EMAIL_SMTP_PASS_FILE != null
+  ) {
+    settings.email.parameters.auth = {
+      user: process.env.OVERLEAF_EMAIL_SMTP_USER,
+      pass: require("fs").readFileSync(process.env.OVERLEAF_EMAIL_SMTP_PASS_FILE, "utf8")
+    }
+  }
+  else if (
+    process.env.OVERLEAF_EMAIL_SMTP_USER != null &&
     process.env.OVERLEAF_EMAIL_SMTP_PASS != null
   ) {
     settings.email.parameters.auth = {
