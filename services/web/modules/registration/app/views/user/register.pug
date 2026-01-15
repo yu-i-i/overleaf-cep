@@ -1,0 +1,58 @@
+extends ../../../../../app/views/layout-marketing
+
+//- block entrypointVar
+//- 	- entrypoint = 'modules/registration/pages/register-page'
+
+
+block content
+	main.content.content-alt#main-content
+		.login-register-container
+			.row
+				.card.login-register-card
+					.login-register-header-focus
+						//- br
+						br
+						h2.login-register-header-heading-focus #{translate("create_an_account")}
+					.ciam-login-register-or-text-container
+						.login-register-hr-text-container
+						form(
+								data-ol-async-form
+								name="registerForm"
+								action="/register",
+								method="POST",
+								aria-label=translate('create_account')
+							)
+								+formMessages()
+								.form-group
+									input.form-control(
+										aria-label="email"
+										type='email',
+										name='email',
+										placeholder=translate("email"),
+										required,
+										autocomplete="username",
+										autofocus
+									)
+								.form-group
+									input.form-control(
+										aria-label="password"
+										type="password",
+										name="password",
+										placeholder=translate("password"),
+										required,
+										autocomplete="new-password"
+									)
+								.actions
+									button.btn.btn-primary.w-100(
+										type='submit',
+										data-ol-disabled-inflight
+									)
+										span(data-ol-inflight="idle") #{translate("create_account")}
+										span(hidden data-ol-inflight="pending") #{translate("registering")}…
+						
+						.login-register-hr-text-container
+						.login-register-other-links
+							.p 
+								| #{translate("already_have_sl_account")} 
+								a(href='/login') #{translate("login")}
+						br

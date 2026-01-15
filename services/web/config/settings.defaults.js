@@ -1063,6 +1063,7 @@ module.exports = {
     'authentication/oidc',
     'admin-panel', // import after authentication
     'template-gallery',
+    'registration'
   ],
   viewIncludes: {},
 
