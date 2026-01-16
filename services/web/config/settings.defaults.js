@@ -786,6 +786,8 @@ module.exports = {
     title: process.env.APP_NAME || 'Overleaf Community Edition',
 
     hide_powered_by: process.env.NAV_HIDE_POWERED_BY === 'true',
+    hide_default_login: process.env.NAV_HIDE_DEFAULT_LOGIN === 'true',
+
     left_footer: [],
 
     right_footer: [
