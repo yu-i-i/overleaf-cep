@@ -66,6 +66,7 @@ function DropdownItem(
     description,
     leadingIcon,
     trailingIcon,
+    unfilled,
     ...props
   }: DropdownItemProps,
   ref: React.ForwardedRef<typeof BS5DropdownItem>
@@ -75,7 +76,7 @@ function DropdownItem(
     if (typeof leadingIcon === 'string') {
       leadingIconComponent = (
         <MaterialIcon
-          className="dropdown-item-leading-icon"
+          className={classnames('dropdown-item-leading-icon', {unfilled})}
           type={leadingIcon}
         />
       )
@@ -95,7 +96,7 @@ function DropdownItem(
 
       trailingIconComponent = (
         <MaterialIcon
-          className="dropdown-item-trailing-icon"
+          className={classnames('dropdown-item-trailing-icon', {unfilled})}
           type={trailingIconType}
         />
       )
