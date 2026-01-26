@@ -145,6 +145,7 @@ const transferOwnershipSchema = z.object({
   }),
   body: z.object({
     user_id: zz.objectId(),
+    skipEmails: z.boolean().optional(),
   }),
 })
 
@@ -161,6 +162,7 @@ async function transferOwnership(req, res, next) {
         allowTransferToNonCollaborators: hasAdminAccess(sessionUser),
         sessionUserId: new ObjectId(sessionUser._id),
         ipAddress: req.ip,
+        skipEmails: body.skipEmails
       }
     )
     res.sendStatus(204)
