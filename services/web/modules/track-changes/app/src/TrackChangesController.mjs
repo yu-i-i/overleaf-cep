@@ -1,13 +1,13 @@
-import ChatApiHandler from '../../../../app/src/Features/Chat/ChatApiHandler.js'
+import ChatApiHandler from '../../../../app/src/Features/Chat/ChatApiHandler.mjs'
 import ChatManager from '../../../../app/src/Features/Chat/ChatManager.mjs'
-import EditorRealTimeController from '../../../../app/src/Features/Editor/EditorRealTimeController.js'
-import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.js'
+import EditorRealTimeController from '../../../../app/src/Features/Editor/EditorRealTimeController.mjs'
+import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
 import UserInfoManager from '../../../../app/src/Features/User/UserInfoManager.mjs'
 import UserInfoController from '../../../../app/src/Features/User/UserInfoController.mjs'
-import DocstoreManager from '../../../../app/src/Features/Docstore/DocstoreManager.js'
+import DocstoreManager from '../../../../app/src/Features/Docstore/DocstoreManager.mjs'
 import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.mjs'
 import CollaboratorsGetter from '../../../../app/src/Features/Collaborators/CollaboratorsGetter.mjs'
-import { Project } from '../../../../app/src/models/Project.js'
+import { Project } from '../../../../app/src/models/Project.mjs'
 import pLimit from 'p-limit'
 
 const TrackChangesController = {
