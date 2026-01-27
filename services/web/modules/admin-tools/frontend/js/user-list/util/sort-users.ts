@@ -6,18 +6,18 @@ const order = (order: SortingOrder, users: User[]) => {
   return order === 'asc' ? [...users] : users.reverse()
 }
 
-
 function cmp(a, b) {
-  const aEmpty = (a === "")
-  const bEmpty = (b === "")
+  const aEmpty = a == null || a === ""
+  const bEmpty = b == null || b === ""
   if (aEmpty && bEmpty) return Compare.SORT_KEEP_ORDER
-  if (aEmpty !== bEmpty) return aEmpty ? Compare.SORT_A_AFTER_B : Compare.SORT_A_BEFORE_B
+  if (aEmpty) return Compare.SORT_A_AFTER_B
+  if (bEmpty) return Compare.SORT_A_BEFORE_B
   return a.localeCompare(b)
 }
 
 export const userNameComparator = (v1: User, v2: User) => {
   const res = cmp(v1.lastName, v2.lastName)
-  if (res !== 0) return res
+  if (res !== Compare.SORT_KEEP_ORDER) return res
   return cmp(v1.firstName, v2.firstName)
 }
 
