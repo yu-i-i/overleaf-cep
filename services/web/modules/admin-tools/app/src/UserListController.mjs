@@ -467,15 +467,25 @@ async function updateUser(req, res, next) {
   req.logger.addFields({ actorUserId })
   const { body } = req
 
-  const projection = Object.fromEntries(Object.keys(body).map(k => [k, 1]))
+  const updatesInput = { ...body }
+  if ('firstName' in updatesInput) {
+    updatesInput.first_name = updatesInput.firstName
+    delete updatesInput.firstName
+  }
+  if ('lastName' in updatesInput) {
+    updatesInput.last_name = updatesInput.lastName
+    delete updatesInput.lastName
+  }
+
+  const projection = Object.fromEntries(Object.keys(updatesInput).map(k => [k, 1]))
   const user = await User.findById(userId, projection).exec()
 
-  if (user == null) {
+  if (!user) {
     throw new OError('problem updating user settings', { userId })
   }
 
   let emailIsUpdated = false
-  const newEmail = body.email?.trim().toLowerCase()
+  const newEmail = updatesInput.email?.trim().toLowerCase()
   if (newEmail != null && newEmail !== user.email) { // email is updated
     if (newEmail.indexOf('@') === -1) {
       const message = req.i18n.translate('email_address_is_invalid')
@@ -502,31 +512,45 @@ async function updateUser(req, res, next) {
       }
     }
     if (userId == actorUserId) {
-      SessionManager.setInSessionUser(req.session, {
-        email: newEmail,
-      })
+      SessionManager.setInSessionUser(req.session, { email: newEmail })
     }
   }
 
   const update = {}
-  for (const [key, value] of Object.entries(body)) {
-    if (key === "email") continue
-    if (value === user[key]) continue
-    update[key] = typeof value === "string" ? value.trim() : value
+
+  for (let [key, value] of Object.entries(updatesInput)) {
+    if (key === 'email') continue
+
+    const newValue = typeof value === 'string' ? value.trim() : value
+    if (newValue === user[key]) continue
+
+    update[key] = newValue
   }
+
   Object.assign(user, update)
   try {
     await user.save()
-  } catch (err) {
+  } catch {
     throw new OError('problem updating user settings', { userId })
   }
+
   if (userId == actorUserId) {
     const sessionUpdate = {}
     if (update.first_name != null) sessionUpdate.first_name = update.first_name
     if (update.last_name != null) sessionUpdate.last_name = update.last_name
     SessionManager.setInSessionUser(req.session, sessionUpdate)
   }
-  if (emailIsUpdated) update["email"] = newEmail
+
+  if (emailIsUpdated) update.email = newEmail
+
+  if (update.first_name != null) {
+    update.firstName = update.first_name
+    delete update.first_name
+  }
+  if (update.last_name != null) {
+    update.lastName = update.last_name
+    delete update.last_name
+  }
 
   return res.json(update)
 }
