@@ -1,4 +1,6 @@
 import dns from 'dns/promises'
+import { sanitizeUrl } from 'strict-url-sanitise'
+import normalizeUrlPath from 'als-normalize-urlpath'
 import ipaddr from 'ipaddr.js'
 import { URL } from 'node:url'
 import { Transform } from 'node:stream'
@@ -18,15 +20,7 @@ function isBlockedIp(ipStr, targetUrl) {
   }
 
   const range = addr.range()
-  if ([
-    'loopback',
-    'private',
-    'linkLocal',
-    'multicast',
-    'reserved',
-    'broadcast',
-    'unspecified'
-  ].includes(range)) {
+  if (!['unicast'].includes(addr.range())) {
     return true
   }
 
@@ -44,7 +38,7 @@ function isBlockedIp(ipStr, targetUrl) {
   return false
 }
 
-async function validateSourceUrl(hostname, targetUrl) {
+async function checkUrlAccess(hostname, targetUrl) {
   const records = await dns.lookup(hostname, { all: true }).catch(() => [])
   if (!records.length) {
     const err = new Error(`DNS lookup failed for ${hostname}`)
@@ -62,22 +56,40 @@ async function validateSourceUrl(hostname, targetUrl) {
   }
 }
 
-async function fetchValidated(urlStr, redirectCount = 0) {
+async function validateAndFetch(rawUrl, redirectCount = 0) {
   if (redirectCount > Settings.maxRedirects) {
     const err = new Error('Too many redirects')
     err.info = { status: 421 }
     throw err
   }
 
-  const url = new URL(urlStr)
+  const sanitizedUrl = sanitizeUrl(rawUrl)
+  if (!sanitizedUrl) {
+    const err = new Error(`Invalid or unsafe URL: ${rawUrl}`)
+    err.info = { status: 400 }
+    throw err
+  }
+
+  const url = new URL(sanitizedUrl)
+
   if (!['http:', 'https:'].includes(url.protocol)) {
     const err = new Error(`${url.protocol} protocol is not allowed`)
     err.info = { status: 400 }
     throw err
   }
 
-  // Validate DNS and blocked IPs
-  await validateSourceUrl(url.hostname, urlStr)
+  const normalizedPath = normalizeUrlPath(url.pathname).pathname
+
+  if (!normalizedPath) {
+    const err = new Error(`Invalid or unsafe URL path: ${url.pathname}`)
+    err.info = { status: 400 }
+    throw err
+  }
+
+  const normalizedUrl = url.toString()
+
+  // check DNS and allowed resources
+  await checkUrlAccess(url.hostname, normalizedUrl)
 
   const opts = {
     redirect: 'manual',
@@ -86,7 +98,7 @@ async function fetchValidated(urlStr, redirectCount = 0) {
   }
 
   try {
-    const { stream, response } = await fetchStreamWithResponse(urlStr, opts)
+    const { stream, response } = await fetchStreamWithResponse(normalizedUrl, opts)
 
     const contentLengthHeader = response.headers.get('content-length')
     if (contentLengthHeader) {
@@ -112,8 +124,8 @@ async function fetchValidated(urlStr, redirectCount = 0) {
       if (status >= 300 && status < 400) {
         const location = err.response.headers.get('Location')
         if (location) {
-          const nextUrl = new URL(location, url).toString()
-          return fetchValidated(nextUrl, redirectCount + 1)
+          const nextUrl = new URL(location, normalizedUrl).toString()
+          return validateAndFetch(nextUrl, redirectCount + 1)
         } else {
           const e = new Error('Redirect response missing Location header')
 	  e.info = { status: 421 }
@@ -141,14 +153,14 @@ async function proxy(req, res) {
       return
     }
 
-    const { stream: upstreamStream, response, headers } = await fetchValidated(targetUrl)
+    const { stream: upstreamStream, response, headers } = await validateAndFetch(targetUrl)
 
     res.statusCode = response.status || 200
     res.setHeader('Content-Type', headers['content-type'] || 'application/octet-stream')
     res.setHeader('Cache-Control', 'no-store')
 
     function onError(err) {
-      logger.warn({ err, url: req.url }, 'linked-url-proxy request failed')
+      logger.info({ err, url: req.url }, 'linked-url-proxy request failed')
       try { upstreamStream.destroy() } catch (_) {}
       if (!res.headersSent) {
 	let body = `Error: ${err?.message ?? String(err)}`
@@ -163,11 +175,9 @@ async function proxy(req, res) {
     upstreamStream.pipe(res)
 
   } catch (err) {
-    logger.warn({ err, url: req.url }, 'linked-url-proxy request failed')
-
-    let status = err.info.status
+    const status = err.info?.status || 500
+    logger.info({ linkedUrl: err.message, status, url: req.url }, 'linked-url-proxy request failed')
     let body = `Error: ${err.message || String(err)}`
-
     try {
       res.writeHead(status, { 'Content-Type': 'text/plain' })
       res.end(body)
