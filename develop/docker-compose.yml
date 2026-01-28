@@ -139,6 +139,13 @@ services:
     volumes:
       - redis-data:/data
 
+  references:
+    build:
+      context: ..
+      dockerfile: services/references/Dockerfile
+    env_file:
+      - dev.env
+
   web:
     build:
       context: ..
@@ -169,6 +176,7 @@ services:
       - notifications
       - project-history
       - real-time
+      - references
 
   webpack:
     build:
