@@ -1,8 +1,8 @@
 import Settings from '@overleaf/settings'
 import UserCreator from '../../../../../app/src/Features/User/UserCreator.mjs'
-import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.js'
-import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.js'
-import { User } from '../../../../../app/src/models/User.js'
+import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.mjs'
+import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.mjs'
+import { User } from '../../../../../app/src/models/User.mjs'
 
 const OIDCAuthenticationManager = {
   async findOrCreateUser(profile, auditLog) {

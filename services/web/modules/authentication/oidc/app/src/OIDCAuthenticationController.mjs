@@ -3,9 +3,9 @@ import passport from 'passport'
 import Settings from '@overleaf/settings'
 import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import UserController from '../../../../../app/src/Features/User/UserController.mjs'
-import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.js'
+import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.mjs'
 import OIDCAuthenticationManager from './OIDCAuthenticationManager.mjs'
-import { acceptsJson } from '../../../../../app/src/infrastructure/RequestContentTypeDetection.js'
+import { acceptsJson } from '../../../../../app/src/infrastructure/RequestContentTypeDetection.mjs'
 
 const OIDCAuthenticationController = {
   passportLogin(req, res, next) {

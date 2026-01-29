@@ -4,9 +4,9 @@ import passport from 'passport'
 import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import SAMLAuthenticationManager from './SAMLAuthenticationManager.mjs'
 import UserController from '../../../../../app/src/Features/User/UserController.mjs'
-import UserSessionsManager from '../../../../../app/src/Features/User/UserSessionsManager.js'
-import { handleAuthenticateErrors } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.js'
-import { xmlResponse } from '../../../../../app/src/infrastructure/Response.js'
+import UserSessionsManager from '../../../../../app/src/Features/User/UserSessionsManager.mjs'
+import { handleAuthenticateErrors } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.mjs'
+import { xmlResponse } from '../../../../../app/src/infrastructure/Response.mjs'
 import { readFilesContentFromEnv } from '../../../utils.mjs'
 
 const SAMLAuthenticationController = {
