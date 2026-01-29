@@ -1,7 +1,7 @@
 import logger from '@overleaf/logger'
 import passport from 'passport'
-import EmailHelper from '../../../../../app/src/Features/Helpers/EmailHelper.js'
-import { handleAuthenticateErrors } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.js'
+import EmailHelper from '../../../../../app/src/Features/Helpers/EmailHelper.mjs'
+import { handleAuthenticateErrors } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.mjs'
 import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import LDAPAuthenticationManager from './LDAPAuthenticationManager.mjs'
 
