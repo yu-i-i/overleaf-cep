@@ -8,7 +8,7 @@ export type Page = {
 }
 
 export type Sort = {
-  by: 'lastUpdated' | 'title' | 'deletedAt'
+  by: 'lastUpdated' | 'title' | 'deletedAt' | 'owner'
   order: SortingOrder
 }
 

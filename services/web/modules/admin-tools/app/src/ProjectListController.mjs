@@ -111,16 +111,23 @@ function _applyFilters(projects,  filters) {
 
 function _sortAndPaginate(projects, sort, page) {
   if (
-    (sort.by && !['lastUpdated', 'title', 'deletedAt'].includes(sort.by)) ||
+    (sort.by && !['lastUpdated', 'title', 'deletedAt', 'owner'].includes(sort.by)) ||
     (sort.order && !['asc', 'desc'].includes(sort.order))
   ) {
     throw new OError('Invalid sorting criteria', { sort })
   }
-  const sortedProjects = _.orderBy(
-    projects,
-    [sort.by || 'lastUpdated'],
-    [sort.order || 'desc']
-  )
+
+// sorting by owner is not implemented, it is mot needed
+  const sortedProjects =
+    sort.by === 'title'
+      ? [...projects].sort((a, b) =>
+          (a.name ?? '\uffff').localeCompare(b.name ?? '\uffff')
+        )
+      : _.orderBy(
+          projects,
+          [sort.by || 'lastUpdated'],
+          [sort.order || 'desc']
+        )
   return sortedProjects
 }
 
