@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 import {
@@ -130,7 +129,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
     'user-list-filter',
     'all'
   )
-  const prevSortRef = useRef<Sort>(sort)
 
   const [searchText, setSearchText] = useState('')
 
@@ -160,11 +158,11 @@ export function UserListProvider({ children }: UserListProviderProps) {
   }, [prefetchedUsersBlob, runAsync])
 
   const addUserToView = useCallback((newUser: Partial<User>) => {
-    setLoadedUsers(prev => sortUsers([newUser, ...prev], prevSortRef.current))
+    setLoadedUsers(prev => [newUser as User, ...prev])
   }, [])
 
   const processedUsers = useMemo(() => {
-    let users = [...loadedUsers]
+    let users = loadedUsers
 
     if (searchText.length) {
       const searchTextLowerCase = searchText.toLowerCase()
@@ -177,11 +175,7 @@ export function UserListProvider({ children }: UserListProviderProps) {
 
     users = arrayFilter(users, filters[filter])
 
-    if (prevSortRef.current !== sort) {
-      users = sortUsers(users, sort)
-    }
-
-    return users
+    return sortUsers(users, sort)
   }, [loadedUsers, searchText, filter, sort])
 
   const visibleUsers = useMemo(() => {
@@ -197,10 +191,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
     hiddenUsersCount,
     MAX_USER_PER_PAGE
   )
-
-  useEffect(() => {
-    prevSortRef.current = sort
-  }, [sort])
 
   const selfVisibleCount = useMemo(() => {
     return visibleUsers.some(u => u.id === selfId) ? 1 : 0
@@ -238,8 +228,8 @@ export function UserListProvider({ children }: UserListProviderProps) {
   )
 
   const selectedUsers = useMemo(() => {
-    return visibleUsers.filter(user => selectedUserIds.has(user.id))
-  }, [selectedUserIds, visibleUsers])
+    return loadedUsers.filter(user => selectedUserIds.has(user.id))
+  }, [selectedUserIds, loadedUsers])
 
   const selectOrUnselectAllUsers = useCallback(
     (checked: any) => {
@@ -258,7 +248,7 @@ export function UserListProvider({ children }: UserListProviderProps) {
         }
         return selectedUserIds
       })
-    } ,
+    },
     [visibleUsers]
   )
 
@@ -356,7 +346,7 @@ export function UserListProvider({ children }: UserListProviderProps) {
   )
 
   if (!loadedUsers || loadedUsers.length === 0) {
-    return  null
+    return null
   }
 
   return (
@@ -377,4 +367,3 @@ export function useUserListContext() {
   }
   return context
 }
-

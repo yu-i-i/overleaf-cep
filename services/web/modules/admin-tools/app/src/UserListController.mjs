@@ -266,11 +266,23 @@ function _sortAndPaginate(users, sort, page) {
     throw new OError('Invalid sorting criteria', { sort })
   }
 
-  const sortedUsers = _.orderBy(
-    users,
-    [sort.by || 'signUpDate'],
-    [sort.order || 'desc']
-  )
+  const LAST = '\uffff'
+  const sortedUsers =
+    sort.by === 'name'
+      ? [...users].sort((a, b) =>
+          (a.lastName ?? LAST).localeCompare(b.lastName ?? LAST, undefined, { sensitivity: 'base' }) ||
+          (a.firstName ?? LAST).localeCompare(b.firstName ?? LAST, undefined, { sensitivity: 'base' }) ||
+          (a.email ?? LAST).localeCompare(b.email ?? LAST, undefined, { sensitivity: 'base' })
+        )
+      : _.orderBy(
+          users,
+          [u => {
+            const key = sort.by || 'signUpDate'
+            const value = u[key]
+            return typeof value === 'string' ? (value ?? LAST).toLowerCase() : value
+          }],
+          [sort.order || 'desc']
+        )
   return sortedUsers
 }
 
