@@ -3,7 +3,7 @@ import logger from '@overleaf/logger'
 import { promisify } from 'util'
 import passport from 'passport'
 import ldapjs from 'ldapauth-fork/node_modules/ldapjs/lib/index.js'
-import UserGetter from '../../../../../app/src/Features/User/UserGetter.js'
+import UserGetter from '../../../../../app/src/Features/User/UserGetter.mjs'
 import { splitFullName } from '../../../utils.mjs'
 
 function _searchLDAP(client, baseDN, options) {
