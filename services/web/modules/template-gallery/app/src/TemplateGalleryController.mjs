@@ -1,11 +1,15 @@
+import Path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import logger from '@overleaf/logger'
 import ErrorController from '../../../../app/src/Features/Errors/ErrorController.mjs'
 import Errors from '../../../../app/src/Features/Errors/Errors.js'
-import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.js'
+import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
 import TemplateGalleryManager from'./TemplateGalleryManager.mjs'
 import { getUserName } from './TemplateGalleryHelper.mjs'
 import { TemplateNameConflictError, RecompileRequiredError } from './TemplateErrors.mjs'
 import Settings from '@overleaf/settings'
+
+const __dirname = Path.dirname(fileURLToPath(import.meta.url))
 
 async function createTemplateFromProject(req, res, next) {
   const t = req.i18n.translate
@@ -108,7 +112,7 @@ async function templatesCategoryPage(req, res, next) {
       category = null
       title = t('templates_page_title')
     }
-    res.render('template_gallery/template-gallery', {
+    res.render(Path.resolve(__dirname, '../views/template_gallery/template-gallery'), {
       title,
       category,
     })
@@ -121,7 +125,7 @@ async function templateDetailsPage(req, res, next) {
   const t = req.i18n.translate
   try {
     const template = await TemplateGalleryManager.getTemplate('_id', req.params.template_id)
-    res.render('template_gallery/template', {
+    res.render(Path.resolve(__dirname, '../views/template_gallery/template'), {
       title: `${t('template')}: ${template.name}`,
       template: JSON.stringify(template),
       languages: Settings.languages,
