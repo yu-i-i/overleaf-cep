@@ -9,9 +9,9 @@ import ProjectZipStreamManager from '../../../../app/src/Features/Downloads/Proj
 import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.mjs'
 import ClsiManager from '../../../../app/src/Features/Compile/ClsiManager.mjs'
 import CompileManager from '../../../../app/src/Features/Compile/CompileManager.mjs'
-import UserGetter from '../../../../app/src/Features/User/UserGetter.js'
+import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import { fetchStreamWithResponse } from '@overleaf/fetch-utils'
-import { Template } from './models/Template.js'
+import { Template } from './models/Template.mjs'
 import { RecompileRequiredError } from './TemplateErrors.mjs'
 import { cleanHtml }  from './CleanHtml.mjs'
 

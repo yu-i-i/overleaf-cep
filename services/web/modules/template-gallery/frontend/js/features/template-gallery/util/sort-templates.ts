@@ -1,7 +1,7 @@
 import { Sort } from '../types/api'
 import { Template } from '../../../../../types/template'
-import { SortingOrder } from '../../../../../types/sorting-order'
-import { Compare } from '../../../../../types/helpers/array/sort'
+import { SortingOrder } from '../../../../../../../types/sorting-order'
+import { Compare } from '../../../../../../../types/helpers/array/sort'
 
 const order = (order: SortingOrder, templates: Template[]) => {
   return order === 'asc' ? [...templates] : templates.reverse()

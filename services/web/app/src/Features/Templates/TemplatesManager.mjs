@@ -32,8 +32,18 @@ const TemplatesManager = {
     templateVersionId,
     userId,
     imageName,
-    language
+    spellCheckLanguage
   ) {
+
+    compiler = ProjectOptionsHandler.normalizeCompiler(compiler || 'pdflatex')
+
+    try {
+       imageName = ProjectOptionsHandler.normalizeImageName(imageName)
+    } catch {
+      logger.warn( { templateId, imageName }, 'cannot use the image required by the template, using the default image')
+      imageName = null
+    }
+
     const zipUrl = `${settings.apis.filestore.url}/template/${templateId}/v/${templateVersionId}/zip`
     const zipReq = await fetchStreamWithResponse(zipUrl, {
       signal: AbortSignal.timeout(TIMEOUT),
@@ -42,8 +52,15 @@ const TemplatesManager = {
     const projectName = ProjectDetailsHandler.fixProjectName(templateName)
     const dumpPath = `${settings.path.dumpFolder}/${crypto.randomUUID()}`
     const writeStream = fs.createWriteStream(dumpPath)
+
     try {
-      const attributes = {}
+      const attributes = {
+        compiler,
+        imageName,
+        spellCheckLanguage,
+      }
+      if (brandVariationId) attributes.brandVariationId = brandVariationId
+
       await pipeline(zipReq.stream, writeStream)
 
       if (zipReq.response.status !== 200) {
@@ -73,13 +90,22 @@ const TemplatesManager = {
         return undefined
       })
 
-      await TemplatesManager._setCompiler(project._id, compiler)
-      await TemplatesManager._setImage(project._id, imageName)
-      await TemplatesManager._setMainFile(project._id, mainFile)
-      await TemplatesManager._setSpellCheckLanguage(project._id, language)
-      await TemplatesManager._setBrandVariationId(project._id, brandVariationId)
+      await TemplatesManager._setMainFile(project, mainFile)
 
-      await prepareClsiCacheInBackground
+      const found = await prepareClsiCacheInBackground
+      if (found === false && project.rootDoc_id) {
+        ClsiCacheManager.createTemplateClsiCache({
+          templateVersionId,
+          project,
+          fileEntries,
+          docEntries,
+        }).catch(err => {
+          logger.error(
+            { err, templateVersionId },
+            'failed to create template clsi-cache'
+          )
+        })
+      }
 
       return project
     } finally {
@@ -87,41 +113,15 @@ const TemplatesManager = {
     }
   },
 
-  async _setCompiler(projectId, compiler) {
-    if (compiler == null) {
-      return
-    }
-    await ProjectOptionsHandler.setCompiler(projectId, compiler)
-  },
-
-  async _setImage(projectId, imageName) {
-    try {
-      await ProjectOptionsHandler.setImageName(projectId, imageName)
-    } catch {
-      logger.warn({ imageName: imageName }, 'not available')
-      await ProjectOptionsHandler.setImageName(projectId, settings.currentImageName)
-    }
-  },
-
-  async _setMainFile(projectId, mainFile) {
+  async _setMainFile(project, mainFile) {
     if (mainFile == null) {
       return
     }
-    await ProjectRootDocManager.setRootDocFromName(projectId, mainFile)
-  },
-
-  async _setSpellCheckLanguage(projectId, language) {
-    if (language == null) {
-      return
-    }
-    await ProjectOptionsHandler.setSpellCheckLanguage(projectId, language)
-  },
-
-  async _setBrandVariationId(projectId, brandVariationId) {
-    if (brandVariationId == null) {
-      return
-    }
-    await ProjectOptionsHandler.setBrandVariationId(projectId, brandVariationId)
+    const rootDocId = await ProjectRootDocManager.setRootDocFromName(
+      project._id,
+      mainFile
+    )
+    if (rootDocId) project.rootDoc_id = rootDocId
   },
 
   async fetchFromV1(templateId) {

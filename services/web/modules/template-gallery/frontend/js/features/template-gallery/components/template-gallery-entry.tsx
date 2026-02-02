@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { cleanHtml } from '../../../../../modules/template-gallery/app/src/CleanHtml.mjs'
+import { cleanHtml } from '../../../../../app/src/CleanHtml.mjs'
 
 function TemplateGalleryEntry({ template }) {
   return (

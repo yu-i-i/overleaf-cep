@@ -301,6 +301,8 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
   TokenAccessRouter.apply(webRouter)
   HistoryRouter.apply(webRouter, privateApiRouter)
 
+  await Modules.applyRouter(webRouter, privateApiRouter, publicApiRouter)
+
   if (Settings.enableSubscriptions) {
     webRouter.get(
       '/user/bonus',
