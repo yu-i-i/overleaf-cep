@@ -168,7 +168,7 @@ function compile(req, res, next) {
                   draft: request.draft,
                   png2pdf: request.png2pdf,
                   imageName: request.imageName
-                    ? request.imageName
+                    ? Path.basename(request.imageName)
                     : undefined,
                   rootResourcePath: request.rootResourcePath,
                   stopOnFirstError: request.stopOnFirstError,
