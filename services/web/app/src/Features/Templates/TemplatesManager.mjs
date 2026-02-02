@@ -37,9 +37,12 @@ const TemplatesManager = {
     compiler = ProjectOptionsHandler.normalizeCompiler(
       compiler || settings.defaultLatexCompiler
     )
-    imageName = ProjectOptionsHandler.normalizeImageName(
-      imageName || 'wl_texlive:2018.1'
-    )
+    try {
+       imageName = ProjectOptionsHandler.normalizeImageName(imageName)
+    } catch {
+      logger.warn( { templateId, imageName }, 'cannot use the image required by the template, using the default image')
+      imageName = null
+    }
 
     const zipUrl = `${settings.apis.filestore.url}/template/${templateId}/v/${templateVersionId}/zip`
     const zipReq = await fetchStreamWithResponse(zipUrl, {
@@ -49,6 +52,7 @@ const TemplatesManager = {
     const projectName = ProjectDetailsHandler.fixProjectName(templateName)
     const dumpPath = `${settings.path.dumpFolder}/${crypto.randomUUID()}_templates-manager`
     const writeStream = fs.createWriteStream(dumpPath)
+
     try {
       const attributes = {
         compiler,

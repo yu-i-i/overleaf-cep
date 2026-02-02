@@ -1,9 +1,9 @@
-const mongoose = require('../../../../../app/src/infrastructure/Mongoose')
+import mongoose from '../../../../../app/src/infrastructure/Mongoose.mjs'
 
 const { Schema } = mongoose
 const { ObjectId } = Schema
 
-const TemplateSchema = new Schema(
+export const TemplateSchema = new Schema(
   {
     name: { type: String, required: true },
     category: { type: String, required: true },
@@ -29,5 +29,4 @@ const TemplateSchema = new Schema(
   { minimize: false }
 )
 
-exports.Template = mongoose.model('Template', TemplateSchema)
-exports.TemplateSchema = TemplateSchema
+export const Template = mongoose.model('Template', TemplateSchema)

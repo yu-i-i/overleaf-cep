@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import * as eventTracking from '../../../infrastructure/event-tracking'
-import getMeta from '../../../utils/meta'
+import * as eventTracking from '@/infrastructure/event-tracking'
+import getMeta from '@/utils/meta'
 import OLTooltip from '@/shared/components/ol/ol-tooltip'
-import { useDetachCompileContext } from '../../../shared/context/detach-compile-context'
-import EditorManageTemplateModalWrapper from '../../template/components/manage-template-modal/editor-manage-template-modal-wrapper'
-import LeftMenuButton from './left-menu-button'
+import { useDetachCompileContext } from '@/shared/context/detach-compile-context'
+import EditorManageTemplateModalWrapper from './manage-template-modal/editor-manage-template-modal-wrapper'
+import LeftMenuButton from '@/features/editor-left-menu/components/left-menu-button'
 
 type TemplateManageResponse = {
   template_id: string
@@ -31,7 +31,7 @@ export default function ActionsManageTemplate() {
     ({ template_id: templateId }: TemplateManageResponse) => {
       location.assign(`/template/${templateId}`)
     },
-    [location]
+    []
   )
 
   return (
