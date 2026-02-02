@@ -1,14 +1,12 @@
-extends ../layout-react
+extends ../../../../../app/views/layout-react
 
 block entrypointVar
-	- entrypoint = 'pages/template'
+	- entrypoint = 'modules/template-gallery/pages/template'
 
 block vars
-	- const suppressNavContentLinks = true
 	- const suppressNavbar = true
 	- const suppressFooter = true
-	- bootstrap5PageStatus = 'enabled' // One of 'disabled', 'enabled', and 'queryStringOnly'
-	- isWebsiteRedesign = false
+	- isWebsiteRedesign = true
 
 block append meta
 	meta(name="ol-template" data-type="json" content=template)

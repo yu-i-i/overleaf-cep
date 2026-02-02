@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import useWaitForI18n from '../../../shared/hooks/use-wait-for-i18n'
-import withErrorBoundary from '../../../infrastructure/error-boundary'
+import useWaitForI18n from '@/shared/hooks/use-wait-for-i18n'
+import withErrorBoundary from '@/infrastructure/error-boundary'
 import { GenericErrorBoundaryFallback } from '@/shared/components/generic-error-boundary-fallback'
 import DefaultNavbar from '@/shared/components/navbar/default-navbar'
 import Footer from '@/shared/components/footer/footer'

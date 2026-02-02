@@ -1,0 +1,15 @@
+extends ../../../../../app/views/layout-react
+
+block entrypointVar
+	- entrypoint = 'modules/template-gallery/pages/template-gallery'
+
+block vars
+	- const suppressFooter = true
+	- const suppressPugCookieBanner = true
+	- isWebsiteRedesign = true
+
+block append meta
+	meta(name="ol-templateCategory" data-type="string" content=category)
+
+block content
+	#template-gallery-root

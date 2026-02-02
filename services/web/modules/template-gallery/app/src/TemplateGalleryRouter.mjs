@@ -2,7 +2,7 @@ import logger from '@overleaf/logger'
 
 import AuthenticationController from '../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import RateLimiterMiddleware from '../../../../app/src/Features/Security/RateLimiterMiddleware.mjs'
-import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.js'
+import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.mjs'
 import TemplateGalleryController from './TemplateGalleryController.mjs'
 
 const rateLimiterNewTemplate = new RateLimiter('create-template-from-project', {

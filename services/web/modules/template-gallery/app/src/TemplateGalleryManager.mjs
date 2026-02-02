@@ -3,7 +3,7 @@ import logger from '@overleaf/logger'
 import { Readable } from 'stream'
 import settings from '@overleaf/settings'
 import { OError } from '../../../../app/src/Features/Errors/Errors.js'
-import { Template } from './models/Template.js'
+import { Template } from './models/Template.mjs'
 import {
   validateTemplateInput,
   renderTemplateHtmlFields,
