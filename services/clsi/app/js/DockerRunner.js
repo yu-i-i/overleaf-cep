@@ -41,8 +41,8 @@ const DockerRunner = {
     }
 
     if (Settings.texliveImageNameOveride != null) {
-      const img = image.split('/')
-      image = `${Settings.texliveImageNameOveride}/${img[2]}`
+      const img = Path.basename(image)
+      image = `${Settings.texliveImageNameOveride}/${img}`
     }
 
     if (compileGroup === 'synctex-output') {
@@ -238,6 +238,7 @@ const DockerRunner = {
     const match = image.match(/:([0-9]+)\.[0-9]+|:TL([0-9]+)/)
     // the rolling build does not follow our <year>.<version>.<patch> convention
     const year = match ? match[1] || match[2] : 'rolling'
+
     env.PATH = `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/texlive/${year}/bin/x86_64-linux/`
     const options = {
       Cmd: command,

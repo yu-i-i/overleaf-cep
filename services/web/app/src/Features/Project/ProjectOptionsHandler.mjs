@@ -46,7 +46,7 @@ const ProjectOptionsHandler = {
     if (!isAllowed) {
       throw new OError('invalid imageName', { imageName })
     }
-    return settings.imageRoot + '/' + imageName
+    return imageName
   },
 
   async setImageName(projectId, imageName) {
