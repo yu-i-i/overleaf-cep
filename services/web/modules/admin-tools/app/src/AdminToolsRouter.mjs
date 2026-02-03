@@ -69,6 +69,10 @@ export default {
       AuthorizationMiddleware.ensureUserIsSiteAdmin,
       ProjectListController.purgeDeletedProject
     )
+    webRouter.delete('/admin/project/:project_id',
+      AuthorizationMiddleware.ensureUserIsSiteAdmin,
+      ProjectListController.deleteProject
+    )
     webRouter.post('/admin/project/:project_id/undelete',
       AuthorizationMiddleware.ensureUserIsSiteAdmin,
       ProjectListController.undeleteProject

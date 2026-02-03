@@ -184,7 +184,7 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
 
   const loadMoreProjects = useCallback(() => {
     setMaxVisibleProjects(v => v + loadMoreCount)
-  }, [maxVisibleProjects])
+  }, [loadMoreCount])
 
   const [selectedProjectIds, setSelectedProjectIds] = useState(
     () => new Set<string>()
@@ -213,9 +213,8 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
     return visibleProjects.filter(project => selectedProjectIds.has(project.id))
   }, [selectedProjectIds, visibleProjects])
 
-
   const selectOrUnselectAllProjects = useCallback(
-    (checked: any) => {
+    (checked: boolean) => {
       setSelectedProjectIds(prevSelectedProjectIds => {
         const selectedProjectIds = new Set(prevSelectedProjectIds)
         for (const project of visibleProjects) {

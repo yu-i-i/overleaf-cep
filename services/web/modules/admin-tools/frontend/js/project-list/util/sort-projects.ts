@@ -10,7 +10,6 @@ const order = (order: SortingOrder, projects: Project[]) => {
 function cmp(a, b) {
   const aEmpty = a == null || a === ""
   const bEmpty = b == null || b === ""
-  if (aEmpty && bEmpty) return Compare.SORT_KEEP_ORDER
   if (aEmpty) return Compare.SORT_A_AFTER_B
   if (bEmpty) return Compare.SORT_A_BEFORE_B
   return a.localeCompare(b)
@@ -57,7 +56,7 @@ export const defaultComparator = (
   if (value1 !== value2) {
     if (value1 === undefined) return Compare.SORT_A_BEFORE_B
     if (value2 === undefined) return Compare.SORT_A_AFTER_B
-    return value1 < value2 ? Compare.SORT_A_BEFORE_B : Compare.SORT_A_AFTER_B
+    return value1.localeCompare(value2)
   }
 
   return Compare.SORT_KEEP_ORDER
