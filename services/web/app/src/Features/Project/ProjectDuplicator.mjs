@@ -117,6 +117,7 @@ async function duplicate(
     )
     attributes.overleaf = { history: { id: newHistoryId } }
   }
+  attributes.imageName = originalProject.imageName
 
   // Now create the new project, cleaning it up on failure if necessary
   const newProject = await ProjectCreationHandler.promises.createBlankProject(
