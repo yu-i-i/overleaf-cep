@@ -251,6 +251,7 @@ async function deleteProject(projectId, options = {}) {
       { projectId, userId: project.owner_ref },
       'successfully deleted project'
     )
+    return { deletedAt: deleterData.deletedAt, deleterId: deleterData.deleterId }
   } catch (err) {
     logger.warn({ err }, 'problem deleting project')
     throw err
