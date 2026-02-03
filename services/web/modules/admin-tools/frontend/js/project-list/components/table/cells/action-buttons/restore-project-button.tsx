@@ -35,7 +35,6 @@ function RestoreProjectButton({
   }, [isMounted])
 
   const handleRestoreProject = useCallback(() => {
-//    const ownerId = project.owner ?? getMeta('ol-user_id')
     return undeleteProject(project.id, project.owner).then(data => {
       toggleSelectedProject(project.id, false)
       updateProjectViewData({

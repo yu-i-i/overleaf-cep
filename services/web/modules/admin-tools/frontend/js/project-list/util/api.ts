@@ -20,7 +20,7 @@ export function getProjects(
 }
 
 export function deleteProject(projectId: string) {
-  return deleteJSON(`/project/${projectId}`)
+  return deleteJSON(`/admin/project/${projectId}`)
 }
 
 export function purgeProject(projectId: string) {

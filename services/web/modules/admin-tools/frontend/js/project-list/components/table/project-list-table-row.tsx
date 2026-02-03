@@ -19,7 +19,7 @@ function ProjectListTableRow({ project, selected, filter }: ProjectListTableRowP
   const ownerName = getUserNameById(project.owner)
   const actorName = filter !== 'deleted' ?
     getUserNameById(project.lastUpdatedBy) :
-    getUserNameById(project.deletedBy)
+    getUserNameById(project.deleterId)
   const eventDate = filter !== 'deleted' ? project.lastUpdated : project.deletedAt
 
   return (

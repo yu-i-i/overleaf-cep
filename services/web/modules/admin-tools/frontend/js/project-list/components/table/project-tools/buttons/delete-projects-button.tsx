@@ -28,11 +28,13 @@ function DeleteProjectsButton() {
   }
 
   const handleDeleteProject = async (project: Project) => {
-    await deleteProject(project.id)
-    toggleSelectedProject(project.id, false)
-    updateProjectViewData({
-      ...project,
-      deleted: true,
+    return deleteProject(project.id).then(data => {
+      toggleSelectedProject(project.id, false)
+      updateProjectViewData({
+        ...project,
+        ...data,
+        deleted: true,
+      })
     })
   }
 

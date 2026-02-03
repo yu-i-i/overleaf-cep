@@ -117,7 +117,7 @@ function _sortAndPaginate(projects, sort, page) {
     throw new OError('Invalid sorting criteria', { sort })
   }
 
-// sorting by owner is not implemented, it is mot needed
+// sorting by owner is not implemented, it is not needed
   const sortedProjects =
     sort.by === 'title'
       ? [...projects].sort((a, b) =>
@@ -162,7 +162,7 @@ function _formatDeletedProjectInfo(deletedProject, maxDate) {
     trashed,
     deleted: true,
     deletedAt: deletedProject.deleterData?.deletedAt?.toISOString(),
-    deletedBy: deletedProject.deleterData?.deleterId,
+    deleterId: deletedProject.deleterData?.deleterId,
   }
 }
 
@@ -212,6 +212,14 @@ async function untrashProjectForUser(req, res) {
   res.sendStatus(200)
 }
 
+async function deleteProject(req, res) {
+  const projectId = req.params.project_id
+  const deleterId = SessionManager.getLoggedInUserId(req.session)
+  const options = { deleterUser: {_id: deleterId } }
+  const deletedProjectData = await ProjectDeleter.promises.deleteProject(projectId, options)
+  return res.json(deletedProjectData)
+}
+
 async function undeleteProject(req, res) {
   const projectId = req.params.project_id
   const { userId } = req.body
@@ -232,6 +240,7 @@ async function purgeDeletedProject(req, res) {
 export default {
   manageProjectsPage: expressify(manageProjectsPage),
   getProjectsJson: expressify(getProjectsJson),
+  deleteProject: expressify(deleteProject),
   undeleteProject: expressify(undeleteProject),
   purgeDeletedProject: expressify(purgeDeletedProject),
   trashProjectForUser: expressify(trashProjectForUser),

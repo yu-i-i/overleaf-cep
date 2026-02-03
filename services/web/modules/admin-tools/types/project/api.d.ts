@@ -40,7 +40,7 @@ export type ProjectApi = {
   trashed: boolean
   deleted: boolean
   inactive?: boolean
-  deletedBy?: string
+  deleterId?: string
   deletedAt?: Date
 }
 
