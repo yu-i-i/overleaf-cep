@@ -100,6 +100,8 @@ async function duplicate(
   // remove any leading or trailing spaces
   newProjectName = newProjectName.trim()
 
+  attributes.imageName = originalProject.imageName
+
   // Now create the new project, cleaning it up on failure if necessary
   const newProject = await ProjectCreationHandler.promises.createBlankProject(
     owner._id,
