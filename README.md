@@ -21,7 +21,7 @@
 
 [Overleaf](https://www.overleaf.com) is an open-source online real-time collaborative LaTeX editor. Overleaf runs a hosted version at [www.overleaf.com](https://www.overleaf.com), but you can also run your own local version, and contribute to the development of Overleaf.
 
-## Extended Community Edition
+## Extended Community Edition (CE+)
 
 The present "extended" version of Overleaf CE includes:
 
@@ -34,6 +34,7 @@ The present "extended" version of Overleaf CE includes:
 - Autocomplete of reference keys
 - Symbol Palette
 - "From External URL" feature
+- Advanced administrator tools for managing user accounts and projects
 
 > [!CAUTION]
 > Overleaf Community Edition is intended for use in environments where **all** users are trusted. Community Edition is **not** appropriate for scenarios where isolation of users is required due to Sandbox Compiles not being available. When not using Sandboxed Compiles, users have full read and write access to the `sharelatex` container resources (filesystem, network, environment variables) when running LaTeX compiles. 
