@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import classnames from 'classnames'
 import * as eventTracking from '@/infrastructure/event-tracking'
@@ -8,12 +9,10 @@ import OLFormGroup from '@/shared/components/ol/ol-form-group'
 import OLFormControl from '@/shared/components/ol/ol-form-control'
 import MaterialIcon from '@/shared/components/material-icon'
 import { MergeAndOverride } from '../../../../../../types/utils'
-import { Filter } from '../context/user-list-context'
 
 type SearchFormOwnProps = {
   inputValue: string
   setInputValue: (input: string) => void
-  filter: Filter
 }
 
 type SearchFormProps = MergeAndOverride<
@@ -24,12 +23,18 @@ type SearchFormProps = MergeAndOverride<
 function SearchForm({
   inputValue,
   setInputValue,
-  filter,
   className,
   ...props
 }: SearchFormProps) {
   const { t } = useTranslation()
   const placeholder = t('search')+'…'
+
+  const [localValue, setLocalValue] = useState(inputValue)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    setLocalValue(inputValue)
+  }, [inputValue])
 
   const handleChange: React.ComponentProps<
     typeof OLFormControl
@@ -38,10 +43,23 @@ function SearchForm({
       action: 'search',
       isSmallDevice,
     })
-    setInputValue(e.target.value)
+
+    const value = e.target.value
+    setLocalValue(value)
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+
+    debounceRef.current = setTimeout(() => {
+      setInputValue(value)
+    }, 300)
   }
 
-  const handleClear = () => setInputValue('')
+  const handleClear = () => {
+    setLocalValue('')
+    setInputValue('')
+  }
 
   return (
     <OLForm
@@ -55,13 +73,13 @@ function SearchForm({
           <OLFormControl
             name="search"
             type="text"
-            value={inputValue}
+            value={localValue}
             onChange={handleChange}
             placeholder={placeholder}
             aria-label={placeholder}
             prepend={<MaterialIcon type="search" />}
             append={
-              inputValue.length > 0 && (
+              localValue.length > 0 && (
                 <button
                   type="button"
                   className="form-control-search-clear-btn"

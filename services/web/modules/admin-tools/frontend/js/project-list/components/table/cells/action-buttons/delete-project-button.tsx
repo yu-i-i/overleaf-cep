@@ -47,12 +47,14 @@ function DeleteProjectButton({ project, children }: DeleteProjectButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <DeleteProjectModal
-        projects={[project]}
-        actionHandler={handleDeleteProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <DeleteProjectModal
+          projects={[project]}
+          actionHandler={handleDeleteProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }
