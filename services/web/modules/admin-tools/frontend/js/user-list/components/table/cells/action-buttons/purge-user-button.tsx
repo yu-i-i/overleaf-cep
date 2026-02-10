@@ -40,12 +40,14 @@ function PurgeUserButton({ user, children }: PurgeUserButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <PurgeUserModal
-        users={[user]}
-        actionHandler={handlePurgeUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <PurgeUserModal
+          users={[user]}
+          actionHandler={handlePurgeUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

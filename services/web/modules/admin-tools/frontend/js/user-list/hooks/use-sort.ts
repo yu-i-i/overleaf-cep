@@ -8,9 +8,10 @@ const toggleSort = (order: SortingOrder): SortingOrder => {
 }
 
 function useSort() {
-  const { filter, sort, setSort } = useUserListContext()
+  const { filter, sort, setSort, setCurrentPage } = useUserListContext()
 
   const handleSort = (by: Sort['by']) => {
+    setCurrentPage(1)
     setSort(prev => ({
       by,
       order: prev.by === by ? toggleSort(sort.order) : sort.order,
@@ -19,13 +20,15 @@ function useSort() {
 
   useEffect(() => {
     if (filter === 'deleted' && sort.by === 'signUpDate') {
+      setCurrentPage(1)
       setSort(prev => ({ ...prev, by: 'deletedAt' }))
     }
 
     if (filter !== 'deleted' && sort.by === 'deletedAt') {
+      setCurrentPage(1)
       setSort(prev => ({ ...prev, by: 'signUpDate' }))
     }
-  }, [filter, sort.by, setSort])
+  }, [filter, sort.by, setSort, setCurrentPage])
 
   return { handleSort }
 }

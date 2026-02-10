@@ -33,13 +33,14 @@ function RestoreUsersButton() {
       <OLButton variant="primary" onClick={handleOpenModal}>
         {t('restore')}
       </OLButton>
-
-      <RestoreUserModal
-        users={selectedUsers}
-        actionHandler={handleRestoreUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <RestoreUserModal
+          users={selectedUsers}
+          actionHandler={handleRestoreUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

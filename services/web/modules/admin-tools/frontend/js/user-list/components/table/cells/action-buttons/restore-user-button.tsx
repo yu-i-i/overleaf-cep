@@ -40,12 +40,14 @@ function RestoreUserButton({ user, children }: RestoreUserButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <RestoreUserModal
-        users={[user]}
-        actionHandler={handleRestoreUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <RestoreUserModal
+          users={[user]}
+          actionHandler={handleRestoreUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

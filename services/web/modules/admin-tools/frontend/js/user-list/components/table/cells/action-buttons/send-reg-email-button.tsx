@@ -42,12 +42,14 @@ function SendRegEmailButton({ user, children }: SendRegEmailButtonProps) {
   return (
     <span style={isHidden ? { visibility: 'hidden' } : undefined }>
       {children(text, handleOpenModal)}
-      <SendRegEmailModal
-        users={[user]}
-        actionHandler={handleSendRegEmail}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <SendRegEmailModal
+          users={[user]}
+          actionHandler={handleSendRegEmail}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </span>
   )
 }

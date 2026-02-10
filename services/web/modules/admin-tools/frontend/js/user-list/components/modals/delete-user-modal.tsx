@@ -9,7 +9,6 @@ import OLForm from '@/shared/components/ol/ol-form'
 import SelectOwnerForm from '../../../project-list/components/select-owner-form'
 import { useUserListContext } from '../../../user-list/context/user-list-context'
 import { UserRef } from '../../../../../types/project/api'
-import sortUsers from '../../../user-list/util/sort-users'
 
 type DeleteUserModalProps = Pick<
   React.ComponentProps<typeof UsersActionModal>,
@@ -34,12 +33,10 @@ function DeleteUserModal({
 
   const potentialOwners = useMemo(() => {
     if (!loadedUsers) return []
-
     const excludeIds = new Set(users.map(u => u.id))
-    const possibleUsers = loadedUsers.filter(
+    return loadedUsers.filter(
       user => !user.deleted && !excludeIds.has(user.id)
     )
-    return sortUsers(possibleUsers, { by: 'name', order: 'asc' })
   }, [loadedUsers, users])
 
   useEffect(() => {

@@ -47,12 +47,14 @@ function RestoreProjectsButton() {
       <OLButton variant="primary" onClick={handleOpenModal}>
         {t('restore')}
       </OLButton>
-      <RestoreProjectModal
-        projects={selectedProjects}
-        actionHandler={handleRestoreProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <RestoreProjectModal
+          projects={selectedProjects}
+          actionHandler={handleRestoreProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

@@ -52,12 +52,14 @@ function TrashProjectsButton() {
           icon="delete"
         />
       </OLTooltip>
-      <TrashProjectModal
-        projects={selectedProjects}
-        actionHandler={handleTrashProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <TrashProjectModal
+          projects={selectedProjects}
+          actionHandler={handleTrashProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

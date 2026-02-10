@@ -43,13 +43,15 @@ function FlagUserButton({ user, action, children }: FlagUserButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <FlagUserModal
-        users={[user]}
-        action={action}
-        actionHandler={handleFlagUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <FlagUserModal
+          users={[user]}
+          action={action}
+          actionHandler={handleFlagUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

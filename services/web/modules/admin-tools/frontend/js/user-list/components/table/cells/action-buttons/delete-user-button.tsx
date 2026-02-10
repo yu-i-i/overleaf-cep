@@ -40,12 +40,14 @@ function DeleteUserButton({ user, children }: DeleteUserButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <DeleteUserModal
-        users={[user]}
-        actionHandler={handleDeleteUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <DeleteUserModal
+          users={[user]}
+          actionHandler={handleDeleteUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

@@ -40,12 +40,14 @@ function UpdateUserButton({ user, children }: UpdateUserButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <UpdateUserModal
-        users={[user]}
-        actionHandler={handleUpdateUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <UpdateUserModal
+          users={[user]}
+          actionHandler={handleUpdateUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

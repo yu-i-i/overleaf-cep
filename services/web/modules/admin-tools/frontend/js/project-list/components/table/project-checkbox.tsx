@@ -18,6 +18,7 @@ export const ProjectCheckbox = memo<{ projectId: string; projectName: string }>(
 
     return (
       <OLFormCheckbox
+        id={`select_project_${projectId}`}
         autoComplete="off"
         onChange={handleCheckboxChange}
         checked={selectedProjectIds.has(projectId)}
