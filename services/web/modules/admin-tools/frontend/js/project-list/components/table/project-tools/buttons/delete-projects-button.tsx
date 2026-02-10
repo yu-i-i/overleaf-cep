@@ -43,12 +43,14 @@ function DeleteProjectsButton() {
       <OLButton variant="danger" onClick={handleOpenModal}>
         {t('delete')}
       </OLButton>
-      <DeleteProjectModal
-        projects={selectedProjects}
-        actionHandler={handleDeleteProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <DeleteProjectModal
+          projects={selectedProjects}
+          actionHandler={handleDeleteProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

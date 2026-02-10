@@ -42,12 +42,14 @@ function PurgeProjectButton({ project, children }: PurgeProjectButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <PurgeProjectModal
-        projects={[project]}
-        actionHandler={handlePurgeProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <PurgeProjectModal
+          projects={[project]}
+          actionHandler={handlePurgeProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }
