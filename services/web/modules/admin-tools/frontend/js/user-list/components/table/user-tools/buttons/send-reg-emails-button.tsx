@@ -47,12 +47,14 @@ function SendRegEmailsButton({ action }: { action: string }) {
           unfilled={true}
         />
       </OLTooltip>
-      <SendRegEmailModal
-        users={selectedUsers}
-        actionHandler={handleSendRegEmail}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <SendRegEmailModal
+          users={selectedUsers}
+          actionHandler={handleSendRegEmail}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

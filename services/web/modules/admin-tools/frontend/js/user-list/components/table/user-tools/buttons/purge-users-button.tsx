@@ -33,13 +33,14 @@ function PurgeUsersButton() {
       <OLButton variant="danger" onClick={handleOpenModal}>
         {t('purge')}
       </OLButton>
-
-      <PurgeUserModal
-        users={selectedUsers}
-        actionHandler={handlePurgeUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <PurgeUserModal
+          users={selectedUsers}
+          actionHandler={handlePurgeUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

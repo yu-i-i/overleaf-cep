@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from 'react'
 import {
   filter as arrayFilter,
@@ -24,8 +25,6 @@ import { getUsers } from '../util/api'
 import sortUsers from '../util/sort-users'
 
 import { UserIdentityProvider } from './user-identity-context'
-
-const MAX_USER_PER_PAGE = 10
 
 type AuthMethods = 'local' | 'ldap' | 'saml' | 'oidc'
 export type Filter = 'all' | 'admin' | 'suspended' | 'inactive' | AuthMethods | 'deleted'
@@ -68,8 +67,6 @@ export type UserListContextValue = {
   filterTranslations: Map<Filter, string>
   hiddenUsersCount: number
   isLoading: ReturnType<typeof useAsync>['isLoading']
-  loadMoreCount: number
-  loadMoreUsers: () => void
   loadProgress: number
   removeUserFromView: (user: User) => void
   searchText: string
@@ -81,13 +78,17 @@ export type UserListContextValue = {
   setSearchText: React.Dispatch<React.SetStateAction<string>>
   setSelectedUserIds: React.Dispatch<React.SetStateAction<Set<string>>>
   setSort: React.Dispatch<React.SetStateAction<Sort>>
-  showAllUsers: () => void
   sort: Sort
   toggleSelectedUser: (userId: string, selected?: boolean) => void
   totalUsersCount: number
   updateUserViewData: (newUserData: User) => void
   loadedUsers: User[]
   visibleUsers: User[]
+  currentPage: number
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>
+  totalPages: number
+  usersPerPage: number,
+  setUsersPerPage: React.Dispatch<React.SetStateAction<number>>,
 }
 
 export const UserListContext = createContext<
@@ -103,9 +104,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
   const [loadedUsers, setLoadedUsers] = useState<User[]>(
     prefetchedUsersBlob?.users ?? []
   )
-
-  const [maxVisibleUsers, setMaxVisibleUsers] =
-    useState(MAX_USER_PER_PAGE)
 
   const [loadProgress, setLoadProgress] = useState(
     prefetchedUsersBlob ? 100 : 20
@@ -130,7 +128,31 @@ export function UserListProvider({ children }: UserListProviderProps) {
     'all'
   )
 
-  const [searchText, setSearchText] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchText, setSearchTextState] = useState('')
+  const lastNonSearchPageRef = useRef(1)
+  const isSearchingRef = useRef(false)
+
+  const setSearchText: React.Dispatch<React.SetStateAction<string>> = value => {
+    setSearchTextState(prev => {
+      const nextValue =
+        typeof value === 'function' ? value(prev) : value
+
+      const wasSearching = isSearchingRef.current
+      const willSearch = nextValue.length > 0
+
+      if (!wasSearching && willSearch) {
+        lastNonSearchPageRef.current = currentPage
+        isSearchingRef.current = true
+        setCurrentPage(1)
+      } else if (wasSearching && !willSearch) {
+        isSearchingRef.current = false
+        setCurrentPage(lastNonSearchPageRef.current)
+      }
+
+      return nextValue
+    })
+  }
 
   const {
     isLoading: loading,
@@ -143,10 +165,11 @@ export function UserListProvider({ children }: UserListProviderProps) {
   })
   const isLoading = isIdle ? true : loading
 
+
   useEffect(() => {
     if (prefetchedUsersBlob) return
     setLoadProgress(40)
-    runAsync(getUsers({ by: 'signUpDate', order: 'desc' }))
+    runAsync(getUsers({ by: 'name', order: 'asc' }))
       .then(data => {
         setLoadedUsers(data.users)
         setTotalUsersCount(data.totalSize)
@@ -161,7 +184,10 @@ export function UserListProvider({ children }: UserListProviderProps) {
     setLoadedUsers(prev => [newUser as User, ...prev])
   }, [])
 
-  const processedUsers = useMemo(() => {
+  const isDefaultSort =
+    sort.by === 'name' && sort.order === 'asc'
+
+  const filteredUsers = useMemo(() => {
     let users = loadedUsers
 
     if (searchText.length) {
@@ -175,34 +201,49 @@ export function UserListProvider({ children }: UserListProviderProps) {
 
     users = arrayFilter(users, filters[filter])
 
-    return sortUsers(users, sort)
-  }, [loadedUsers, searchText, filter, sort])
+    return users
+  }, [loadedUsers, searchText, filter])
+
+  const processedUsers = useMemo(() => {
+    if (isDefaultSort) {
+      return filteredUsers
+    }
+
+    return sortUsers(filteredUsers, sort)
+  }, [filteredUsers, sort, isDefaultSort])
+
+  const [usersPerPage, setUsersPerPage] = useState(20)
+  const previousUsersPerPageRef = useRef(usersPerPage)
+
+  useEffect(() => {
+    const previousUsersPerPage = previousUsersPerPageRef.current
+
+    if (previousUsersPerPage !== usersPerPage) {
+      const oldStartIndex = (currentPage - 1) * previousUsersPerPage
+      const newPage = Math.floor(oldStartIndex / usersPerPage) + 1
+      setCurrentPage(newPage)
+      previousUsersPerPageRef.current = usersPerPage
+    }
+  }, [usersPerPage])
+
+  const totalPages = useMemo(
+    () => Math.ceil(processedUsers.length / usersPerPage),
+    [processedUsers.length, usersPerPage]
+  )
+  const startIndex = (currentPage - 1) * usersPerPage
 
   const visibleUsers = useMemo(() => {
-    return processedUsers.slice(0, maxVisibleUsers)
-  }, [processedUsers, maxVisibleUsers])
+    return processedUsers.slice(startIndex, startIndex + usersPerPage)
+  }, [processedUsers, startIndex, usersPerPage])
 
   const hiddenUsersCount = Math.max(
     processedUsers.length - visibleUsers.length,
     0
   )
 
-  const loadMoreCount = Math.min(
-    hiddenUsersCount,
-    MAX_USER_PER_PAGE
-  )
-
   const selfVisibleCount = useMemo(() => {
     return visibleUsers.some(u => u.id === selfId) ? 1 : 0
   }, [visibleUsers])
-
-  const showAllUsers = useCallback(() => {
-    setMaxVisibleUsers(maxVisibleUsers + hiddenUsersCount)
-  }, [hiddenUsersCount, maxVisibleUsers])
-
-  const loadMoreUsers = useCallback(() => {
-    setMaxVisibleUsers(maxVisibleUsers + loadMoreCount)
-  }, [maxVisibleUsers, loadMoreCount])
 
   const [selectedUserIds, setSelectedUserIds] = useState(
     () => new Set<string>()
@@ -266,10 +307,10 @@ export function UserListProvider({ children }: UserListProviderProps) {
         return prev
       })
 
-      const selected = false
-      selectOrUnselectAllUsers(selected)
+      selectOrUnselectAllUsers(false)
+      setCurrentPage(1)
     },
-    [selectOrUnselectAllUsers, setFilter]
+    [selectOrUnselectAllUsers]
   )
 
   const updateUserViewData = useCallback((newUserData: User) => {
@@ -294,8 +335,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
       filterTranslations,
       hiddenUsersCount,
       isLoading,
-      loadMoreCount,
-      loadMoreUsers,
       loadProgress,
       removeUserFromView,
       searchText,
@@ -307,13 +346,17 @@ export function UserListProvider({ children }: UserListProviderProps) {
       setSearchText,
       setSelectedUserIds,
       setSort,
-      showAllUsers,
       sort,
       toggleSelectedUser,
       totalUsersCount,
       updateUserViewData,
       loadedUsers,
       visibleUsers,
+      currentPage,
+      setCurrentPage,
+      totalPages,
+      usersPerPage,
+      setUsersPerPage,
     }),
     [
       addUserToView,
@@ -322,8 +365,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
       filterTranslations,
       hiddenUsersCount,
       isLoading,
-      loadMoreCount,
-      loadMoreUsers,
       loadProgress,
       removeUserFromView,
       searchText,
@@ -335,19 +376,21 @@ export function UserListProvider({ children }: UserListProviderProps) {
       setSearchText,
       setSelectedUserIds,
       setSort,
-      showAllUsers,
       sort,
       toggleSelectedUser,
       totalUsersCount,
       updateUserViewData,
       loadedUsers,
       visibleUsers,
+      currentPage,
+      setCurrentPage,
+      totalPages,
+      usersPerPage,
+      setUsersPerPage,
     ]
   )
 
-  if (!loadedUsers || loadedUsers.length === 0) {
-    return null
-  }
+  if (isLoading) return null
 
   return (
     <UserIdentityProvider users={loadedUsers}>

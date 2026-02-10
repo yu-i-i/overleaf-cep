@@ -28,10 +28,13 @@ function UserListTable() {
   const {
     visibleUsers,
     sort,
+    searchText,
     selectedUsers,
     selectOrUnselectAllUsers,
     selfVisibleCount,
     filter,
+    currentPage,
+    setCurrentPage,
   } = useUserListContext()
   const { handleSort } = useSort()
   const checkAllRef = useRef<HTMLInputElement>(null)

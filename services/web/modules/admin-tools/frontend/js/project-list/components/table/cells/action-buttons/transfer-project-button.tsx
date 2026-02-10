@@ -54,12 +54,14 @@ function TransferProjectButton({ project, children }: TransferProjectButtonProps
   return (
     <>
       {children(text, handleOpenModal)}
-      <TransferProjectModal
-        projects={[project]}
-        actionHandler={handleTransferProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <TransferProjectModal
+          projects={[project]}
+          actionHandler={handleTransferProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

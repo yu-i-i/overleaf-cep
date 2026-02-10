@@ -60,12 +60,14 @@ function TransferProjectsButton() {
           icon="swap_horiz"
         />
       </OLTooltip>
-      <TransferProjectModal
-        projects={selectedProjects}
-        actionHandler={handleTransferProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <TransferProjectModal
+          projects={selectedProjects}
+          actionHandler={handleTransferProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

@@ -36,12 +36,14 @@ function PurgeProjectsButton() {
       <OLButton variant="danger" onClick={handleOpenModal}>
         {t('purge')}
       </OLButton>
-      <PurgeProjectModal
-        projects={selectedProjects}
-        actionHandler={handlePurgeProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <PurgeProjectModal
+          projects={selectedProjects}
+          actionHandler={handlePurgeProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

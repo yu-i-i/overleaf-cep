@@ -47,12 +47,14 @@ function TrashProjectButton({ project, children }: TrashProjectButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <TrashProjectModal
-        projects={[project]}
-        actionHandler={handleTrashProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <TrashProjectModal
+          projects={[project]}
+          actionHandler={handleTrashProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

@@ -13,7 +13,6 @@ import OLFormGroup from '@/shared/components/ol/ol-form-group'
 import OLFormLabel from '@/shared/components/ol/ol-form-label'
 import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
 import OLSpinner from '@/shared/components/ol/ol-spinner'
-import sortUsers from '../../../user-list/util/sort-users'
 
 type TransferProjectModalProps = Pick<
   React.ComponentProps<typeof ProjectsActionModal>,
@@ -35,9 +34,8 @@ function TransferProjectModal({
 
   const potentialOwners = useMemo(() => {
     if (!loadedUsers) return null;
-    const sortedUsers = sortUsers(loadedUsers, { by: 'name', order: 'asc' })
     const result: UserRef[] = []
-    for (const user of sortedUsers) {
+    for (const user of loadedUsers) {
       if (!user.deleted && user.id !== projectsOwnerId) {
         result.push({
           id: user.id,

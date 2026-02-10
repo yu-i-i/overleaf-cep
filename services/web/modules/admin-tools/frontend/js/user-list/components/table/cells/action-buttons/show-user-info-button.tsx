@@ -38,11 +38,13 @@ function ShowUserInfoButton({ user, children }: ShowUserInfoButtonProps) {
   return (
     <>
       {children(text, handleOpenModal)}
-      <ShowUserInfoModal
-        users={[user]}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <ShowUserInfoModal
+          users={[user]}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }
