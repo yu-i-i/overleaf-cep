@@ -51,12 +51,14 @@ function RestoreProjectButton({
   return (
     <>
       {children(text, handleOpenModal)}
-      <RestoreProjectModal
-        projects={[project]}
-        actionHandler={handleRestoreProject}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <RestoreProjectModal
+          projects={[project]}
+          actionHandler={handleRestoreProject}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }

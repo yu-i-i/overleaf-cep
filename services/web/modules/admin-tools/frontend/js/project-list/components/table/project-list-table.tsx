@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ProjectListTableRow from './project-list-table-row'
 import { useProjectListContext } from '../../context/project-list-context'
@@ -28,9 +28,12 @@ function ProjectListTable() {
   const {
     visibleProjects,
     sort,
+    searchText,
     selectedProjects,
     selectOrUnselectAllProjects,
     filter,
+    currentPage,
+    setCurrentPage,
   } = useProjectListContext()
   const { handleSort } = useSort()
   const checkAllRef = useRef<HTMLInputElement>(null)
@@ -49,6 +52,10 @@ function ProjectListTable() {
         selectedProjects.length !== visibleProjects.length
     }
   }, [selectedProjects, visibleProjects])
+
+  const [lastNonSearchPage, setLastNonSearchPage] = useState(1)
+  const [isSearching, setIsSearching] = useState(false)
+
   return (
     <OLTable className="project-dash-table" container={false} hover>
       <caption className="visually-hidden">{t('projects_list')}</caption>
@@ -59,6 +66,7 @@ function ProjectListTable() {
             aria-label={t('select_projects')}
           >
             <OLFormCheckbox
+              name="select_all_projects"
               autoComplete="off"
               onChange={handleAllProjectsCheckboxChange}
               checked={

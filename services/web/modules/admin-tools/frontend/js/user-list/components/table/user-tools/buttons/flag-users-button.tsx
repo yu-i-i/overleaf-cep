@@ -70,13 +70,15 @@ function FlagUsersButton({ action }: { action: string }) {
           unfilled={unfilled}
         />
       </OLTooltip>
-      <FlagUserModal
-        users={selectedUsers}
-        action={action}
-        actionHandler={handleFlagUser}
-        showModal={showModal}
-        handleCloseModal={handleCloseModal}
-      />
+      {showModal && (
+        <FlagUserModal
+          users={selectedUsers}
+          action={action}
+          actionHandler={handleFlagUser}
+          showModal={showModal}
+          handleCloseModal={handleCloseModal}
+        />
+      )}
     </>
   )
 }
