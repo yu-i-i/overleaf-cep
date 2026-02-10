@@ -18,6 +18,8 @@ import overleafLogo from '@/shared/svgs/overleaf-a-ds-solution-mallard.svg'
 import { getUserName } from '../util/user'
 import { useProjectListContext } from '../context/project-list-context'
 import { useUserIdentityContext } from '../../user-list/context/user-identity-context'
+import Pagination from '@/shared/components/pagination-cep'
+import ProjectListSummary from './project-list-summary'
 
 export function ProjectListDsNav() {
 
@@ -32,6 +34,9 @@ export function ProjectListDsNav() {
     selectedProjects,
     filter,
     projectsOwnerId,
+    currentPage,
+    setCurrentPage,
+    totalPages,
   } = useProjectListContext()
   const { getUserNameById } = useUserIdentityContext()
 
@@ -100,7 +105,10 @@ export function ProjectListDsNav() {
                     </TableContainer>
                   </div>
                   <div className="mt-3">
-                    <LoadMore />
+                    <ProjectListSummary />
+                  </div>
+                  <div className="mt-3">
+                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                   </div>
                 </div>
               </main>

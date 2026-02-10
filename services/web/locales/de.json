@@ -957,6 +957,7 @@
   "pending": "Ausstehend",
   "pending_additional_licenses": "Dein Abonnement wird geändert, um <0>__pendingAdditionalLicenses__</0> zusätzliche Lizenz(en) für insgesamt <1>__pendingTotalLicenses__</1> Lizenzen einzuschließen.",
   "per_month": "pro Monat",
+  "per_page": "pro Seite",
   "per_user_year": "pro Nutzer / Jahr",
   "per_year": "pro Jahr",
   "permanently_delete_accounts": "Konten endgültig löschen",

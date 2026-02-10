@@ -7,7 +7,7 @@ import UsersDropdown from './dropdown/users-dropdown'
 import SortByDropdown from './dropdown/sort-by-dropdown'
 import UserTools from './table/user-tools/user-tools'
 import UserListTitle from './title/user-list-title'
-import LoadMore from './load-more'
+import CountUsers from './count-users'
 import OLCol from '@/shared/components/ol/ol-col'
 import OLRow from '@/shared/components/ol/ol-row'
 import { TableContainer } from '@/shared/components/table'
@@ -18,6 +18,8 @@ import Footer from '@/shared/components/footer/footer'
 import SidebarDsNav from './sidebar/sidebar-ds-nav'
 import overleafLogo from '@/shared/svgs/overleaf-a-ds-solution-mallard.svg'
 import CookieBanner from '@/shared/components/cookie-banner'
+import Pagination from '@/shared/components/pagination-cep'
+import UserListSummary from './user-list-summary'
 
 export function UserListDsNav() {
   const navbarProps = getMeta('ol-navbar')
@@ -30,6 +32,9 @@ export function UserListDsNav() {
     setSearchText,
     selectedUsers,
     filter,
+    currentPage,
+    setCurrentPage,
+    totalPages,
   } = useUserListContext()
 
   const tableTopArea = (
@@ -40,7 +45,6 @@ export function UserListDsNav() {
       <SearchForm
         inputValue={searchText}
         setInputValue={setSearchText}
-        filter={filter}
         className="overflow-hidden flex-grow-1"
       />
     </div>
@@ -77,7 +81,6 @@ export function UserListDsNav() {
                       <SearchForm
                         inputValue={searchText}
                         setInputValue={setSearchText}
-                        filter={filter}
                       />
                     </OLCol>
                   </OLRow>
@@ -98,7 +101,10 @@ export function UserListDsNav() {
                     </TableContainer>
                   </div>
                   <div className="mt-3">
-                    <LoadMore />
+                    <UserListSummary />
+                  </div>
+                  <div className="mt-3">
+                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                   </div>
                 </div>
               </main>
