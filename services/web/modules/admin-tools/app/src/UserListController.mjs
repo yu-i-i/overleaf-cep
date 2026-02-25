@@ -289,11 +289,15 @@ function _sortAndPaginate(users, sort, page) {
 
 function _formatUserInfo(user, maxDate) {
   let authMethods = []
-  if (availableAuthMethods.includes('local') && user.hashedPassword) authMethods.push('local')
-  if (availableAuthMethods.includes('saml') && user.samlIdentifiers.length > 0) authMethods.push('saml')
-  if (availableAuthMethods.includes('oidc') && user.thirdPartyIdentifiers.length > 0) authMethods.push('oidc')
+  if (availableAuthMethods.includes('local') && user.hashedPassword)
+    authMethods.push('local')
+  if (availableAuthMethods.includes('saml') && user.samlIdentifiers && user.samlIdentifiers.length > 0)
+    authMethods.push('saml')
+  if (availableAuthMethods.includes('oidc') && user.thirdPartyIdentifiers && user.thirdPartyIdentifiers.length > 0)
+    authMethods.push('oidc')
 // If none of the above, mark as LDAP
-  if (availableAuthMethods.includes('ldap') && authMethods.length === 0 && user.loginCount !== 0) authMethods.push('ldap')
+  if (availableAuthMethods.includes('ldap') && authMethods.length === 0 && user.loginCount !== 0)
+    authMethods.push('ldap')
 
 // if not all user's authentications methods update a property on login, allow admin to update that property
   const allowUpdateDetails = authMethods.length === 0 || !authMethods.every(m => userDetailsUpdatedOnLogin[m])
