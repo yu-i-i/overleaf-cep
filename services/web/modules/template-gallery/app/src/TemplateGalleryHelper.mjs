@@ -71,13 +71,13 @@ export async function canUserOverrideTemplate(template, userId) {
     userIsOwner = false
     try {
       userIsAdmin = (await UserGetter.promises.getUser(userId, { isAdmin: 1 })).isAdmin
-    } catch {
+    } catch (error) {
       logger.error({ error, userId }, 'Logged in user does not exist, strange...')
       userIsAdmin = false
     }
     templateOwnerName = await getUserName(templateOwnerId) || 'unknown'
   }
-  const canOverride = userIsOwner || userIsAdmin
+  const canOverride = userIsOwner || userIsAdmin || (settings.templates?.user_id === userId)
   return { canOverride, templateOwnerName }
 }
 
@@ -193,7 +193,7 @@ export async function deleteTemplateAssets(templateId, version, deleteFromDb) {
     try {
       await Template.deleteOne({ _id: templateId }).exec()
     } catch (error) {
-      logger.error({ err, templateId }, 'Failed to delete template from MongoDB')
+      logger.error({ error, templateId }, 'Failed to delete template from MongoDB')
       throw error
     }
   }

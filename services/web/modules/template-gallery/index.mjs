@@ -19,7 +19,8 @@ if (process.env.OVERLEAF_TEMPLATE_GALLERY === 'true') {
   }
 
   Settings.templates = {
-    nonAdminCanManage: boolFromEnv(process.env.OVERLEAF_NON_ADMIN_CAN_PUBLISH_TEMPLATES)
+    nonAdminCanManage: boolFromEnv(process.env.OVERLEAF_NON_ADMIN_CAN_PUBLISH_TEMPLATES),
+    user_id: process.env.OVERLEAF_TEMPLATES_USER_ID
   }
 
   const templateKeys = process.env.OVERLEAF_TEMPLATE_CATEGORIES
