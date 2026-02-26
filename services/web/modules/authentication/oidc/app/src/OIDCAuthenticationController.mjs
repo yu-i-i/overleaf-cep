@@ -5,7 +5,6 @@ import AuthenticationController from '../../../../../app/src/Features/Authentica
 import UserController from '../../../../../app/src/Features/User/UserController.mjs'
 import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.mjs'
 import OIDCAuthenticationManager from './OIDCAuthenticationManager.mjs'
-import { acceptsJson } from '../../../../../app/src/infrastructure/RequestContentTypeDetection.mjs'
 
 const OIDCAuthenticationController = {
   passportLogin(req, res, next) {
@@ -142,17 +141,10 @@ const OIDCAuthenticationController = {
         initiatorId: userId,
       }
       await ThirdPartyIdentityManager.promises.unlink(userId, providerId, auditLog)
-      return res.status(200).end()
+      return res.status(204).end()
     } catch (error) {
-      logger.error(error.info, error.message)
-      return {
-        user: false,
-        info: {
-          type: 'error',
-          text: 'Can not unlink account',
-          status: 200,
-	}
-      }
+      logger.error('Unexpected error in uninkAccount')
+      return next({ stack: error.stack, info: {userId: req.user?._id} })
     }
   },
   async passportLogout(req, res, next) {
