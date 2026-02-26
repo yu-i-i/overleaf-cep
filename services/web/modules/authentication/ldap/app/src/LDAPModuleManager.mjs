@@ -59,13 +59,8 @@ const LDAPModuleManager = {
     }
   },
 
-  async getContacts(userId, contacts, callback) {
-    try {
-      const newContacts = await fetchLDAPContacts(userId, contacts)
-      callback(null, newContacts)
-    } catch (error) {
-      callback(error)
-    }
+  getContacts(userId, contacts) {
+    return fetchLDAPContacts(userId, contacts)
   },
 
   initPolicy() {

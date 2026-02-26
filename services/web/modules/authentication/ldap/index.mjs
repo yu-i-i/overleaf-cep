@@ -8,8 +8,10 @@ if (process.env.EXTERNAL_AUTH?.includes('ldap')) {
     name: 'ldap-authentication',
     hooks: {
       passportSetup: LDAPModuleManager.passportSetup,
-      getContacts: LDAPModuleManager.getContacts,
       getGroupPolicyForUser: LDAPModuleManager.getGroupPolicyForUser,
+      promises: {
+        getContacts: LDAPModuleManager.getContacts,
+      },
     },
     router: router,
   }
