@@ -16,7 +16,8 @@ function TemplateDetails() {
   const lastUpdatedDate = fromNowDate(template.lastUpdated)
   const tooltipText = formatDate(template.lastUpdated)
   const loggedInUserId = getMeta('ol-user_id')
-  const loggedInUserIsAdmin = getMeta('ol-userIsAdmin')
+  const loggedInUserCanManageTemplates = getMeta('ol-userIsAdmin')
+                                      || getMeta('ol-userIsTemplatesManager')
 
   const openAsTemplateParams = new URLSearchParams({
     version: template.version,
@@ -90,7 +91,7 @@ function TemplateDetails() {
           </div>
         )}
     </div>
-    {loggedInUserId && (loggedInUserId === template.owner || loggedInUserIsAdmin) && (
+    {loggedInUserId && (loggedInUserId === template.owner || loggedInUserCanManageTemplates) && (
       <OLRow className="cta-links-container">
         <OLCol md={12} className="text-end">
           <EditTemplateButton />
