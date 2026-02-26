@@ -80,6 +80,7 @@ export const db = {
   systemmessages: internalDb.collection('systemmessages'),
   tags: internalDb.collection('tags'),
   teamInvites: internalDb.collection('teamInvites'),
+  templates: internalDb.collection('templates'),
   tokens: internalDb.collection('tokens'),
   userAuditLogEntries: internalDb.collection('userAuditLogEntries'),
   users: internalDb.collection('users'),

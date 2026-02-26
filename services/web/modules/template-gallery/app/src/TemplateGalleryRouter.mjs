@@ -4,6 +4,7 @@ import AuthenticationController from '../../../../app/src/Features/Authenticatio
 import RateLimiterMiddleware from '../../../../app/src/Features/Security/RateLimiterMiddleware.mjs'
 import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.mjs'
 import TemplateGalleryController from './TemplateGalleryController.mjs'
+import TemplateAuthorizationMiddleware from './TemplateAuthorizationMiddleware.mjs'
 
 const rateLimiterNewTemplate = new RateLimiter('create-template-from-project', {
   points: 20,
@@ -18,7 +19,6 @@ const rateLimiterThumbnails = new RateLimiter('template-gallery-thumbnails', {
   duration: 60,
 })
 
-
 export default {
   rateLimiter,
   apply(webRouter) {
@@ -28,6 +28,7 @@ export default {
       '/template/new/:Project_id',
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(rateLimiterNewTemplate),
+      TemplateAuthorizationMiddleware.ensureTemplateManagementAccess,
       TemplateGalleryController.createTemplateFromProject
     )
 
@@ -41,6 +42,7 @@ export default {
       '/template/:template_id/edit',
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(rateLimiter),
+      TemplateAuthorizationMiddleware.ensureTemplateManagementAccess,
       TemplateGalleryController.editTemplate
     )
 
@@ -48,6 +50,7 @@ export default {
       '/template/:template_id/delete',
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(rateLimiter),
+      TemplateAuthorizationMiddleware.ensureTemplateManagementAccess,
       TemplateGalleryController.deleteTemplate
     )
 
