@@ -11,17 +11,16 @@ export function deleteTemplate(template: Template) {
 
 type UpdateTemplateOptions = {
   template: Template
-  initialTemplate: Template
-  descriptionEdited: boolean
+  editedTemplate: Template
 }
 
 export function updateTemplate({
-  editedTemplate,
-  template
+  template,
+  editedTemplate
 }: UpdateTemplateOptions): Promise<Template | null> {
   const updatedFields: Partial<Template> = {
     name: editedTemplate.name.trim(),
-    license: editedTemplate.license.trim(),
+    license: editedTemplate.license,
     category: editedTemplate.category,
     language: editedTemplate.language,
     authorMD: editedTemplate.authorMD.trim(),
@@ -36,12 +35,10 @@ export function updateTemplate({
   }, {} as Partial<Template>)
 
   if (Object.keys(changedFields).length === 0) {
-    return null
+    return Promise.resolve(null)
   }
 
-  const updated = postJSON(`/template/${editedTemplate.id}/edit`, {
+  return postJSON(`/template/${editedTemplate.id}/edit`, {
     body: changedFields
   })
-
-  return updated
 }
