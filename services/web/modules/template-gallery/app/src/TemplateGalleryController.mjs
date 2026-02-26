@@ -123,12 +123,14 @@ async function templatesCategoryPage(req, res, next) {
 
 async function templateDetailsPage(req, res, next) {
   const t = req.i18n.translate
+  const userId = SessionManager.getLoggedInUserId(req.session)
   try {
     const template = await TemplateGalleryManager.getTemplate('_id', req.params.template_id)
     res.render(Path.resolve(__dirname, '../views/template_gallery/template'), {
       title: `${t('template')}: ${template.name}`,
       template: JSON.stringify(template),
       languages: Settings.languages,
+      userIsTemplatesManager: Boolean(Settings.templates?.user_id && Settings.templates.user_id === userId)
     })
   } catch (error) {
     return ErrorController.notFound(req, res, next)
