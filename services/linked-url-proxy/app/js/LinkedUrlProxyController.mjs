@@ -7,6 +7,7 @@ import { Transform } from 'node:stream'
 import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import { fetchStreamWithResponse, RequestFailedError } from '@overleaf/fetch-utils'
+import { Agent } from 'undici'
 
 function isAllowedResource(targetUrl) {
   if (!Settings.allowedResources) return false
@@ -46,7 +47,7 @@ async function checkUrlAccess(hostname, targetUrl) {
     throw err
   }
 // Permit explicitly allowed resources without checking blocked IPs
-  if (isAllowedResource(targetUrl)) return
+  if (isAllowedResource(targetUrl)) return records[0].address
   for (const { address } of records) {
     if (isBlockedIp(address, targetUrl)) {
       const err = new Error(`Blocked IP address: ${address}`)
@@ -54,6 +55,7 @@ async function checkUrlAccess(hostname, targetUrl) {
       throw err
     }
   }
+  return records[0].address
 }
 
 async function validateAndFetch(rawUrl, redirectCount = 0) {
@@ -89,7 +91,16 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
   const normalizedUrl = url.toString()
 
   // check DNS and allowed resources
-  await checkUrlAccess(url.hostname, normalizedUrl)
+  const validatedIp = await checkUrlAccess(url.hostname, normalizedUrl)
+
+  // pin fetch to validated IP to prevent DNS rebinding
+  const agent = new Agent({
+    connect: {
+      lookup(hostname, opts, cb) {
+        cb(null, validatedIp, 4)
+      }
+    }
+  })
 
   const opts = {
     redirect: 'manual',
@@ -98,7 +109,7 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
   }
 
   try {
-    const { stream, response } = await fetchStreamWithResponse(normalizedUrl, opts)
+    const { stream, response } = await fetchStreamWithResponse(normalizedUrl, { ...opts, dispatcher: agent })
 
     const contentLengthHeader = response.headers.get('content-length')
     if (contentLengthHeader) {
