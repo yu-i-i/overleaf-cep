@@ -2,6 +2,7 @@
   "name": "overleaf",
   "private": true,
   "dependencies": {
+    "passport-ldapauth": "^3.0.1",
     "patch-package": "^8.0.0"
   },
   "devDependencies": {
