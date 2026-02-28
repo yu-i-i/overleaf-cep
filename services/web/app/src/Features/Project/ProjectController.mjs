@@ -564,6 +564,7 @@ const _ProjectController = {
           brandVariationId: 1,
           overleaf: 1,
           tokens: 1,
+          imageName: 1,
         }),
         userIsMemberOfGroupSubscription: sessionUser
           ? (async () =>
@@ -648,6 +649,8 @@ const _ProjectController = {
         projectId
       )
       const imageNames = await ProjectHelper.getAllowedImagesForUser(user)
+
+      if (!project.imageName) await EditorController.promises.setImageName(projectId, Settings.currentImageName)
 
       const privilegeLevel =
         await AuthorizationManager.promises.getPrivilegeLevelForProject(
