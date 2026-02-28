@@ -121,7 +121,7 @@ if ((process.env.DOCKER_RUNNER || process.env.SANDBOXED_COMPILES) === 'true') {
       image:
         process.env.TEXLIVE_IMAGE ||
         process.env.TEX_LIVE_DOCKER_IMAGE ||
-        'quay.io/sharelatex/texlive-full:2017.1',
+        process.env.ALL_TEX_LIVE_DOCKER_IMAGES.split(',')[0].trim(),
       env: {
         HOME: '/tmp',
         CLSI: 1,
