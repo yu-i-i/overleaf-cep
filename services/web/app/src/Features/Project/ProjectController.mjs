@@ -531,6 +531,7 @@ const _ProjectController = {
           collaberator_refs: 1, // used for link sharing analytics
           pendingEditor_refs: 1, // used for link sharing analytics
           reviewer_refs: 1,
+          imageName: 1,
         }),
         userIsMemberOfGroupSubscription: sessionUser
           ? (async () =>
@@ -605,6 +606,8 @@ const _ProjectController = {
         projectId
       )
       const imageNames = ProjectHelper.getAllowedImagesForUser(user)
+
+      if (!project.imageName) await EditorController.promises.setImageName(projectId, Settings.currentImageName)
 
       const privilegeLevel =
         await AuthorizationManager.promises.getPrivilegeLevelForProject(
