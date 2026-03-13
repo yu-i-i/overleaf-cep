@@ -42,7 +42,8 @@ function ShowUserInfoModal({
   const user = users[0]
 
   const [activationLink, setActivationLink] = useState<string | null>(null)
-   const [copied, setCopied] = useState(false)
+  const [copiedId, setCopiedId] = useState(false)
+  const [copiedActivationLink, setCopiedActivationLink] = useState(false)
 
   useEffect(() => {
     if (!showModal) return
@@ -56,22 +57,22 @@ function ShowUserInfoModal({
       })
   }, [showModal, user.id])
 
-  const handleCopy = () => {
-    if (!activationLink) return
+  const markCopied = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    setter(true)
+    setTimeout(() => setter(false), 1500)
+  }
 
-    const markCopied = () => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    }
+  const handleCopy = (text: string, setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    if (!text) return
 
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(activationLink).then(markCopied)
+      navigator.clipboard.writeText(text).then(() => markCopied(setter))
       return
     }
 
     // fallback for older browsers
     const tempInput = document.createElement('input')
-    tempInput.value = activationLink
+    tempInput.value = text
     tempInput.style.position = 'fixed'
     tempInput.style.opacity = '0'
     document.body.appendChild(tempInput)
@@ -79,7 +80,7 @@ function ShowUserInfoModal({
     document.execCommand('copy')
     document.body.removeChild(tempInput)
 
-    markCopied()
+    markCopied(setter)
   }
 
   return (
@@ -95,7 +96,22 @@ function ShowUserInfoModal({
           <>
             <Card.Header>{t('Account')}</Card.Header>
             <Body>
-              <InfoRow label={'ID'} value={user.id} />
+              <InfoRow
+                label={'ID'}
+                value={
+                  <span
+                    style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                    onClick={() => handleCopy(user.id, setCopiedId)}
+                  >
+                    {user.id}
+                    {copiedId && (
+                      <span className="ms-2 text-success">
+                        ({t('copied')})
+                      </span>
+                    )}
+                  </span>
+                }
+              />
               <InfoRow label={t('email_address')} value={user.email} />
               <InfoRow label={t('first_name')} value={user.firstName || '—'} />
               <InfoRow label={t('last_name')} value={user.lastName || '—'} />
@@ -111,15 +127,15 @@ function ShowUserInfoModal({
                 />
               )}
               {activationLink && (
-                <InfoRow 
+                <InfoRow
                   label={t('activation_link')}
                   value={
                     <span
                       style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                      onClick={handleCopy}
+                      onClick={() => handleCopy(activationLink, setCopiedActivationLink)}
                     >
                       {activationLink}
-                      {copied && (
+                      {copiedActivationLink && (
                         <span className="ms-2 text-success">
                           ({t('copied')})
                         </span>
@@ -171,4 +187,3 @@ function ShowUserInfoModal({
 }
 
 export default ShowUserInfoModal
-
