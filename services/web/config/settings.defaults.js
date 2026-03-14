@@ -1198,6 +1198,15 @@ module.exports = {
     }),
   },
 
+  splitTestOverrides: {
+ // new-fancy-feature': 'enabled',
+    ...(process.env.OVERLEAF_HISTORY_RESTORE?.toLowerCase() === 'true' ? {
+      'history-ranges-support': 'enabled',
+      'revert-file': 'enabled',
+      'revert-project': 'enabled',
+    } : {}),
+  },
+
 }
 
 module.exports.mergeWith = function (overrides) {
