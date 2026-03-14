@@ -1063,7 +1063,12 @@ module.exports = {
     referenceLinkingWidgets: [],
     importProjectFromGithubModalWrapper: [],
     importProjectFromGithubMenu: [],
-    editorLeftMenuSync: [],
+    editorLeftMenuSync: [
+      Path.resolve(
+        __dirname,
+        '../modules/git-bridge/frontend/js/card/components/git-modal.tsx'
+      ),
+    ],
     editorLeftMenuManageTemplate: [
       Path.resolve(
         __dirname,
@@ -1077,7 +1082,12 @@ module.exports = {
       ),
     ],
     insertMenuSections: [],
-    oauth2Server: [],
+    oauth2Server: [
+      Path.resolve(
+        __dirname,
+        '../modules/git-bridge/frontend/js/widget/components/git-integration-widget.tsx'
+      )
+    ],
     managedGroupSubscriptionEnrollmentNotification: [],
     managedGroupEnrollmentInvite: [],
     ssoCertificateInfo: [],
@@ -1114,7 +1124,12 @@ module.exports = {
         '../modules/full-project-search/frontend/js/components/full-project-search.tsx'
       ),
     ],
-    integrationPanelComponents: [],
+    integrationPanelComponents: [
+      Path.resolve(
+        __dirname,
+        '../modules/git-bridge/frontend/js/card/components/git-integration-card.tsx'
+      ),
+    ],
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],
     settingsModalSpellcheckSections: [],
@@ -1138,6 +1153,7 @@ module.exports = {
     'authentication/oidc',
     'admin-tools', // import after authentication
     'template-gallery',
+    'git-bridge',
   ],
   viewIncludes: {},
 
@@ -1151,7 +1167,6 @@ module.exports = {
       'app/views/project/ide-react': [`img-src 'self' data: blob:`],
     },
   },
-
   unsupportedBrowsers: {
     ie: '<=11',
     safari: '<15',
