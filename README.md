@@ -25,16 +25,17 @@
 
 The present "extended" version of Overleaf CE includes:
 
-- Template Gallery
-- Sandboxed Compiles with TeX Live image selection
+- Template gallery
+- Sandboxed compiles with TeX Live image selection
 - LDAP authentication
 - SAML authentication
 - OpenID Connect authentication
 - Real-time track changes and comments
 - Autocomplete of reference keys
-- Symbol Palette
-- "From External URL" feature
+- Symbol palette
+- Import file from external URL
 - Advanced administrator tools for managing user accounts and projects
+- Git integration
 
 > [!CAUTION]
 > Overleaf Community Edition is intended for use in environments where **all** users are trusted. Community Edition is **not** appropriate for scenarios where isolation of users is required due to Sandbox Compiles not being available. When not using Sandboxed Compiles, users have full read and write access to the `sharelatex` container resources (filesystem, network, environment variables) when running LaTeX compiles. 
@@ -74,11 +75,14 @@ folder are added.
 
 ## Authors
 
-[The Overleaf Team](https://www.overleaf.com/about)  
-[yu-i-i](https://github.com/yu-i-i/overleaf-cep) — Extensions for CE unless otherwise noted
+[The Overleaf Team](https://www.overleaf.com/about)\
+[yu-i-i](https://github.com/yu-i-i/overleaf-cep) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md)
 
 ## License
 
 The code in this repository is released under the GNU AFFERO GENERAL PUBLIC LICENSE, version 3. A copy can be found in the [`LICENSE`](LICENSE) file.
 
-Copyright (c) Overleaf, 2014-2025.
+Copyright (c) Overleaf, 2014-2026.\
+Copyright (c) yu-i-i, 2024-2026, for CE extensions.
+
+Portions of the code are derived from other open-source projects; see [`CREDITS`](CREDITS.md).
