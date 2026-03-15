@@ -4,7 +4,7 @@
 
 services:
   test_unit:
-    image: node:22.18.0
+    image: node:24.13.0
     volumes:
       - .:/overleaf/services/references
       - ../../node_modules:/overleaf/node_modules
