@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useProjectContext } from '@/shared/context/project-context'
-import IntegrationCard from '@/features/ide-redesign/components/integrations-panel/integration-card'
+import IntegrationCard from '@/features/integrations-panel/integration-card.tsx'
 import GitLogoOrange from '@/shared/svgs/git-logo-orange'
 
 import GitModalWrapper from './git-modal-wrapper'
