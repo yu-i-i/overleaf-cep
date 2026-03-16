@@ -5,7 +5,7 @@ import Path from 'node:path'
 
 const modulePath = Path.join(
   import.meta.dirname,
-  '../../../app/js/DockerRunner'
+  '../../../app/js/DockerRunner.mjs'
 )
 
 describe('DockerRunner', () => {
