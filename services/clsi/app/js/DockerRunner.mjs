@@ -1,13 +1,14 @@
-const { promisify } = require('node:util')
-const Settings = require('@overleaf/settings')
-const logger = require('@overleaf/logger')
-const Docker = require('dockerode')
+import { promisify } from 'node:util'
+import Settings from '@overleaf/settings'
+import logger from '@overleaf/logger'
+import Docker from 'dockerode'
+import crypto from 'node:crypto'
+import async from 'async'
+import LockManager from './DockerLockManager.js'
+import Path from 'node:path'
+import _ from 'lodash'
+
 const dockerode = new Docker()
-const crypto = require('node:crypto')
-const async = require('async')
-const LockManager = require('./DockerLockManager')
-const Path = require('node:path')
-const _ = require('lodash')
 
 const ONE_HOUR_IN_MS = 60 * 60 * 1000
 logger.debug('using docker runner')
@@ -602,8 +603,8 @@ const DockerRunner = {
 
 DockerRunner.startContainerMonitor()
 
-module.exports = DockerRunner
-module.exports.promises = {
+DockerRunner.promises = {
   run: promisify(DockerRunner.run),
   kill: promisify(DockerRunner.kill),
 }
+export default DockerRunner
