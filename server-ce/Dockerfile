@@ -39,7 +39,7 @@ ADD server-ce/config/env.sh /etc/overleaf/env.sh
 # Configure nginx
 # ---------------
 ADD server-ce/nginx/nginx.conf.template /etc/nginx/templates/nginx.conf.template
-ADD server-ce/nginx/overleaf.conf /etc/nginx/sites-enabled/overleaf.conf
+ADD server-ce/nginx/overleaf.conf.template /etc/nginx/templates/overleaf.conf.template
 ADD server-ce/nginx/clsi-nginx.conf /etc/nginx/sites-enabled/clsi-nginx.conf
 
 
@@ -111,7 +111,9 @@ ENV GRACEFUL_SHUTDOWN_DELAY_SECONDS=1
 ENV NODE_ENV="production"
 ENV LOG_LEVEL="info"
 
-
+ENV GIT_BRIDGE_HOST=git-bridge
+ENV GIT_BRIDGE_PORT=8000
+ENV GIT_BRIDGE_REPOSTORE_MAX_FILE_SIZE=52428800
 EXPOSE 80
 
 ENTRYPOINT ["/sbin/my_init"]
