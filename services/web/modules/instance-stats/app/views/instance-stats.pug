@@ -1,0 +1,46 @@
+extends ../../../../app/views/layout-marketing
+
+block entrypointVar
+	- entrypoint = 'modules/instance-stats/pages/instance-stats'
+
+block content
+	#main-content.content.content-alt
+		.container
+			.row
+				.col-sm-12
+					.card#instance-stats-root
+						.card-body
+							.page-header
+								h1 Instance statistics
+
+							.row.justify-content-end
+								.col-2
+									label.form-label(for='timeFilter') Show:
+									select#timeFilter.form-select
+										option(value='month' selected) Last 1 month
+										option(value='6m') Last 6 months
+										option(value='year') Last 1 year
+										option(value='all') All
+
+							hr
+
+							// Charts
+							.row(style='height:400px')
+								.col-md-4#user-count
+								.col-md-4#active-users
+								.col-md-4#collaborators
+
+							.row(style='height:400px')
+								.col-md-3#project-count
+								.col-md-3#active-projects
+								.col-md-3#history-blobs
+								.col-md-3#file-count
+
+							.row(style='height:400px')
+								.col-md-4#overleaf-storage
+								.col-md-4#redis-storage
+								.col-md-4#mongodb-storage
+
+block prepend foot-scripts
+	script(src='https://cdn.plot.ly/plotly-3.0.1.min.js' charset='utf-8' nonce=scriptNonce defer=deferScripts)
+
