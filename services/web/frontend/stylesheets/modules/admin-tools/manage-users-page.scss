@@ -1,0 +1,15 @@
+@include theme('default') {
+  #manage-users-root {
+    .website-redesign-navbar,
+    .website-redesign .navbar-default {
+      @include navbar-dark;
+    }
+  }
+  .user-ds-nav-page {
+    @include dark-dropdown-menu;
+    .table,
+    .table-container {
+      @include dark-table;
+    }
+  }
+}

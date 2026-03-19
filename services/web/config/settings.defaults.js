@@ -1199,7 +1199,9 @@ module.exports = {
   },
 
   splitTestOverrides: {
- // new-fancy-feature': 'enabled',
+    ...(process.env.OVERLEAF_THEMED_DASHBOARD?.toLowerCase() === 'true' ? {
+      'themed-project-dashboard': 'enabled',
+    } : {}),
     ...(process.env.OVERLEAF_HISTORY_RESTORE?.toLowerCase() === 'true' ? {
       'history-ranges-support': 'enabled',
       'revert-file': 'enabled',

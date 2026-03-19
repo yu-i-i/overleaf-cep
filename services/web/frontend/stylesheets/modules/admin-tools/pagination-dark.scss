@@ -1,0 +1,33 @@
+@include theme('default') {
+ .project-ds-nav-page,
+ .user-ds-nav-page {
+    .pagination {
+      > li {
+        > a,
+        > span,
+        > button {
+          color: var(--content-primary-inverse);
+          background-color: var(--bg-secondary);
+          border-color: var(--border-primary);
+
+          &:hover,
+          &:focus {
+            color: var(--content-primary-inverse);
+            background-color: var(--bg-tertiary);
+          }
+        }
+      }
+
+      > .active > a,
+      > .active > span,
+      > .active > button {
+        &,
+        &:hover,
+        &:focus {
+          color: var(--content-primary-inverse);
+          background-color: var(--green-70);
+        }
+      }
+    }
+  }
+}
