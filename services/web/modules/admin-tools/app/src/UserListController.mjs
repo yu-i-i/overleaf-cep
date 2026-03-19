@@ -16,12 +16,14 @@ import OneTimeTokenHandler from '../../../../app/src/Features/Security/OneTimeTo
 import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import UserUpdater from '../../../../app/src/Features/User/UserUpdater.mjs'
 import UserDeleter from '../../../../app/src/Features/User/UserDeleter.mjs'
+import UserSettingsHelper from '../../../../app/src/Features/Project/UserSettingsHelper.mjs'
 import ProjectDeleter from '../../../../app/src/Features/Project/ProjectDeleter.mjs'
 import OwnershipTransferHandler from '../../../../app/src/Features/Collaborators/OwnershipTransferHandler.mjs'
 import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandler.mjs'
 import ErrorController from '../../../../app/src/Features/Errors/ErrorController.mjs'
 import Errors, { OError } from '../../../../app/src/Features/Errors/Errors.js'
 import { db } from '../../../../app/src/infrastructure/mongodb.mjs'
+import SplitTestHandler from '../../../../app/src/Features/SplitTests/SplitTestHandler.mjs'
 
 const __dirname = Path.dirname(fileURLToPath(import.meta.url))
 
@@ -71,8 +73,6 @@ function cleanupSession(req) {
 async function manageUsersPage(req, res, next) {
   cleanupSession(req)
 
-  const userId = SessionManager.getLoggedInUserId(req.session)
-
   const usersBlobPending = _getUsers().catch(err => {
     logger.err({ err }, 'users listing in background failed')
     return undefined
@@ -84,8 +84,24 @@ async function manageUsersPage(req, res, next) {
     status: prefetchedUsersBlob ? 'success' : 'error',
   })
 
+  await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'themed-project-dashboard'
+  )
+
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  const user = await User.findById(userId, 'ace')
+
+  const userSettings = await UserSettingsHelper.buildUserSettings(
+    req,
+    res,
+    user
+  )
+
   res.render(Path.resolve(__dirname, '../views/manage-users-react'), {
     title: 'Manage Users',
+    userSettings,
     prefetchedUsersBlob,
     availableAuthMethods,
     userDetailsUpdatedOnLogin,

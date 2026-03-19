@@ -17,7 +17,7 @@
   padding: 0 var(--spacing-02);
 }
 
-#user-list-root .user-notifications ul {
+#manage-users-root .user-notifications ul {
   margin-bottom: 0;
 }
 
@@ -50,7 +50,7 @@
   .user-list-title {
     @include heading-sm;
 
-    color: $content-secondary;
+    color: var(--content-secondary-themed);
     font-weight: bold;
     min-width: 0;
   }
@@ -241,7 +241,7 @@ ul.user-list-filters {
 
   @include media-breakpoint-down(md) {
     tr:not(:last-child) {
-      border-bottom: 1px solid $table-border-color;
+      border-bottom: 1px solid var(--border-divider-themed);
     }
 
     td {
@@ -260,7 +260,7 @@ ul.user-list-filters {
   .table-header-sort-btn {
     border: 0;
     text-align: left;
-    color: var(--content-secondary);
+    color: var(--content-secondary-themed);
     background-color: transparent;
     padding: 0;
     font-weight: bold;
@@ -271,7 +271,7 @@ ul.user-list-filters {
 
     &:hover,
     &:focus {
-      color: var(--content-secondary);
+      color: var(--content-secondary-themed);
       text-decoration: none;
     }
 
@@ -283,11 +283,8 @@ ul.user-list-filters {
 
   .dash-row-admin {
     font-weight: bold;
-    td {
-      a {
-        color: darkred !important;
-        --bs-link-color: darkred !important;
-      }
+    a {
+      color: var(--content-danger) !important;
     }
   }
 
@@ -474,7 +471,7 @@ ul.user-list-filters {
     }
 
     .dash-cell-actions {
-      width: 12;
+      width: 12%;
     }
   }
 
@@ -532,57 +529,18 @@ ul.user-list-filters {
   }
 }
 
-.survey-notification {
-  display: flex;
-  flex-wrap: wrap;
-  padding: var(--spacing-06);
-  background-color: var(--bg-dark-tertiary);
-  border-color: transparent;
-  color: var(--neutral-20);
-  box-shadow: 2px 4px 6px rgb(0 0 0 / 25%);
-  border-radius: var(--border-radius-base);
-
-  @include media-breakpoint-up(md) {
-    flex-wrap: nowrap;
-  }
-
-  button.close {
-    @extend .text-white;
-
-    padding: 0;
-  }
-}
-
-.user-list-sidebar-survey-wrapper {
-  .survey-notification {
-    font-size: var(--font-size-02);
-
-    a {
-      text-decoration: none;
-    }
-  }
-
-  @include media-breakpoint-down(md) {
-    .survey-notification {
-      font-size: unset;
-
-      .user-list-sidebar-survey-link {
-        display: block;
-        align-items: center;
-        min-width: 48px;
-        min-height: 48px;
-        padding-top: var(--spacing-07);
-      }
-    }
-  }
-}
-
-.user-list-load-more-button {
-  margin-bottom: var(--spacing-05);
-}
-
 form.user-search {
   .form-group {
     margin-bottom: 0;
+  }
+}
+
+@include theme('default') {
+  .dash-cell-email a,
+  .dash-cell-email-date a {
+    color: var(--green-40);
+  }
+  .dash-row-admin a {
+    color: var(--content-danger-dark) !important;
   }
 }

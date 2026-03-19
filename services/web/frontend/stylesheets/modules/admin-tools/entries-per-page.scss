@@ -1,0 +1,26 @@
+.entries-per-page-toggle {
+  cursor: pointer;
+  background-color: var(--bg-light-tertiary);
+  padding: 0 var(--spacing-02);
+  border-radius: var(--border-radius-medium);
+  &:hover {
+    background-color: var(--bg-accent-03);
+  }
+  & + .dropdown-menu {
+    min-width: auto;
+    width: auto;
+  }
+}
+
+.entries-per-page-toggle::after {
+  display: none;
+}
+
+@include theme('default') {
+  .entries-per-page-toggle {
+    background-color: var(--bg-dark-tertiary);
+    &:hover {
+      background-color: var(--green-70);
+    }
+  }
+}
