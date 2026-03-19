@@ -54,6 +54,7 @@ import { formatCurrency } from '../../util/currency.js'
 import UserSettingsHelper from './UserSettingsHelper.mjs'
 import AiFeatureUsageRateLimiter from '../../infrastructure/rate-limiters/AiFeatureUsageRateLimiter.mjs'
 import WorkbenchRateLimiter from '../../infrastructure/rate-limiters/WorkbenchRateLimiter.mjs'
+import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
 
 const { isPaidSubscription } = SubscriptionHelper
 const { hasAdminAccess } = AdminAuthorizationHelper
@@ -267,6 +268,14 @@ const _ProjectController = {
       return res.json({ redir: '/register' })
     }
     const currentUser = SessionManager.getSessionUser(req.session)
+    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+      return HttpErrorHandler.forbidden(
+        req,
+        res,
+        'Your account is not allowed to create projects.'
+      )
+    }
     const { first_name: firstName, last_name: lastName, email } = currentUser
     try {
       const project = await ProjectDuplicator.promises.duplicate(
@@ -305,6 +314,14 @@ const _ProjectController = {
 
   async newProject(req, res) {
     const currentUser = SessionManager.getSessionUser(req.session)
+    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+      return HttpErrorHandler.forbidden(
+        req,
+        res,
+        'Your account is not allowed to create projects.'
+      )
+    }
     const {
       first_name: firstName,
       last_name: lastName,

@@ -18,7 +18,27 @@ type UpdateUserModalProps = Pick<
   React.ComponentProps<typeof UsersActionModal>,
   'users' | 'actionHandler' | 'showModal' | 'handleCloseModal'
 >
-const pickUserFields = ({ firstName, lastName, email, isAdmin }) => ({ firstName, lastName, email, isAdmin })
+type UpdateUserData = {
+  firstName: string
+  lastName: string
+  email: string
+  isAdmin: boolean
+  isGuestUser?: boolean
+}
+
+const pickUserFields = ({
+  firstName,
+  lastName,
+  email,
+  isAdmin,
+  isGuestUser,
+}: UpdateUserData): UpdateUserData => ({
+  firstName,
+  lastName,
+  email,
+  isAdmin,
+  isGuestUser,
+})
 
 function UpdateUserModal({
   users,
@@ -31,7 +51,7 @@ function UpdateUserModal({
   const { autoFocusedRef } = useRefWithAutoFocus<HTMLInputElement>()
 
   if (users.length !== 1) return null
-  const [userData, setUserData] = useState(pickUserFields(users[0]))
+  const [userData, setUserData] = useState<UpdateUserData>(pickUserFields(users[0]))
   const isSelf = getMeta('ol-user_id') === users[0].id
   const allowUpdateDetails = users[0].allowUpdateDetails
   const allowUpdateIsAdmin = users[0].allowUpdateIsAdmin
@@ -44,12 +64,12 @@ function UpdateUserModal({
 
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.currentTarget
-    setUserData(prev => ({ ...prev, [name]: value }))
+    setUserData((prev: UpdateUserData) => ({ ...prev, [name]: value }))
   }
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.currentTarget
-    setUserData(prev => ({ ...prev, [name]: checked }))
+    setUserData((prev: UpdateUserData) => ({ ...prev, [name]: checked }))
   }
 
   return (
@@ -108,6 +128,17 @@ function UpdateUserModal({
               label={t('set_admin_account')}
               checked={userData.isAdmin}
               disabled={isSelf || !allowUpdateIsAdmin}
+            />
+          </OLFormGroup>
+        </OLCol>
+        <OLCol xs={6}>
+          <OLFormGroup controlId="is-guest-user-checkbox">
+            <OLFormCheckbox
+              autoComplete="off"
+              onChange={handleCheckboxChange}
+              name="isGuestUser"
+              label="Guest user (cannot create projects)"
+              checked={userData.isGuestUser}
             />
           </OLFormGroup>
         </OLCol>

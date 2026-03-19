@@ -194,8 +194,12 @@ function _thirdPartyIdentifierUpdate(
     tpi =>
       tpi.externalUserId === externalUserId && tpi.providerId === providerId
   )
+
   // do recursive merge of new data over existing data
-  _.merge(thirdPartyIdentifier.externalData, externalData)
+  thirdPartyIdentifier.externalData = _.merge(
+    thirdPartyIdentifier.externalData,
+    externalData
+  )
   const update = { 'thirdPartyIdentifiers.$': thirdPartyIdentifier }
   return update
 }
