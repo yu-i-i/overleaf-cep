@@ -28,15 +28,15 @@ function ManageUsersRoot() {
   if (!isReady) return null
 
   return (
-    <SplitTestProvider>
-      <UserSettingsProvider>
-        <UsersPageProvider>
-          <UserListProvider>
+    <UsersPageProvider>
+      <UserListProvider>
+        <SplitTestProvider>
+          <UserSettingsProvider>
             <UsersPageSelector />
-          </UserListProvider>
-        </UsersPageProvider>
-      </UserSettingsProvider>
-    </SplitTestProvider>
+          </UserSettingsProvider>
+        </SplitTestProvider>
+      </UserListProvider>
+    </UsersPageProvider>
   )
 }
 

@@ -27,7 +27,7 @@ function SidebarDsNav() {
   const { sessionUser } = getMeta('ol-navbar')
   const { containerRef, scrolledUp } = useScrolled()
   const themedDsNav = useFeatureFlag('themed-project-dashboard')
-  
+
   const { getUserNameById } = useUserIdentityContext()
   const { projectsOwnerId } = useProjectListContext() 
 

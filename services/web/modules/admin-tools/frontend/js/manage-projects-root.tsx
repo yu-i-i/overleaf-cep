@@ -13,15 +13,15 @@ function ManageProjectsRoot() {
   if (!isReady) return null
 
   return (
-    <SplitTestProvider>
-      <UserSettingsProvider>
-        <UserListProvider>
-          <ProjectListProvider projectsOwnerId={null}>
+    <UserListProvider>
+      <ProjectListProvider projectsOwnerId={null}>
+        <SplitTestProvider>
+          <UserSettingsProvider>
             <ProjectListRoot />
-          </ProjectListProvider>
-        </UserListProvider>
-      </UserSettingsProvider>
-    </SplitTestProvider>
+          </UserSettingsProvider>
+        </SplitTestProvider>
+      </ProjectListProvider>
+    </UserListProvider>
   )
 }
 
