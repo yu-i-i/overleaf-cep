@@ -1256,6 +1256,7 @@ module.exports = {
     'authentication/oidc',
     'admin-tools', // import after authentication
     'registration-page', // import after authentication
+    'instance-stats',
     'template-gallery',
     'git-bridge',
     'git-sync/github',

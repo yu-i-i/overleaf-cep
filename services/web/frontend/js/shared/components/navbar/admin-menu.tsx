@@ -10,6 +10,7 @@ export default function AdminMenu({
   canDisplaySplitTestMenu,
   canDisplaySurveyMenu,
   canDisplayScriptLogMenu,
+  canDisplayInstanceStats,
   adminUrl,
 }: Pick<
   DefaultNavbarMetadata,
@@ -19,6 +20,7 @@ export default function AdminMenu({
   | 'canDisplaySplitTestMenu'
   | 'canDisplaySurveyMenu'
   | 'canDisplayScriptLogMenu'
+  | 'canDisplayInstanceStats'
   | 'adminUrl'
 >) {
   const sendProjectListMB = useSendProjectListMB()
@@ -66,6 +68,11 @@ export default function AdminMenu({
       {canDisplayScriptLogMenu ? (
         <NavDropdownLinkItem href="/admin/script-logs">
           View Script Logs
+        </NavDropdownLinkItem>
+      ) : null}
+      {canDisplayInstanceStats ? (
+        <NavDropdownLinkItem href="/admin/instance-stats">
+          Instance Statistics
         </NavDropdownLinkItem>
       ) : null}
     </NavDropdownMenu>
