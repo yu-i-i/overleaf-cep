@@ -4,6 +4,8 @@ import TemplatesManager from './TemplatesManager.mjs'
 import ProjectHelper from '../Project/ProjectHelper.mjs'
 import { expressify } from '@overleaf/promise-utils'
 import { parseReq, z } from '../../infrastructure/Validation.mjs'
+import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
+import { User } from '../../models/User.mjs'
 
 const numericId = z.string().regex(/^[0-9]+$/)
 const objectId = z.string().regex(/^[a-fA-F0-9]{24}$/)
@@ -81,6 +83,15 @@ const TemplatesController = {
   },
 
   async createProjectFromV1Template(req, res) {
+    const currentUser = SessionManager.getSessionUser(req.session)
+    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+      return HttpErrorHandler.forbidden(
+        req,
+        res,
+        'Your account is not allowed to create projects.'
+      )
+    }
     const { body } = parseReq(req, createProjectFromV1TemplateSchema, {
       fallbackSchema: createProjectFromV1TemplateFallbackSchema,
     })

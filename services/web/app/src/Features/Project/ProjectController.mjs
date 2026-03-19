@@ -57,6 +57,7 @@ import AiFeatureUsageRateLimiter from '../../infrastructure/rate-limiters/AiFeat
 import WorkbenchRateLimiter from '../../infrastructure/rate-limiters/WorkbenchRateLimiter.mjs'
 import PermissionsManager from '../Authorization/PermissionsManager.mjs'
 import { FileTooLargeError } from '../Errors/Errors.js'
+import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
 
 const { checkUserPermissions } = PermissionsManager.promises
 const { isPaidSubscription } = SubscriptionHelper
@@ -409,6 +410,14 @@ const _ProjectController = {
     if (!SessionManager.isUserLoggedIn(req.session)) {
       return res.json({ redir: '/register' })
     }
+    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+      return HttpErrorHandler.forbidden(
+        req,
+        res,
+        'Your account is not allowed to create projects.'
+      )
+    }
     const { first_name: firstName, last_name: lastName, email } = currentUser
     try {
       const project = await ProjectDuplicator.promises.duplicate(
@@ -458,6 +467,14 @@ const _ProjectController = {
 
   async newProject(req, res) {
     const currentUser = SessionManager.getSessionUser(req.session)
+    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+      return HttpErrorHandler.forbidden(
+        req,
+        res,
+        'Your account is not allowed to create projects.'
+      )
+    }
     const {
       first_name: firstName,
       last_name: lastName,

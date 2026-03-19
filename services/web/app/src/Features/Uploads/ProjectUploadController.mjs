@@ -22,6 +22,8 @@ import ProjectOptionsHandler from '../Project/ProjectOptionsHandler.mjs'
 import AnalyticsManager from '../Analytics/AnalyticsManager.mjs'
 import { multer, multerUploadHandler } from '../../infrastructure/Multer.mjs'
 import { parseReq, z, zz } from '../../infrastructure/Validation.mjs'
+import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
+import { User } from '../../models/User.mjs'
 
 /**
  * @typedef {import('express').Request} Request
@@ -86,7 +88,17 @@ const upload = multerUploadHandler({
  * @param {Request} req
  * @param {Response} res
  */
-function uploadProject(req, res) {
+async function uploadProject(req, res) {
+  const currentUser = SessionManager.getSessionUser(req.session)
+  const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+  if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+    return HttpErrorHandler.forbidden(
+      req,
+      res,
+      'Your account is not allowed to create projects.'
+    )
+  }
+
   const timer = new metrics.Timer('project-upload')
   const userId = SessionManager.getLoggedInUserId(req.session)
   const { body, file } = parseReq(req, uploadProjectSchema, {

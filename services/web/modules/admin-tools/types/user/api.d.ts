@@ -43,6 +43,7 @@ export type UserApi = {
   authMethods: string[]
   allowUpdateDetails: boolean
   allowUpdateIsAdmin: boolean
+  isGuestUser?: boolean
   suspended: boolean
   inactive: boolean
   deleted?: boolean
