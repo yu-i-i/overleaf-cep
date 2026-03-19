@@ -4,21 +4,32 @@ import { fileURLToPath } from 'node:url'
 import { expressify } from '@overleaf/promise-utils'
 import logger from '@overleaf/logger'
 import Metrics from '@overleaf/metrics'
+import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
+import PrivilegeLevels from '../../../../app/src/Features/Authorization/PrivilegeLevels.mjs'
 import ProjectHelper from '../../../../app/src/Features/Project/ProjectHelper.mjs'
 import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
-import PrivilegeLevels from '../../../../app/src/Features/Authorization/PrivilegeLevels.mjs'
-import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
+import ProjectDeleter from '../../../../app/src/Features/Project/ProjectDeleter.mjs'
+import UserSettingsHelper from '../../../../app/src/Features/Project/UserSettingsHelper.mjs'
 import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
-import { OError } from '../../../../app/src/Features/Errors/Errors.js'
 import { User } from '../../../../app/src/models/User.mjs'
 import { Project } from '../../../../app/src/models/Project.mjs'
 import { DeletedProject } from '../../../../app/src/models/DeletedProject.mjs'
-import ProjectDeleter from '../../../../app/src/Features/Project/ProjectDeleter.mjs'
+import { OError } from '../../../../app/src/Features/Errors/Errors.js'
 import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandler.mjs'
+import SplitTestHandler from '../../../../app/src/Features/SplitTests/SplitTestHandler.mjs'
 
 const __dirname = Path.dirname(fileURLToPath(import.meta.url))
 
+function cleanupSession(req) {
+  // cleanup redirects at the end of the redirect chain
+  delete req.session.postCheckoutRedirect
+  delete req.session.postLoginRedirect
+  delete req.session.postOnboardingRedirect
+}
+
 async function manageProjectsPage(req, res, next) {
+  cleanupSession(req)
+
   const projectsBlobPending = _getProjects().catch(err => {
     logger.err({ err }, 'projects listing in background failed')
     return undefined
@@ -30,8 +41,24 @@ async function manageProjectsPage(req, res, next) {
     status: prefetchedProjectsBlob ? 'success' : 'error',
   })
 
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  const user = await User.findById(userId, 'ace')
+
+  const userSettings = await UserSettingsHelper.buildUserSettings(
+    req,
+    res,
+    user
+  )
+
+  await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'themed-project-dashboard'
+  )
+
   res.render(Path.resolve(__dirname, '../views/manage-projects-react'), {
     title: 'Manage Projects',
+    userSettings,
     prefetchedProjectsBlob,
   })
 }
