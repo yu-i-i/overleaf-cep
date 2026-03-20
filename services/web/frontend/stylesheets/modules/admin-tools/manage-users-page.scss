@@ -5,6 +5,16 @@
       @include navbar-dark;
     }
   }
+  .project-list-wrapper {
+   .project-dash-table {
+      .btn-link {
+        &:hover,
+        &:focus {
+          background-color: var(--bg-dark-tertiary) !important;
+        }
+      }
+    }
+  }
   .user-ds-nav-page {
     @include dark-dropdown-menu;
     .table,
