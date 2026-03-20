@@ -7,6 +7,7 @@ import async from 'async'
 import LockManager from './DockerLockManager.js'
 import Path from 'node:path'
 import _ from 'lodash'
+import { getLastProjectAccessTime } from './LastProjectAccess.js'
 
 const dockerode = new Docker()
 
@@ -547,6 +548,19 @@ const DockerRunner = {
       for (const container of containers) {
         const { name, id, ttl } = DockerRunner.examineOldContainer(container)
         if (name.slice(0, 9) === '/project-' && ttl <= 0) {
+          // extract projectId: /project-<projectId>-...
+          const match = name.match(/^\/project-([a-f0-9]{24})-/)
+          const projectId = match && match[1]
+
+          if (projectId != null) {
+            const lastAccess = getLastProjectAccessTime(projectId)
+            // if last access time is missing, lastAccess === 0, container will be destroyed
+            // provided that MAX_CONTAINER_AGE is less that 56 years, but anyway, let's check it
+            if (lastAccess && lastAccess > Date.now() - DockerRunner.MAX_CONTAINER_AGE) {
+              continue
+            }
+          }
+
           // strip the / prefix
           // the LockManager uses the plain container name
           const plainName = name.slice(1)
