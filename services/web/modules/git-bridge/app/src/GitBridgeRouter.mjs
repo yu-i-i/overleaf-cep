@@ -13,9 +13,10 @@ const oauthTokenInfoRateLimiter = new RateLimiter('oauth-token-info', {
 })
 
 export default {
-  apply(webRouter, privateApiRouter) {
+  apply(webRouter, privateApiRouter, publicApiRouter) {
     logger.debug({}, 'Init git-bridge router')
 
+// Called by git-bridge served by web-api
     privateApiRouter.get('/api/v0/docs/:project_id',
       ensureTokenProjectAccess('read'),
       GitBridgeController.getDoc
@@ -35,8 +36,8 @@ export default {
       ensureTokenProjectAccess('write'),
       GitBridgeController.postSnapshot
     )
-// Called by git-bridge to validate a PAT
-    webRouter.get('/oauth/token/info',
+// Called by git-bridge to validate a PAT, served by web
+    publicApiRouter.get('/oauth/token/info',
       RateLimiterMiddleware.rateLimit(oauthTokenInfoRateLimiter),
       GitBridgePATController.validatePersonalAccessToken
     )
