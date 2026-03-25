@@ -44,12 +44,50 @@ block content
 
 									.tab-pane(role='tabpanel' id='open-sockets')
 										.row-spaced
-											ul
-												each agents, url in openSockets
-													li #{url} - total : #{agents.length}
-														ul
-															each agent in agents
-																li #{agent}
+											h3 Active Projects (Currently Being Edited)
+											p.text-muted Real-time information from the editor service showing who is actively working on which projects.
+											if activeProjects && activeProjects.length > 0
+												p.small 
+													strong #{activeProjects.length} 
+													| project(s) currently being edited
+												table.table.table-striped.table-hover
+													thead
+														tr
+															th Project Name
+															th Owner
+															th Owner Email
+															th Active Users
+															th Connections
+													tbody
+														each project in activeProjects
+															tr
+																td
+																	a(href=`/project/${project.id}`, target='_blank') #{project.name}
+																td #{project.owner ? project.owner.name : 'Unknown'}
+																td
+																	if project.owner
+																		a(href=`mailto:${project.owner.email}`) #{project.owner.email}
+																	else
+																		| N/A
+																td
+																	if project.activeUsers && project.activeUsers.length > 0
+																		ul.list-unstyled.mb-0
+																			each user in project.activeUsers
+																				li
+																					strong #{user.name}
+																					if user.email
+																						| &nbsp;(
+																						a(href=`mailto:${user.email}`) #{user.email}
+																						| )
+																	else
+																		em None detected
+																td #{project.connectionCount}
+											else
+												.alert.alert-success
+													i.fa.fa-check-circle
+													|  
+													strong Great news!
+													|  No projects are currently being edited. This is a good time for maintenance.
 
 									.tab-pane(role='tabpanel' id='open-close-editor')
 										if hasFeature('saas')

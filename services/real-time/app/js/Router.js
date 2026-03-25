@@ -119,6 +119,9 @@ export default Router = {
     app.get('/clients', HttpController.getConnectedClients)
     app.get('/clients/:client_id', HttpController.getConnectedClient)
 
+    // Admin API: list active projects and connected users
+    app.get('/active-projects', HttpApiController.getAllActiveProjects)
+
     app.post(
       '/project/:project_id/message/:message',
       bodyParser.json({ limit: '5mb' }),
