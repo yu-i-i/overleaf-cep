@@ -3,7 +3,10 @@ import Settings from '@overleaf/settings'
 import mongoose from '../../../../app/src/infrastructure/Mongoose.mjs'
 import { InstanceStat } from '../../../../app/src/models/InstanceStat.mjs'
 import RedisWrapper from '../../../../app/src/infrastructure/RedisWrapper.mjs'
-import childProcess from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+
+const execFileAsync = promisify(execFile)
 
 function getInternalUserRegex() {
   const segmentation = Settings.instanceStats?.userSegmentation
@@ -36,10 +39,7 @@ function parseFirstInt(output) {
 async function duBytes(path) {
   // Prefer exact du output in bytes. Fall back to 0 on failure.
   try {
-    const { stdout } = await childProcess.promises.execFile('du', [
-      '-b0s',
-      path,
-    ])
+    const { stdout } = await execFileAsync('du', ['-b0s', path])
     return parseFirstInt(stdout)
   } catch (err) {
     logger.error({ err, path }, 'Failed to compute du bytes')
@@ -88,7 +88,6 @@ async function collectForDay({ day }) {
   const projects = db.collection('projects')
   const users = db.collection('users')
   const docs = db.collection('docs')
-  const projectHistoryBlobs = db.collection('projectHistoryBlobs')
 
   const activeProjects = await projects.countDocuments({
     lastUpdated: { $gte: oneDayAgo },
@@ -96,7 +95,6 @@ async function collectForDay({ day }) {
 
   let activeUsersValues
   let userCountValues
-  let collaboratorsValues
 
   if (segmentationEnabled) {
     const activeInternalUsers = await users.countDocuments({
@@ -115,77 +113,20 @@ async function collectForDay({ day }) {
       email: { $not: internalUserRegex },
     })
 
-    const collaboratorsAgg = await projects
-      .aggregate([
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'collaberator_refs',
-            foreignField: '_id',
-            as: 'collaboratorDocs',
-          },
-        },
-        { $unwind: '$collaboratorDocs' },
-        {
-          $group: {
-            _id: {
-              $cond: [
-                {
-                  $regexMatch: {
-                    input: '$collaboratorDocs.email',
-                    regex: internalUserRegex,
-                  },
-                },
-                'internal',
-                'external',
-              ],
-            },
-            total: { $sum: 1 },
-          },
-        },
-      ])
-      .toArray()
-
-    let collaboratorsInternal = 0
-    let collaboratorsExternal = 0
-    for (const row of collaboratorsAgg) {
-      if (row._id === 'internal') collaboratorsInternal = row.total
-      if (row._id === 'external') collaboratorsExternal = row.total
-    }
-
     activeUsersValues = [activeInternalUsers, activeExternalUsers]
     userCountValues = [internalUsers, externalUsers]
-    collaboratorsValues = [collaboratorsInternal, collaboratorsExternal]
   } else {
     const activeUsers = await users.countDocuments({
       lastActive: { $gte: oneDayAgo },
     })
     const totalUsers = await users.countDocuments()
 
-    const collaboratorsAgg = await projects
-      .aggregate([
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'collaberator_refs',
-            foreignField: '_id',
-            as: 'collaboratorDocs',
-          },
-        },
-        { $unwind: '$collaboratorDocs' },
-        { $count: 'total' },
-      ])
-      .toArray()
-    const collaboratorsTotal = collaboratorsAgg[0]?.total || 0
-
     activeUsersValues = [activeUsers]
     userCountValues = [totalUsers]
-    collaboratorsValues = [collaboratorsTotal]
   }
 
   const projectCount = await projects.countDocuments()
   const fileCount = await docs.countDocuments()
-  const historyBlobs = await projectHistoryBlobs.countDocuments()
 
   // Mongo storage: approximate with dbStats.storageSize (bytes).
   let mongodbStorageBytes = 0
@@ -206,10 +147,8 @@ async function collectForDay({ day }) {
   await upsertStat({ statKey: 'active_projects', day, values: [activeProjects], generatedAt })
   await upsertStat({ statKey: 'active_users', day, values: activeUsersValues, generatedAt })
   await upsertStat({ statKey: 'user_count', day, values: userCountValues, generatedAt })
-  await upsertStat({ statKey: 'collaborators', day, values: collaboratorsValues, generatedAt })
   await upsertStat({ statKey: 'project_count', day, values: [projectCount], generatedAt })
   await upsertStat({ statKey: 'file_count', day, values: [fileCount], generatedAt })
-  await upsertStat({ statKey: 'history_blobs', day, values: [historyBlobs], generatedAt })
   await upsertStat({ statKey: 'mongodb_storage', day, values: [mongodbStorageBytes], generatedAt })
   await upsertStat({ statKey: 'overleaf_storage', day, values: [overleafStorageBytes], generatedAt })
   await upsertStat({ statKey: 'redis_storage', day, values: [redisDiskBytes, redisRamBytes], generatedAt })

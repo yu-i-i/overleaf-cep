@@ -1,5 +1,7 @@
 extends ../../../../app/views/layout-marketing
 
+include ../../../../app/views/_mixins/bookmarkable_tabset.pug
+
 block entrypointVar
 	- entrypoint = 'modules/instance-stats/pages/instance-stats'
 
@@ -24,22 +26,31 @@ block content
 
 							hr
 
-							// Charts
-							.row(style='height:400px')
-								.col-md-4#user-count
-								.col-md-4#active-users
-								.col-md-4#collaborators
+							// Charts (organized into tabs)
+							ol-tabs.ol-tabs(data-ol-bookmarkable-tabset)
+								.nav-tabs-container
+									ul.nav.nav-tabs.align-left(role='tablist')
+										+bookmarkable-tabset-header('user', 'User', true)
+										+bookmarkable-tabset-header('project', 'Project')
+										+bookmarkable-tabset-header('storage', 'Storage')
 
-							.row(style='height:400px')
-								.col-md-3#project-count
-								.col-md-3#active-projects
-								.col-md-3#history-blobs
-								.col-md-3#file-count
+								.tab-content
+									.tab-pane.active(role='tabpanel' id='user')
+										.row(style='height:400px')
+											.col-md-6#active-users
+											.col-md-6#user-count
 
-							.row(style='height:400px')
-								.col-md-4#overleaf-storage
-								.col-md-4#redis-storage
-								.col-md-4#mongodb-storage
+									.tab-pane(role='tabpanel' id='project')
+										.row(style='height:400px')
+											.col-md-4#active-projects
+											.col-md-4#project-count
+											.col-md-4#file-count
+
+									.tab-pane(role='tabpanel' id='storage')
+										.row(style='height:400px')
+											.col-md-4#mongodb-storage
+											.col-md-4#overleaf-storage
+											.col-md-4#redis-storage
 
 block prepend foot-scripts
 	script(src='https://cdn.plot.ly/plotly-3.0.1.min.js' charset='utf-8' nonce=scriptNonce defer=deferScripts)
