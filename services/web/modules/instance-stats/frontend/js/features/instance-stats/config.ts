@@ -14,6 +14,7 @@ export const STAT_CONFIG: StatConfig[] = [
   {
     id: 'active-projects',
     metric: 'active_projects',
+    tabId: 'project',
     title: 'Active projects',
     seriesCount: 1,
     transform: passThrough,
@@ -23,6 +24,7 @@ export const STAT_CONFIG: StatConfig[] = [
   {
     id: 'active-users',
     metric: 'active_users',
+    tabId: 'user',
     title: 'Active users',
     seriesCount: 2,
     transform: passThrough,
@@ -32,6 +34,7 @@ export const STAT_CONFIG: StatConfig[] = [
   {
     id: 'user-count',
     metric: 'user_count',
+    tabId: 'user',
     title: 'Users',
     seriesCount: 2,
     transform: passThrough,
@@ -41,6 +44,7 @@ export const STAT_CONFIG: StatConfig[] = [
   {
     id: 'project-count',
     metric: 'project_count',
+    tabId: 'project',
     title: 'Projects',
     seriesCount: 1,
     transform: passThrough,
@@ -50,6 +54,7 @@ export const STAT_CONFIG: StatConfig[] = [
   {
     id: 'file-count',
     metric: 'file_count',
+    tabId: 'project',
     title: 'Files',
     seriesCount: 1,
     transform: passThrough,
@@ -57,17 +62,9 @@ export const STAT_CONFIG: StatConfig[] = [
     labels: {},
   },
   {
-    id: 'history-blobs',
-    metric: 'history_blobs',
-    title: 'History blobs',
-    seriesCount: 1,
-    transform: passThrough,
-    colors: { y1: '#acbce2' },
-    labels: {},
-  },
-  {
     id: 'mongodb-storage',
     metric: 'mongodb_storage',
+    tabId: 'storage',
     title: 'Mongodb storage',
     ylabel: 'MB',
     seriesCount: 1,
@@ -78,6 +75,7 @@ export const STAT_CONFIG: StatConfig[] = [
   {
     id: 'overleaf-storage',
     metric: 'overleaf_storage',
+    tabId: 'storage',
     title: 'Overleaf storage',
     ylabel: 'MB',
     seriesCount: 1,
@@ -88,21 +86,13 @@ export const STAT_CONFIG: StatConfig[] = [
   {
     id: 'redis-storage',
     metric: 'redis_storage',
+    tabId: 'storage',
     title: 'Redis storage',
     ylabel: 'MB',
     seriesCount: 2,
     transform: bytesToMB,
     colors: { y1: '#767676', y2: '#ADADAD' },
     labels: { y1: 'Disk', y2: 'RAM' },
-  },
-  {
-    id: 'collaborators',
-    metric: 'collaborators',
-    title: 'Collaborators',
-    seriesCount: 2,
-    transform: passThrough,
-    colors: { y1: '#d98c8c', y2: '#EDC9C9' },
-    labels: { y1: 'Internal', y2: 'External' },
   },
 ]
 

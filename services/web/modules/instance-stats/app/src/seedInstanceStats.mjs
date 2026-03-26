@@ -7,10 +7,8 @@ const SEGMENTED_STAT_DEFS = {
   active_projects: { base: [30], noise: [12], min: [0] },
   active_users: { base: [120, 80], noise: [25, 20], min: [0, 0] }, // [internal, external]
   user_count: { base: [900, 500], noise: [8, 6], min: [0, 0] }, // [internal, external]
-  collaborators: { base: [260, 180], noise: [40, 30], min: [0, 0] }, // [internal, external]
   project_count: { base: [1600], noise: [6], min: [0] },
   file_count: { base: [12000], noise: [80], min: [0] },
-  history_blobs: { base: [18000], noise: [120], min: [0] },
   mongodb_storage: { base: [9.5e9], noise: [4.5e7], min: [0] }, // bytes
   overleaf_storage: { base: [2.8e10], noise: [8.0e7], min: [0] }, // bytes
   redis_storage: { base: [4.2e8, 1.9e8], noise: [1.2e7, 7e6], min: [0, 0] }, // bytes
@@ -55,7 +53,6 @@ function getStatDefsForCurrentSegmentation() {
     ...SEGMENTED_STAT_DEFS,
     active_users: { base: [200], noise: [35], min: [0] },
     user_count: { base: [1400], noise: [10], min: [0] },
-    collaborators: { base: [440], noise: [60], min: [0] },
   }
 }
 

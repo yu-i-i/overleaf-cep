@@ -1,13 +1,13 @@
 export type WindowKey = 'month' | '6m' | 'year' | 'all'
 
+export type TabId = 'user' | 'project' | 'storage'
+
 export type StatKey =
   | 'active_projects'
   | 'active_users'
   | 'user_count'
-  | 'collaborators'
   | 'project_count'
   | 'file_count'
-  | 'history_blobs'
   | 'mongodb_storage'
   | 'overleaf_storage'
   | 'redis_storage'
@@ -26,6 +26,7 @@ export interface SeriesResponse {
 export interface StatConfig {
   id: string
   metric: StatKey
+  tabId: TabId
   title: string
   ylabel?: string
   seriesCount: 1 | 2

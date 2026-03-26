@@ -32,10 +32,8 @@ async function main() {
     'active_projects',
     'active_users',
     'user_count',
-    'collaborators',
     'project_count',
     'file_count',
-    'history_blobs',
     'mongodb_storage',
     'overleaf_storage',
     'redis_storage',
@@ -63,8 +61,7 @@ async function main() {
         statKey === 'redis_storage' ||
         (segmentationEnabled &&
           (statKey === 'active_users' ||
-            statKey === 'user_count' ||
-            statKey === 'collaborators'))
+            statKey === 'user_count'))
       for (const [i, d] of docs.entries()) {
         const len = d.values?.length || 0
         if (expectTwo && len < 2) {
