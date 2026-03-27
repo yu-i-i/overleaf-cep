@@ -16,3 +16,11 @@ In the moment it mainly uses inkscape and imagemagick as tools.
 This script copies the files to the correct positions before compilation. I seperated the scripts, since you may want to check the logos beforehand. Or do changes by hand.
 e.g. I don't like overleaf-a-ds-solution-mallard.svg as a long logo.
 
+# 3_remove_branding_from_projectpage.sh
+
+This script is a maintenance utility designed to modify the project list sidebar by removing specific branding elements from the frontend source code.
+
+Target File: services/web/frontend/js/features/project-list/components/sidebar/sidebar-ds-nav.tsx
+
+Action:  Removes the <div ... className="ds-nav-ds-name" ...>...</div> block
+

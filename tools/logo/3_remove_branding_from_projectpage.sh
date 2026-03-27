@@ -4,7 +4,7 @@ set -euo pipefail
 # Removes the ds-nav branding block from the project page sidebar component.
 # Usage: bash 3_remove_branding_from_projectpage.sh
 
-TARGET="../services/web/frontend/js/features/project-list/components/sidebar/sidebar-ds-nav.tsx"
+TARGET="../../services/web/frontend/js/features/project-list/components/sidebar/sidebar-ds-nav.tsx"
 BACKUP="$TARGET.bak"
 
 if [ ! -f "$TARGET" ]; then
