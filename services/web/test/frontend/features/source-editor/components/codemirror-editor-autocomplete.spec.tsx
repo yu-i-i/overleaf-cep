@@ -434,6 +434,184 @@ describe('autocomplete', { scrollBehavior: false }, function () {
     cy.get('@line').contains('\\cite{ref-2, ref-3}')
   })
 
+  it('reference picker avoids preselecting non-bibkey text in unclosed cite argument', function () {
+    const rootFolder: Folder[] = [
+      {
+        _id: 'root-folder-id',
+        name: 'rootFolder',
+        docs: [
+          {
+            _id: docId,
+            name: 'main.tex',
+          },
+        ],
+        folders: [],
+        fileRefs: [],
+      },
+    ]
+
+    const scope = mockScope()
+
+    const ReferencesProvider: FC<React.PropsWithChildren> = ({ children }) => {
+      return (
+        <ReferencesContext.Provider
+          value={{
+            referenceKeys: new Set(['ref-1', 'ref-2', 'ref-3']),
+            indexAllReferences: cy.stub(),
+            searchLocalReferences() {
+              return Promise.resolve({ hits: [] })
+            },
+          }}
+        >
+          {children}
+        </ReferencesContext.Provider>
+      )
+    }
+
+    cy.mount(
+      <TestContainer>
+        <EditorProviders
+          scope={scope}
+          providers={{ ReferencesProvider }}
+          rootFolder={rootFolder as any}
+        >
+          <CodeMirrorEditor />
+        </EditorProviders>
+      </TestContainer>
+    )
+
+    cy.get('.cm-editor').as('editor')
+
+    cy.get('.cm-line').eq(16).as('line').click()
+
+    // type malformed cite with natural text; the picker should not treat that phrase
+    // as a selected reference key.
+    cy.get('@line').type('here is some text \\cite{ here the text continues.')
+
+    cy.get('@line').type('{ctrl+ }')
+
+    cy.get('[data-testid="reference-picker-title"]').should('not.exist')
+    cy.get('[data-testid="reference-picker-selected-chips"]').should(
+      'not.exist'
+    )
+  })
+
+  it('reference picker in cite ignores trailing words that are not bibkeys', function () {
+    const rootFolder: Folder[] = [
+      {
+        _id: 'root-folder-id',
+        name: 'rootFolder',
+        docs: [
+          {
+            _id: docId,
+            name: 'main.tex',
+          },
+        ],
+        folders: [],
+        fileRefs: [],
+      },
+    ]
+
+    const scope = mockScope()
+
+    const ReferencesProvider: FC<React.PropsWithChildren> = ({ children }) => {
+      return (
+        <ReferencesContext.Provider
+          value={{
+            referenceKeys: new Set(['sadassadfsdf', 'existing-key']),
+            indexAllReferences: cy.stub(),
+            searchLocalReferences() {
+              return Promise.resolve({ hits: [] })
+            },
+          }}
+        >
+          {children}
+        </ReferencesContext.Provider>
+      )
+    }
+
+    cy.mount(
+      <TestContainer>
+        <EditorProviders
+          scope={scope}
+          providers={{ ReferencesProvider }}
+          rootFolder={rootFolder as any}
+        >
+          <CodeMirrorEditor />
+        </EditorProviders>
+      </TestContainer>
+    )
+
+    cy.get('.cm-editor').as('editor')
+    cy.get('.cm-line').eq(16).as('line').click()
+
+    cy.get('@line').type('\\cite{sadassadfsdf still allows a ctrl+Space.')
+    cy.get('@line').type('{ctrl+ }')
+
+    cy.get('[data-testid="reference-picker-title"]').should('not.exist')
+    cy.get('[data-testid="reference-picker-selected-chips"]').should(
+      'not.exist'
+    )
+  })
+
+  it('reference picker does not open when cite is unclosed', function () {
+    const rootFolder: Folder[] = [
+      {
+        _id: 'root-folder-id',
+        name: 'rootFolder',
+        docs: [
+          {
+            _id: docId,
+            name: 'main.tex',
+          },
+        ],
+        folders: [],
+        fileRefs: [],
+      },
+    ]
+
+    const scope = mockScope()
+
+    const ReferencesProvider: FC<React.PropsWithChildren> = ({ children }) => {
+      return (
+        <ReferencesContext.Provider
+          value={{
+            referenceKeys: new Set(['sadassadfsdf', 'existing-key']),
+            indexAllReferences: cy.stub(),
+            searchLocalReferences() {
+              return Promise.resolve({ hits: [] })
+            },
+          }}
+        >
+          {children}
+        </ReferencesContext.Provider>
+      )
+    }
+
+    cy.mount(
+      <TestContainer>
+        <EditorProviders
+          scope={scope}
+          providers={{ ReferencesProvider }}
+          rootFolder={rootFolder as any}
+        >
+          <CodeMirrorEditor />
+        </EditorProviders>
+      </TestContainer>
+    )
+
+    cy.get('.cm-editor').as('editor')
+    cy.get('.cm-line').eq(16).as('line').click()
+
+    cy.get('@line').type('\\cite{sadasadsd')
+    cy.get('@line').type('{ctrl+ }')
+
+    cy.get('[data-testid="reference-picker-title"]').should('not.exist')
+    cy.get('[data-testid="reference-picker-selected-chips"]').should(
+      'not.exist'
+    )
+  })
+
   it('autocomplete stops after space after command', function () {
     const rootFolder: Folder[] = [
       {
