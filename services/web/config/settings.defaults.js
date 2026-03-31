@@ -1017,7 +1017,12 @@ module.exports = {
       ),
     ],
     sourceEditorToolbarComponents: [],
-    sourceEditorToolbarEndButtons: [],
+    sourceEditorToolbarEndButtons: [
+      Path.resolve(
+        __dirname,
+        '../modules/tex-autoformatter/frontend/components/autoformat-button'
+      ),
+    ],
     rootContextProviders: [],
     mainEditorLayoutModals: [],
     mainEditorLayoutPanels: [],
@@ -1113,6 +1118,7 @@ module.exports = {
     'admin-tools', // import after authentication
     'template-gallery',
     'git-bridge',
+    'tex-autoformatter',
   ],
   viewIncludes: {},
 
