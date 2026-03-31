@@ -61,6 +61,20 @@ RUN chmod 600 /etc/cron.d/crontab-deletion
 COPY server-ce/init_scripts/ /etc/my_init.d/
 COPY server-ce/init_preshutdown_scripts/ /etc/my_init.pre_shutdown.d/
 
+# Install tex-fmt for LaTeX auto-formatting
+# https://github.com/WGUNDERWOOD/tex-fmt
+# ------------------------------------------
+ARG TEX_FMT_VERSION=v0.5.7
+RUN --mount=type=tmpfs,target=/tmp \
+    ARCH=$(dpkg --print-architecture) \
+&&  if [ "$ARCH" = "amd64" ]; then TEX_FMT_ARCH="x86_64-linux"; \
+    elif [ "$ARCH" = "arm64" ]; then TEX_FMT_ARCH="aarch64-linux"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi \
+&&  wget -qO /tmp/tex-fmt.tar.gz \
+      "https://github.com/WGUNDERWOOD/tex-fmt/releases/download/${TEX_FMT_VERSION}/tex-fmt-${TEX_FMT_ARCH}.tar.gz" \
+&&  tar -xzf /tmp/tex-fmt.tar.gz -C /usr/local/bin tex-fmt \
+&&  chmod +x /usr/local/bin/tex-fmt
+
 # Copy app settings files
 # -----------------------
 COPY server-ce/config/settings.js /etc/overleaf/settings.js
