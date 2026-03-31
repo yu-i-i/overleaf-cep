@@ -1,0 +1,16 @@
+// Zotero module styles
+// This file is imported via modules/all.scss as 'third-party-references'
+// or directly from the zotero module.
+
+.modal-new-file-body-zotero {
+  padding: 16px;
+
+  .form-group {
+    margin-bottom: 12px;
+  }
+}
+
+.settings-widget-container .zotero-logo {
+  width: 40px;
+  height: 40px;
+}
