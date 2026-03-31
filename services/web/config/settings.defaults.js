@@ -1057,7 +1057,12 @@ module.exports = {
     sourceEditorToolbarComponents: [],
     sourceEditorToolbarEndButtons: [],
     rootContextProviders: [],
-    mainEditorLayoutModals: [],
+    mainEditorLayoutModals: [
+      Path.resolve(
+        __dirname,
+        '../modules/reference-picker/frontend/components/reference-picker-controller.tsx'
+      ),
+    ],
     mainEditorLayoutPanels: [],
     langFeedbackLinkingWidgets: [],
     labsExperiments: [],
@@ -1104,7 +1109,12 @@ module.exports = {
     rollingBuildsUpdatedAlert: [],
     offlineModeToolbarButtons: [],
     settingsEntries: [],
-    autoCompleteExtensions: [],
+    autoCompleteExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/reference-picker/frontend/extensions/reference-picker-keybinding.ts'
+      ),
+    ],
     sectionTitleGenerators: [],
     toastGenerators: [
       Path.resolve(
@@ -1139,7 +1149,12 @@ module.exports = {
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],
     errorLogsComponents: [],
-    referenceIndices: [],
+    referenceIndices: [
+      Path.resolve(
+        __dirname,
+        '../modules/reference-picker/frontend/reference-index/enhanced-reference-index.ts'
+      ),
+    ],
     railEntries: [],
     railPopovers: [],
   },
@@ -1150,6 +1165,7 @@ module.exports = {
     'server-ce-scripts',
     'sandboxed-compiles',
     'symbol-palette',
+    'reference-picker',
     'track-changes',
     'authentication/ldap',
     'authentication/saml',
