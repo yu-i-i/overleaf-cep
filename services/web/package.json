@@ -73,7 +73,6 @@
     "last 1 year",
     "safari > 14"
   ],
-
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.25",
     "@ai-sdk/openai": "^3.0.41",
@@ -136,6 +135,7 @@
     "express-session": "^1.17.1",
     "file-type": "^21.0.0",
     "focus-trap-react": "^11.0.4",
+    "fuse.js": "^7.0.0",
     "globby": "^5.0.0",
     "helmet": "^6.0.1",
     "https-proxy-agent": "^7.0.6",
