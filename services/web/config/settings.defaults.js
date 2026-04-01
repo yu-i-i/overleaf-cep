@@ -1028,14 +1028,39 @@ module.exports = {
     //
     // Restart webpack after making changes.
     //
-    createFileModes: [],
+    createFileModes: [
+      Path.resolve(
+        __dirname,
+        '../modules/zotero/frontend/js/components/zotero-create-file'
+      ),
+    ],
     devToolbar: [],
     gitBridge: [],
     publishModal: [],
-    tprFileViewInfo: [],
-    tprFileViewRefreshError: [],
-    tprFileViewRefreshButton: [],
-    tprFileViewNotOriginalImporter: [],
+    tprFileViewInfo: [
+      Path.resolve(
+        __dirname,
+        '../modules/zotero/frontend/js/components/tpr-file-view-info'
+      ),
+    ],
+    tprFileViewRefreshError: [
+      Path.resolve(
+        __dirname,
+        '../modules/zotero/frontend/js/components/tpr-file-view-refresh-error'
+      ),
+    ],
+    tprFileViewRefreshButton: [
+      Path.resolve(
+        __dirname,
+        '../modules/zotero/frontend/js/components/tpr-file-view-refresh-button'
+      ),
+    ],
+    tprFileViewNotOriginalImporter: [
+      Path.resolve(
+        __dirname,
+        '../modules/zotero/frontend/js/components/tpr-file-view-not-original-importer'
+      ),
+    ],
     contactUsModal: [],
     sourceEditorExtensions: [],
     sourceEditorVisualExtensions: [],
@@ -1063,7 +1088,12 @@ module.exports = {
     langFeedbackLinkingWidgets: [],
     labsExperiments: [],
     integrationLinkingWidgets: [],
-    referenceLinkingWidgets: [],
+    referenceLinkingWidgets: [
+      Path.resolve(
+        __dirname,
+        '../modules/zotero/frontend/js/components/zotero-widget'
+      ),
+    ],
     importProjectFromGithubModalWrapper: [],
     importProjectFromGithubMenu: [],
     editorLeftMenuSync: [
@@ -1157,6 +1187,7 @@ module.exports = {
     'admin-tools', // import after authentication
     'template-gallery',
     'git-bridge',
+    'zotero',
   ],
   viewIncludes: {},
 
