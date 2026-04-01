@@ -993,7 +993,18 @@ module.exports = {
     //
     // Restart webpack after making changes.
     //
-    createFileModes: [],
+    createFileModes: [
+      Path.resolve(
+        __dirname,
+        '../modules/drawio/frontend/js/components/create-drawio-file'
+      ),
+    ],
+    fileViewButtons: [
+      Path.resolve(
+        __dirname,
+        '../modules/toast-image/frontend/js/components/toast-image-editor'
+      ),
+    ],
     devToolbar: [],
     gitBridge: [],
     publishModal: [],
@@ -1003,7 +1014,12 @@ module.exports = {
     tprFileViewNotOriginalImporter: [],
     contactUsModal: [],
     sourceEditorExtensions: [],
-    sourceEditorComponents: [],
+    sourceEditorComponents: [
+      Path.resolve(
+        __dirname,
+        '../modules/drawio/frontend/js/components/drawio-editor'
+      ),
+    ],
     pdfLogEntryHeaderActionComponents: [],
     pdfLogEntryComponents: [],
     pdfLogEntriesComponents: [],
@@ -1113,6 +1129,8 @@ module.exports = {
     'admin-tools', // import after authentication
     'template-gallery',
     'git-bridge',
+    'drawio',
+    'toast-image',
   ],
   viewIncludes: {},
 
@@ -1123,7 +1141,9 @@ module.exports = {
     reportUri: process.env.CSP_REPORT_URI,
     exclude: [],
     viewDirectives: {
-      'app/views/project/ide-react': [`img-src 'self' data: blob:`],
+      'app/views/project/ide-react': [
+        `img-src 'self' data: blob:`,
+      ],
     },
   },
   unsupportedBrowsers: {
