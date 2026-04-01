@@ -27,7 +27,14 @@ import sortUsers from '../util/sort-users'
 import { UserIdentityProvider } from './user-identity-context'
 
 type AuthMethods = 'local' | 'ldap' | 'saml' | 'oidc'
-export type Filter = 'all' | 'admin' | 'suspended' | 'inactive' | AuthMethods | 'deleted'
+export type Filter =
+  | 'all'
+  | 'admin'
+  | 'suspended'
+  | 'inactive'
+  | 'guest'
+  | AuthMethods
+  | 'deleted'
 
 const selfId = getMeta('ol-user_id')
 const availableAuthMethods: AuthMethods[] = getMeta('ol-availableAuthMethods') ?? []
@@ -41,6 +48,7 @@ const filters: FilterMap = {
   admin: { isAdmin: true, deleted: false },
   suspended: { suspended: true, deleted: false },
   inactive: { inactive: true, deleted: false },
+  guest: { isGuestUser: true, deleted: false },
   deleted: { deleted: true },
   ...Object.fromEntries(
     availableAuthMethods.map(method => [
@@ -56,6 +64,7 @@ const filterKeys: Filter[] = [
   'admin',
   'suspended',
   'inactive',
+  'guest',
   ...(availableAuthMethods.length === 1 ? [] : availableAuthMethods),
   'deleted'
 ]

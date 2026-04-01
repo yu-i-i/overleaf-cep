@@ -15,6 +15,7 @@ export type Filters = {
   all?: boolean
   admin?: boolean
   inactive?: boolean
+  guestUser?: boolean
   suspended?: boolean
   deleted?: boolean
   local?: boolean
