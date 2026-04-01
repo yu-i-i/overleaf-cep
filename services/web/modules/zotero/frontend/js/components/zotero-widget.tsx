@@ -5,6 +5,7 @@ import getMeta from '@/utils/meta'
 import OLButton from '@/shared/components/ol/ol-button'
 import OLNotification from '@/shared/components/ol/ol-notification'
 import OLFormControl from '@/shared/components/ol/ol-form-control'
+import ZoteroLogo from '@/shared/svgs/zotero-logo'
 
 /**
  * Zotero account linking widget for the Account Settings page.
@@ -131,15 +132,5 @@ export default function ZoteroWidget() {
         )}
       </div>
     </div>
-  )
-}
-
-function ZoteroLogo() {
-  return (
-    <img
-      src="/img/third-party-icons/zotero.svg"
-      alt="Zotero"
-      style={{ width: 40, height: 40 }}
-    />
   )
 }
