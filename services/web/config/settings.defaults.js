@@ -1157,10 +1157,9 @@ module.exports = {
     // Used for the `window=all` query so responses remain bounded.
     retentionDays: intFromEnv('INSTANCE_STATS_RETENTION_DAYS', 365),
     userSegmentation: {
-      // When enabled, user-related metrics are split into [internal, external].
+      // When enabled, active_users and user_count are split into [standard, guest]
+      // using users whose adminRoles array contains "guest-user".
       enabled: process.env.INSTANCE_STATS_USER_SEGMENTATION_ENABLED === 'true',
-      // Domain used to classify internal users, e.g. "example.org".
-      internalDomain: process.env.INSTANCE_STATS_INTERNAL_DOMAIN || '',
     },
   },
 

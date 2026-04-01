@@ -29,7 +29,7 @@ export const STAT_CONFIG: StatConfig[] = [
     seriesCount: 2,
     transform: passThrough,
     colors: { y1: '#d98c8c', y2: '#EDC9C9' },
-    labels: { y1: 'Internal', y2: 'External' },
+    labels: { y1: 'Standard', y2: 'Guest' },
   },
   {
     id: 'user-count',
@@ -39,7 +39,7 @@ export const STAT_CONFIG: StatConfig[] = [
     seriesCount: 2,
     transform: passThrough,
     colors: { y1: '#d98c8c', y2: '#EDC9C9' },
-    labels: { y1: 'Internal', y2: 'External' },
+    labels: { y1: 'Standard', y2: 'Guest' },
   },
   {
     id: 'project-count',
