@@ -49,9 +49,6 @@ export function TPRFileViewRefreshButton({
     <OLButton
       variant="primary"
       disabled
-      title={
-        'You are not the original Zotero importer. Only the importer can refresh this file.'
-      }
     >
       {t('refresh')}
     </OLButton>

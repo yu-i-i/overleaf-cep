@@ -20,48 +20,48 @@ export default function ZoteroWidget() {
   const { t } = useTranslation()
   const user = getMeta('ol-user')
   const refProviders = user?.refProviders || {}
-  const isLinked = Boolean(refProviders.zotero)
+  const [isLinked, setIsLinked] = useState(Boolean(refProviders.zotero))
   const [apiKey, setApiKey] = useState('')
-  const [linking, setLinking] = useState(false)
-  const [unlinking, setUnlinking] = useState(false)
+  const [processing, setProcessing] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   const handleLink = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!apiKey.trim()) return
-      setLinking(true)
+      if (!apiKey) return
+      setProcessing(true)
       setError('')
       setSuccess('')
       try {
-        await postJSON('/zotero/link', { body: { apiKey: apiKey.trim() } })
-        setSuccess('Zotero account linked successfully.')
+        await postJSON('/zotero/link', { body: { apiKey } })
+        setSuccess(t('zotero_account_linked_successfully'))
         setApiKey('')
-        // Reload to reflect the new linked state
-        setTimeout(() => window.location.reload(), 1000)
+        setProcessing(false)
+        setIsLinked(true)
       } catch (err: any) {
         const msg =
           err?.data?.error === 'invalid_api_key'
             ? 'Invalid API key. Please check your key and try again.'
             : t('generic_something_went_wrong')
         setError(msg)
-        setLinking(false)
+        setProcessing(false)
       }
     },
     [apiKey, t]
   )
 
   const handleUnlink = useCallback(async () => {
-    setUnlinking(true)
+    setProcessing(true)
     setError('')
     setSuccess('')
     try {
       await postJSON('/zotero/unlink')
-      window.location.reload()
+      setProcessing(false)
+      setIsLinked(false)
     } catch (err) {
       setError(t('generic_something_went_wrong'))
-      setUnlinking(false)
+      setProcessing(false)
     }
   }, [t])
 
@@ -102,17 +102,17 @@ export default function ZoteroWidget() {
                 placeholder="Paste your Zotero API key"
                 value={apiKey}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setApiKey(e.target.value)
+                  setApiKey(e.target.value.trim())
                 }
-                disabled={linking}
+                disabled={processing}
                 autoComplete="off"
               />
             </div>
             <OLButton
               variant="primary"
               type="submit"
-              disabled={linking || !apiKey.trim()}
-              isLoading={linking}
+              disabled={!apiKey}
+              isLoading={processing}
             >
               {t('link_to_zotero')}
             </OLButton>
@@ -124,8 +124,7 @@ export default function ZoteroWidget() {
           <OLButton
             variant="danger-ghost"
             onClick={handleUnlink}
-            disabled={unlinking}
-            isLoading={unlinking}
+            isLoading={processing}
           >
             {t('unlink')}
           </OLButton>
