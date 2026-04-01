@@ -1017,7 +1017,16 @@ module.exports = {
       ),
     ],
     sourceEditorToolbarComponents: [],
-    sourceEditorToolbarEndButtons: [],
+    sourceEditorToolbarEndButtons: [
+      Path.resolve(
+        __dirname,
+        '../modules/doi-picker/frontend/js/components/doi-picker-toolbar-button.tsx'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/orcid-picker/frontend/js/components/orcid-picker-toolbar-button.tsx'
+      ),
+    ],
     rootContextProviders: [],
     mainEditorLayoutModals: [],
     mainEditorLayoutPanels: [],
@@ -1113,6 +1122,8 @@ module.exports = {
     'admin-tools', // import after authentication
     'template-gallery',
     'git-bridge',
+    'doi-picker',
+    'orcid-picker',
   ],
   viewIncludes: {},
 
