@@ -36,6 +36,10 @@ ADD server-ce/runit /etc/service
 # ------------------------------------------
 ADD server-ce/config/env.sh /etc/overleaf/env.sh
 
+# Install pandoc for .tex -> .docx conversion
+# ------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends pandoc && rm -rf /var/lib/apt/lists/*
+
 # Configure nginx
 # ---------------
 ADD server-ce/nginx/nginx.conf.template /etc/nginx/templates/nginx.conf.template
