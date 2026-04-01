@@ -26,10 +26,11 @@ export function TPRFileViewInfo({ file }: TPRFileViewInfoProps) {
   const groupId = (file.linkedFileData as any)?.zoteroGroupId
 
   return (
-    <div className="file-view-info">
-      <LinkedFileIcon />
+    <p>
       <div>
         <span>
+          <LinkedFileIcon />
+          &nbsp;
           {t('imported_from_zotero_at_date', {
             formattedDate,
             relativeDate: relative,
@@ -39,6 +40,6 @@ export function TPRFileViewInfo({ file }: TPRFileViewInfoProps) {
           <span className="text-muted small"> (Group: {groupId})</span>
         )}
       </div>
-    </div>
+    </p>
   )
 }

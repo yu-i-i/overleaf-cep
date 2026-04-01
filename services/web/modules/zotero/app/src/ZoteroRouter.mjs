@@ -10,7 +10,7 @@ export default {
       ZoteroController.getGroups
     )
 
-    // Link Zotero account (user submits their API key)
+    // Link Zotero account (a user submits an API key)
     webRouter.post(
       '/zotero/link',
       AuthenticationController.requireLogin(),

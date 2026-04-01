@@ -13,12 +13,12 @@ const ZOTERO_API_URL = 'https://api.zotero.org'
  */
 async function _getCredentials(userId) {
   const user = await User.findById(userId, 'refProviders.zotero').exec()
-  if (!user?.refProviders?.zotero?.encrypted) {
+  if (!user?.refProviders?.zotero?.apiKeyEncrypted) {
     return null
   }
   try {
     const decrypted = await AccessTokenEncryptor.promises.decryptToJson(
-      user.refProviders.zotero.encrypted
+      user.refProviders.zotero.apiKeyEncrypted
     )
     return decrypted
   } catch (err) {
@@ -162,13 +162,13 @@ async function validateApiKey(apiKey) {
  * Link a Zotero account (store encrypted credentials).
  */
 async function storeCredentials(userId, apiKey, zoteroUserId) {
-  const encrypted = await AccessTokenEncryptor.promises.encryptJson({
+  const apiKeyEncrypted = await AccessTokenEncryptor.promises.encryptJson({
     apiKey,
     zoteroUserId: String(zoteroUserId),
   })
   await User.updateOne(
     { _id: userId },
-    { $set: { 'refProviders.zotero': { encrypted } } }
+    { $set: { 'refProviders.zotero': { apiKeyEncrypted } } }
   ).exec()
 }
 

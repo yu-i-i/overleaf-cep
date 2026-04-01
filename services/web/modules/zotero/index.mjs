@@ -1,17 +1,18 @@
 import Settings from '@overleaf/settings'
+import ZoteroRouter from './app/src/ZoteroRouter.mjs'
 
-const { default: ZoteroRouter } = await import('./app/src/ZoteroRouter.mjs')
-
-const ZoteroModule = {
-  router: ZoteroRouter,
-}
+let ZoteroModule = {}
 
 if (Settings.enabledLinkedFileTypes?.includes('zotero')) {
   const { default: ZoteroLinkedFileAgent } = await import(
     './app/src/ZoteroLinkedFileAgent.mjs'
   )
-  ZoteroModule.linkedFileAgents = {
-    zotero: () => ZoteroLinkedFileAgent,
+
+  ZoteroModule = {
+    router: ZoteroRouter,
+    linkedFileAgents: {
+      zotero: () => ZoteroLinkedFileAgent,
+    },
   }
 }
 
