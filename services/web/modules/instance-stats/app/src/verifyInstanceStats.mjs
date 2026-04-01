@@ -24,9 +24,9 @@ function computeCutoff(window) {
 
 async function main() {
   await mongoose.connectionPromise
-  const segmentationEnabled =
-    Settings.instanceStats?.userSegmentation?.enabled &&
-    Boolean(Settings.instanceStats?.userSegmentation?.internalDomain)
+  const segmentationEnabled = Boolean(
+    Settings.instanceStats?.userSegmentation?.enabled
+  )
 
   const statKeys = [
     'active_projects',

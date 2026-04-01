@@ -8,21 +8,16 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
-function getInternalUserRegex() {
-  const segmentation = Settings.instanceStats?.userSegmentation
-  if (!segmentation?.enabled) {
-    return null
-  }
-  const rawDomain = segmentation.internalDomain || ''
-  const normalized = rawDomain.trim().replace(/^@/, '').toLowerCase()
-  if (!normalized) {
-    logger.warn(
-      'instanceStats.userSegmentation.enabled=true but INSTANCE_STATS_INTERNAL_DOMAIN is empty; disabling segmentation'
-    )
-    return null
-  }
-  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`@${escaped}$`, 'i')
+/** Role string stored inside User.adminRoles (array of strings). */
+const GUEST_ADMIN_ROLE = 'guest-user'
+
+/** Mongo filter: user is a guest if their adminRoles list includes this role. */
+function guestUserFilter() {
+  return { adminRoles: { $in: [GUEST_ADMIN_ROLE] } }
+}
+
+function isUserSegmentationEnabled() {
+  return Boolean(Settings.instanceStats?.userSegmentation?.enabled)
 }
 
 function toUtcMidnight(date) {
@@ -82,8 +77,7 @@ async function collectForDay({ day }) {
   const now = new Date()
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   const db = mongoose.connection.db
-  const internalUserRegex = getInternalUserRegex()
-  const segmentationEnabled = Boolean(internalUserRegex)
+  const segmentationEnabled = isUserSegmentationEnabled()
 
   const projects = db.collection('projects')
   const users = db.collection('users')
@@ -97,24 +91,24 @@ async function collectForDay({ day }) {
   let userCountValues
 
   if (segmentationEnabled) {
-    const activeInternalUsers = await users.countDocuments({
-      email: { $regex: internalUserRegex },
+    const guestMatch = guestUserFilter()
+
+    const activeGuestUsers = await users.countDocuments({
+      ...guestMatch,
       lastActive: { $gte: oneDayAgo },
     })
-    const activeExternalUsers = await users.countDocuments({
-      email: { $not: internalUserRegex },
+    const activeUsersTotal = await users.countDocuments({
       lastActive: { $gte: oneDayAgo },
     })
+    const activeStandardUsers = activeUsersTotal - activeGuestUsers
 
-    const internalUsers = await users.countDocuments({
-      email: { $regex: internalUserRegex },
-    })
-    const externalUsers = await users.countDocuments({
-      email: { $not: internalUserRegex },
-    })
+    const guestUsers = await users.countDocuments(guestMatch)
+    const totalUsers = await users.countDocuments()
+    const standardUsers = totalUsers - guestUsers
 
-    activeUsersValues = [activeInternalUsers, activeExternalUsers]
-    userCountValues = [internalUsers, externalUsers]
+    // [standard, guest] — matches chart labels in instance-stats frontend config
+    activeUsersValues = [activeStandardUsers, activeGuestUsers]
+    userCountValues = [standardUsers, guestUsers]
   } else {
     const activeUsers = await users.countDocuments({
       lastActive: { $gte: oneDayAgo },

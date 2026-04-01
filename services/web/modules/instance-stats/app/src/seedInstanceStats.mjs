@@ -5,8 +5,8 @@ import { InstanceStat } from '../../../../app/src/models/InstanceStat.mjs'
 
 const SEGMENTED_STAT_DEFS = {
   active_projects: { base: [30], noise: [12], min: [0] },
-  active_users: { base: [120, 80], noise: [25, 20], min: [0, 0] }, // [internal, external]
-  user_count: { base: [900, 500], noise: [8, 6], min: [0, 0] }, // [internal, external]
+  active_users: { base: [120, 80], noise: [25, 20], min: [0, 0] }, // [standard, guest]
+  user_count: { base: [900, 500], noise: [8, 6], min: [0, 0] }, // [standard, guest]
   project_count: { base: [1600], noise: [6], min: [0] },
   file_count: { base: [12000], noise: [80], min: [0] },
   mongodb_storage: { base: [9.5e9], noise: [4.5e7], min: [0] }, // bytes
@@ -36,14 +36,7 @@ function generateValues(def, dayOffset) {
 
 function getStatDefsForCurrentSegmentation() {
   const segmentation = Settings.instanceStats?.userSegmentation
-  const segmentationEnabled =
-    Boolean(segmentation?.enabled) && Boolean(segmentation?.internalDomain)
-
-  if (segmentation?.enabled && !segmentation?.internalDomain) {
-    logger.warn(
-      'instanceStats.userSegmentation.enabled=true but internalDomain is empty; seeding user metrics as single-series totals'
-    )
-  }
+  const segmentationEnabled = Boolean(segmentation?.enabled)
 
   if (segmentationEnabled) {
     return SEGMENTED_STAT_DEFS
