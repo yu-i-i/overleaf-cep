@@ -14,15 +14,41 @@ type TPRFileViewNotOriginalImporterProps = {
 export function TPRFileViewNotOriginalImporter({
   file,
 }: TPRFileViewNotOriginalImporterProps) {
-  const { t } = useTranslation()
   const provider = file.linkedFileData?.provider
 
   if (provider !== 'zotero') {
     return null
   }
 
-  // For now, this is a placeholder. In full implementation, you'd compare
-  // file.linkedFileData.importedByUserId with the current user's ID.
-  // Since we don't store the importer ID in the basic integration, we skip this check.
+  const currentUserId =
+    (getMeta('ol-user') as any)?._id || (getMeta('ol-user_id') as string)
+  const importedByUserId = (file.linkedFileData as any)?.importedByUserId
+
+  if (provider !== 'zotero') {
+    return null
+  }
+
+  if (!importedByUserId) {
+    return (
+      <OLNotification
+        type="warning"
+        content={
+          'Original importer is unknown. Refresh is restricted to the original Zotero importer.'
+        }
+      />
+    )
+  }
+
+  if (currentUserId && importedByUserId !== currentUserId) {
+    return (
+      <OLNotification
+        type="warning"
+        content={
+          'This Zotero file was imported by another user. You cannot refresh it until the owner performs a refresh.'
+        }
+      />
+    )
+  }
+
   return null
 }

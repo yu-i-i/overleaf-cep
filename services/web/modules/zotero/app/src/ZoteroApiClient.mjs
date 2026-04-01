@@ -45,7 +45,7 @@ async function _zoteroApiRequest(apiKey, path, opts = {}) {
 async function getGroupsForUser(userId) {
   const credentials = await _getCredentials(userId)
   if (!credentials) {
-    throw new Error('Zotero account not linked')
+    throw new ZoteroAccountNotLinkedError()
   }
   const { apiKey, zoteroUserId } = credentials
   const { url, headers } = await _zoteroApiRequest(
@@ -73,7 +73,7 @@ async function getGroupsForUser(userId) {
 async function getUserLibraryBibtex(userId) {
   const credentials = await _getCredentials(userId)
   if (!credentials) {
-    throw new Error('Zotero account not linked')
+    throw new ZoteroAccountNotLinkedError()
   }
   return _fetchBibtex(
     credentials.apiKey,
@@ -87,7 +87,7 @@ async function getUserLibraryBibtex(userId) {
 async function getGroupLibraryBibtex(userId, groupId) {
   const credentials = await _getCredentials(userId)
   if (!credentials) {
-    throw new Error('Zotero account not linked')
+    throw new ZoteroAccountNotLinkedError()
   }
   return _fetchBibtex(credentials.apiKey, `/groups/${groupId}/items`)
 }
@@ -189,6 +189,13 @@ export class ZoteroForbiddenError extends Error {
   }
 }
 
+export class ZoteroAccountNotLinkedError extends Error {
+  constructor(message = 'Zotero account not linked') {
+    super(message)
+    this.name = 'ZoteroAccountNotLinkedError'
+  }
+}
+
 export default {
   getGroupsForUser,
   getUserLibraryBibtex,
@@ -197,4 +204,5 @@ export default {
   storeCredentials,
   unlinkAccount,
   ZoteroForbiddenError,
+  ZoteroAccountNotLinkedError,
 }
