@@ -359,6 +359,7 @@
   "ill_take_it": "Беру!",
   "import_from_github": "Импорт с GitHub",
   "import_to_sharelatex": "Импортировать в __appName__",
+  "imported_from_zotero_at_date": "Импортировано из Zotero в __formattedDate__ __relativeDate__",
   "importing": "Импорт",
   "importing_and_merging_changes_in_github": "Импорт и слияние изменений в GitHub",
   "inactive_projects": "Неактивные проекты",
@@ -839,5 +840,13 @@
   "your_subscriptions": "Ваши подписки",
   "youre_on_free_trial_which_ends_on": "У Вас бесплатный пробный период, он заканчивается <0>__date__</0>.",
   "youve_paused_your_subscription": "Подписка <0>__planName__</0> приостановлена до <0>__reactivationDate__</0>, затем она возобновится автоматически. Вы можете возобновить её раньше в любой момент.",
-  "zh-CN": "Китайский"
+  "zh-CN": "Китайский",
+  "zotero_account_linked_successfully": "Ваш аккаунт Zotero успешно подключён.",
+  "zotero_groups_loading_error": "При загрузке групп из Zotero произошла ошибка",
+  "zotero_imported_by_collaborator": "Этот файл был импортирован из Zotero вашим соавтором. Вы не можете обновить файл.",
+  "zotero_imported_by_unknown": "Этот файл был импортирован из Zotero неизвестным пользователем. Вы не можете обновить файл.",
+  "zotero_reference_loading_error": "Ошибка: не удалось загрузить ссылки из Zotero",
+  "zotero_reference_loading_error_expired": "Срок действия токена Zotero истёк, пожалуйста, повторно подключите аккаунт",
+  "zotero_reference_loading_error_forbidden": "Не удалось загрузить ссылки из Zotero, пожалуйста, повторно подключите аккаунт и попробуйте снова",
+  "zotero_sync_description": "Используя интеграцию с Zotero вы можете импортировать свои ссылки из Zotero в проекты __appName__."
 }

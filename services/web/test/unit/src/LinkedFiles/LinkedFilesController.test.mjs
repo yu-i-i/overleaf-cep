@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import sinon from 'sinon'
 import { setReqValidationModeForTests } from '@overleaf/validation-tools'
+import LinkedFilesErrors from '../../../../app/src/Features/LinkedFiles/LinkedFilesErrors.mjs'
 const modulePath =
   '../../../../app/src/Features/LinkedFiles/LinkedFilesController.mjs'
 
@@ -405,6 +406,37 @@ describe('LinkedFilesController', function () {
           )
         })
       })
+
+    it('returns error 400 if user is not original importer', async function (ctx) {
+      ctx.Agent.promises.refreshLinkedFile = sinon
+        .stub()
+        .rejects(
+          new LinkedFilesErrors.NotOriginalImporterError(
+            'Only the user who created the Zotero-linked file can refresh this file'
+          )
+        )
+
+      await new Promise(resolve => {
+        ctx.next = sinon.stub().callsFake(() => resolve('unexpected error'))
+        ctx.res = {
+          status: sinon.stub().callsFake(code => {
+            expect(code).to.equal(400)
+            return ctx.res
+          }),
+          contentType: sinon.stub(),
+          setHeader: sinon.stub(),
+          send: sinon.stub(msg => {
+            expect(msg).to.equal('You are not the user who originally imported this file')
+            resolve()
+          }),
+        }
+
+        ctx.LinkedFilesController.refreshLinkedFile(ctx.req, ctx.res, ctx.next)
+      })
+    })
+      })
+
+      expect(ctx.Agent.promises.refreshLinkedFile).to.not.have.been.called
     })
   })
   describe('handleError', function () {

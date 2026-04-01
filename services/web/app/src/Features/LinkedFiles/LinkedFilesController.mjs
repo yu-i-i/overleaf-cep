@@ -363,7 +363,13 @@ export default LinkedFilesController = {
       },
       'failed to create/refresh linked file'
     )
-    if (error instanceof AccessDeniedError) {
+    if (
+      error instanceof AccessDeniedError &&
+      error.message === 'Zotero account not linked'
+    ) {
+      res.status(400)
+      plainTextResponse(res, 'Your account is not linked with Zotero')
+    } else if (error instanceof AccessDeniedError) {
       res.status(403)
       plainTextResponse(
         res,
@@ -405,8 +411,7 @@ export default LinkedFilesController = {
       } else {
         plainTextResponse(
           res,
-          `Your URL could not be reached (${
-            error.info?.status || error.cause?.info?.status
+          `Your URL could not be reached (${error.info?.status || error.cause?.info?.status
           } status code). Please check it and try again.`
         )
       }
