@@ -1396,6 +1396,7 @@
   "user_category_all": "Alle Benutzer",
   "user_category_deleted": "Gelöschte Benutzer",
   "user_category_inactive": "Inaktive Benutzer",
+  "user_category_guest": "Gastbenutzer",
   "user_category_ldap": "LDAP-Benutzer",
   "user_category_local": "Lokale Benutzer",
   "user_category_oidc": "OIDC-Benutzer",

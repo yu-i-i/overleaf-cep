@@ -2230,6 +2230,7 @@
   "user_category_admin": "",
   "user_category_all": "",
   "user_category_deleted": "",
+  "user_category_guest": "",
   "user_category_inactive": "",
   "user_category_ldap": "",
   "user_category_local": "",

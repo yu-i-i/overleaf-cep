@@ -288,6 +288,27 @@ ul.user-list-filters {
     }
   }
 
+  .dash-row-guest {
+    opacity: 0.72;
+    color: var(--content-secondary);
+
+    td {
+      color: inherit;
+    }
+
+    .dash-cell-name span[role='link'] {
+      color: var(--content-secondary);
+    }
+
+    td:not(.dash-cell-actions) a {
+      color: var(--content-secondary);
+    }
+  }
+
+  .dash-row-admin.dash-row-guest {
+    opacity: 0.88;
+  }
+
   .dash-cell-name {
     hyphens: auto;
     width: 30%;

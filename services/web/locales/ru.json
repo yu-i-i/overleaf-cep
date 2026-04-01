@@ -558,6 +558,7 @@
   "user_category_all": "Все пользователи",
   "user_category_deleted": "Удалённые пользователи",
   "user_category_inactive": "Неактивные пользователи",
+  "user_category_guest": "Гостевые пользователи",
   "user_category_ldap": "Пользователи LDAP",
   "user_category_local": "Локальные пользователи",
   "user_category_oidc": "Пользователи OIDC",

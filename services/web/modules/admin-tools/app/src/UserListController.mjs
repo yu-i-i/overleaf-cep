@@ -363,6 +363,7 @@ function _matchesFilters(user, filters) {
   if (filters.all) return true
   if (filters.admin) return user.isAdmin
   if (filters.inactive && !user.inactive) return false
+  if (filters.guestUser && !user.isGuestUser) return false
   if (filters.suspended && !user.suspended) return false
   for (const method of availableAuthMethods) {
     if (filters[method] && !user.authMethods.includes(method)) {
@@ -378,6 +379,7 @@ function _hasActiveFilter(filters) {
     filters.all ||
     filters.admin ||
     filters.inactive ||
+    filters.guestUser ||
     filters.suspended ||
     filters.local ||
     filters.saml ||
