@@ -1,2 +1,2 @@
-50 23 * * * root bash /overleaf/cron/collect-instance-stats.sh >> /var/log/overleaf/cron-instance-stats.log 2>&1
+50 * * * * root bash /overleaf/cron/collect-instance-stats.sh >> /var/log/overleaf/cron-instance-stats.log 2>&1
 
