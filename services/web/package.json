@@ -73,7 +73,6 @@
     "last 1 year",
     "safari > 14"
   ],
-
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.25",
     "@ai-sdk/openai": "^3.0.41",
@@ -351,6 +350,7 @@
     "lottie-react": "^2.4.1",
     "match-sorter": "^6.2.0",
     "mathjax": "^3.2.2",
+    "mathlive": "^0.105.0",
     "mediatr-ts": "^2.0.1",
     "mensch": "^0.3.4",
     "micromark": "^4.0.0",

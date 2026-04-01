@@ -63,6 +63,7 @@ const mathjaxDir = getModuleDirectory('mathjax')
 const pdfjsDir = getModuleDirectory('pdfjs-dist')
 const dictionariesDir = getModuleDirectory('@overleaf/dictionaries')
 const pyodideDir = getModuleDirectory('pyodide')
+const mathliveDir = getModuleDirectory('mathlive')
 
 const vendorDir = path.join(__dirname, 'frontend/js/vendor')
 
@@ -160,7 +161,7 @@ module.exports = {
               configFile: path.join(__dirname, './babel.config.json'),
               plugins: [
                 process.env.REACT_REFRESH_ENABLED === 'true' &&
-                  'react-refresh/babel',
+                'react-refresh/babel',
               ].filter(Boolean),
             },
           },
@@ -465,6 +466,12 @@ module.exports = {
           from: 'legacy/web/images',
           to: 'images/pdfjs-dist',
           context: pdfjsDir,
+        },
+        // Copy MathLive KaTeX fonts for the LaTeX equation editor
+        {
+          from: 'fonts',
+          to: 'fonts/mathlive',
+          context: mathliveDir,
         },
       ],
     }),

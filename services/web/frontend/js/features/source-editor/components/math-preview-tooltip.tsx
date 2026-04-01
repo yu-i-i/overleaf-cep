@@ -24,6 +24,11 @@ import { mathPreviewStateField } from '../extensions/math-preview'
 import { getTooltip } from '@codemirror/view'
 import ReactDOM from 'react-dom'
 import OLDropdownMenuItem from '@/shared/components/ol/ol-dropdown-menu-item'
+import {
+  mathAncestorNode,
+  parseMathContainer,
+} from '../utils/tree-operations/math'
+import { descendantsOfNodeWithType } from '../utils/tree-query'
 
 const MathPreviewTooltipContainer: FC = () => {
   const state = useCodeMirrorStateContext()
@@ -58,6 +63,7 @@ const MathPreviewTooltipContainer: FC = () => {
 
 const MathPreviewTooltipMenu: FC = () => {
   const { t } = useTranslation()
+  const state = useCodeMirrorStateContext()
 
   const [showDisableModal, setShowDisableModal] = useState(false)
   const { setMathPreview } = useProjectSettingsContext()
@@ -67,6 +73,31 @@ const MathPreviewTooltipMenu: FC = () => {
   const onHide = useCallback(() => {
     window.dispatchEvent(new Event('editor:hideMathTooltip'))
   }, [])
+
+  const onOpenEquationEditor = useCallback(() => {
+    const range = state.selection.main
+    if (range.empty) {
+      const ancestorNode = mathAncestorNode(state, range.from)
+      if (ancestorNode) {
+        const [node] = descendantsOfNodeWithType(ancestorNode, 'Math', 'Math')
+        if (node) {
+          const mathContainer = parseMathContainer(state, node, ancestorNode)
+          if (mathContainer) {
+            document.dispatchEvent(
+              new CustomEvent('latex-editor:open', {
+                detail: { latex: mathContainer.content },
+              })
+            )
+            return
+          }
+        }
+      }
+    }
+    // Fallback: open editor with empty content
+    document.dispatchEvent(
+      new CustomEvent('latex-editor:open', { detail: { latex: '' } })
+    )
+  }, [state])
 
   const keyDownListener = useCallback(
     (event: KeyboardEvent) => {
@@ -94,6 +125,12 @@ const MathPreviewTooltipMenu: FC = () => {
           />
         </DropdownToggle>
         <DropdownMenu flip={false}>
+          <OLDropdownMenuItem
+            onClick={onOpenEquationEditor}
+            description="Open this equation in the visual editor"
+          >
+            Open in Equation Editor
+          </OLDropdownMenuItem>
           <OLDropdownMenuItem
             onClick={onHide}
             description={t('temporarily_hides_the_preview')}
