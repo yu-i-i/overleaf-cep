@@ -1,7 +1,12 @@
 import logger from '@overleaf/logger'
 import metrics from '@overleaf/metrics'
 import fs from 'node:fs'
+import os from 'node:os'
 import Path from 'node:path'
+import uuid from 'uuid'
+const { v4: uuidv4 } = uuid
+import PDFDocument from 'pdfkit'
+import SVGtoPDF from 'svg-to-pdfkit'
 import FileSystemImportManager from './FileSystemImportManager.mjs'
 import ProjectUploadManager from './ProjectUploadManager.mjs'
 import SessionManager from '../Authentication/SessionManager.mjs'
@@ -15,6 +20,44 @@ import { expressify } from '@overleaf/promise-utils'
 import { DuplicateNameError } from '../Errors/Errors.js'
 
 const defaultsDeep = lodash.defaultsDeep
+
+async function convertSvgFileToPdf(svgPath, outputPdfPath) {
+  const svgContent = await fs.promises.readFile(svgPath, 'utf8')
+
+  return new Promise((resolve, reject) => {
+    const pdfStream = fs.createWriteStream(outputPdfPath)
+    pdfStream.on('finish', resolve)
+    pdfStream.on('error', reject)
+
+    const doc = new PDFDocument({ autoFirstPage: false, size: 'A4', margin: 0 })
+    doc.pipe(pdfStream)
+
+    doc.addPage({ margin: 0 })
+    SVGtoPDF(doc, svgContent, 0, 0, { preserveAspectRatio: 'xMidYMid meet' })
+    doc.end()
+  })
+}
+
+async function convertAndUploadSvgPdf(userId, projectId, folderId, svgName, svgPath) {
+  const pdfName = svgName.replace(/\.svg$/i, '.pdf')
+  const tempPdfFile = Path.join(
+    os.tmpdir(),
+    `drawio-svg-convert-${Date.now()}-${uuidv4()}.pdf`
+  )
+  await convertSvgFileToPdf(svgPath, tempPdfFile)
+  try {
+    await FileSystemImportManager.promises.addEntity(
+      userId,
+      projectId,
+      folderId,
+      pdfName,
+      tempPdfFile,
+      true
+    )
+  } finally {
+    fs.unlink(tempPdfFile, () => { })
+  }
+}
 
 const upload = multer(
   defaultsDeep(
@@ -38,7 +81,7 @@ function uploadProject(req, res, next) {
     name,
     path,
     function (error, project) {
-      fs.unlink(path, function () {})
+      fs.unlink(path, function () { })
       timer.done()
       if (error != null) {
         logger.error(
@@ -71,7 +114,7 @@ async function uploadFile(req, res, next) {
   const userId = SessionManager.getLoggedInUserId(req.session)
   let { folder_id: folderId } = req.query
   if (name == null || name.length === 0 || name.length > 150) {
-    fs.unlink(path, function () {})
+    fs.unlink(path, function () { })
     return res.status(422).json({
       success: false,
       error: 'invalid_filename',
@@ -96,9 +139,13 @@ async function uploadFile(req, res, next) {
       folderId = lastFolder._id
     }
   } catch (error) {
-    fs.unlink(path, function () {})
+    fs.unlink(path, function () { })
     throw error
   }
+
+  const convertSvgToPdf =
+    req.query.convert_svg_to_pdf === 'true' ||
+    req.query.convert_svg_to_pdf === '1'
 
   return FileSystemImportManager.addEntity(
     userId,
@@ -108,9 +155,10 @@ async function uploadFile(req, res, next) {
     path,
     true,
     function (error, entity) {
-      fs.unlink(path, function () {})
+      const cleanup = () => fs.unlink(path, function () { })
       timer.done()
       if (error != null) {
+        cleanup()
         if (error.name === 'InvalidNameError') {
           return res.status(422).json({
             success: false,
@@ -145,6 +193,25 @@ async function uploadFile(req, res, next) {
           return res.status(422).json({ success: false })
         }
       } else {
+        if (convertSvgToPdf && name.toLowerCase().endsWith('.svg')) {
+          convertAndUploadSvgPdf(userId, projectId, folderId, name, path)
+            .catch(err => {
+              logger.error(
+                {
+                  err,
+                  projectId,
+                  filePath: path,
+                  fileName: name,
+                  folderId,
+                },
+                'failed converting SVG to PDF'
+              )
+            })
+            .finally(cleanup)
+        } else {
+          cleanup()
+        }
+
         return res.json({
           success: true,
           entity_id: entity?._id,
