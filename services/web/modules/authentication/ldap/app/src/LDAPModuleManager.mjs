@@ -30,7 +30,7 @@ const LDAPModuleManager = {
       searchBase: process.env.OVERLEAF_LDAP_SEARCH_BASE,
       searchFilter: process.env.OVERLEAF_LDAP_SEARCH_FILTER,
       searchScope: process.env.OVERLEAF_LDAP_SEARCH_SCOPE || 'sub',
-      searchAttributes: JSON.parse(process.env.OVERLEAF_LDAP_SEARCH_ATTRIBUTES || '[]'),
+      searchAttributes: JSON.parse(process.env.OVERLEAF_LDAP_SEARCH_ATTRIBUTES || null),
       cache: boolFromEnv(process.env.OVERLEAF_LDAP_CACHE),
       timeout: numFromEnv(process.env.OVERLEAF_LDAP_TIMEOUT),
       connectTimeout: numFromEnv(process.env.OVERLEAF_LDAP_CONNECT_TIMEOUT),
