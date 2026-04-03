@@ -10,7 +10,7 @@ import TokenTable from './token-table'
 import ExposeTokenModal from './modals/expose-token-modal'
 import { Token } from '../../../../types/api'
 
-export default function GitIntegrationWidget() {
+export const GitIntegrationWidget = function GitIntegrationWidget() {
   const { t } = useTranslation()
 
   const [tokens, setTokens] = useState<Token[]>([])

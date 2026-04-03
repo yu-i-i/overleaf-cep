@@ -13,9 +13,6 @@ type Props = {
 
 function TokenTableRow({ token, handleDeleteClick }: Props) {
   const { t } = useTranslation()
-
-console.log("token = ", token)
-
   const created = moment(token.createdAt).format('Do MMM YYYY')
   const lastUsed = token.lastUsedAt
     ? moment(token.lastUsedAt).format('Do MMM YYYY')
