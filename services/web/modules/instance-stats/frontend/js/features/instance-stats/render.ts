@@ -35,13 +35,19 @@ function buildTraces(stat: StatConfig, points: SeriesPoint[]) {
   return indexes.map(index => {
     const key = index === 0 ? 'y1' : 'y2'
     const y = points.map(point => stat.transform(point.values[index] ?? 0))
+    const label = seriesCount === 2 ? stat.labels[key] : undefined
+    const hovertemplate =
+      label != null
+        ? `%{x|%d %b %Y}<br>${label}: %{y}<extra></extra>`
+        : '%{x|%d %b %Y}<br>%{y}<extra></extra>'
     return {
       x,
       y,
       type: 'bar',
-      name: seriesCount === 2 ? stat.labels[key] : undefined,
+      name: label,
       showlegend: seriesCount === 2,
       marker: { color: stat.colors[key] },
+      hovertemplate,
     }
   })
 }
@@ -63,6 +69,7 @@ function buildLayout(stat: StatConfig, points: SeriesPoint[]) {
       tickmode: 'auto',
       nticks: 8,
       ticklabelmode: 'period',
+      hoverformat: '%d %b %Y',
       automargin: true,
       tickformatstops: [
         { dtickrange: [null, 24 * 60 * 60 * 1000], value: '%d %b' },

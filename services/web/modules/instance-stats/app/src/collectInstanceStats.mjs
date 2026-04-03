@@ -43,7 +43,7 @@ async function duBytes(path) {
 }
 
 function parseRedisInfoInt(info, key) {
-  const re = new RegExp(`${key}:(\\\\d+)`)
+  const re = new RegExp(`${key}:(\\d+)`)
   const match = info?.match(re)
   return match ? parseInt(match[1], 10) : 0
 }
@@ -122,12 +122,14 @@ async function collectForDay({ day }) {
   const projectCount = await projects.countDocuments()
   const fileCount = await docs.countDocuments()
 
-  // Mongo storage: approximate with dbStats.storageSize (bytes).
+  // Mongo storage: approximate with dbStats.totalSize (bytes).
+  // Note that this will be lower that when doing `du` for the mongo
+  // data folder, because that includes journaling files that we can not
+  // measure directly from mongo.
   let mongodbStorageBytes = 0
   try {
-    const stats = await db.admin().command({ dbStats: 1 })
-    mongodbStorageBytes =
-      stats?.storageSize ?? stats?.dataSize ?? stats?.totalSize ?? 0
+    const stats = await db.stats()
+    mongodbStorageBytes = stats?.totalSize ?? 0
   } catch (err) {
     logger.error({ err }, 'Failed to query Mongo dbStats')
   }
