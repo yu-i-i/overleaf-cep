@@ -1,0 +1,17 @@
+extends ../../../../app/views/layout-react
+
+block entrypointVar
+    - entrypoint = 'modules/llm/pages/admin/llm-admin-settings'
+
+block vars
+    - isWebsiteRedesign = true
+
+block append meta
+    meta(name='ol-systemPrompt' data-type='string' content=systemPrompt)
+    meta(name='ol-llmApiUrl' data-type='string' content=llmApiUrl)
+    meta(name='ol-hasLlmApiKey' data-type='string' content=hasLlmApiKey ? 'true' : 'false')
+    meta(name='ol-allowedModels' data-type='string' content=(allowedModels || []).join(','))
+
+block content
+    main#main-content.content.content-alt
+        #llm-admin-settings-root

@@ -75,6 +75,8 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 									+dropdown-menu-link-item(href='/admin/survey') Manage Surveys
 								if canDisplayScriptLogMenu
 									+dropdown-menu-link-item(href='/admin/script-logs') View Script Logs
+								if settings.llm && settings.llm.enabled
+									+dropdown-menu-link-item(href='/admin/llm/settings') LLM Settings
 
 					// loop over header_extras
 					each item in nav.header_extras
@@ -205,6 +207,8 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 									.disabled.dropdown-item #{getSessionUser().email}
 								+dropdown-menu-divider
 								+dropdown-menu-link-item(href='/user/settings') #{translate('account_settings')}
+								if settings.llm && settings.llm.allowUserSettings
+									+dropdown-menu-link-item(href='/user/llm-settings') AI Settings
 								if nav.showSubscriptionLink
 									+dropdown-menu-link-item(href='/user/subscription') #{translate('subscription')}
 								+dropdown-menu-divider

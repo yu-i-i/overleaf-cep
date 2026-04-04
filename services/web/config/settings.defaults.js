@@ -215,18 +215,16 @@ module.exports = {
   // options incase you want to run some services on remote hosts.
   apis: {
     web: {
-      url: `http://${
-        process.env.WEB_API_HOST || process.env.WEB_HOST || '127.0.0.1'
-      }:${process.env.WEB_API_PORT || process.env.WEB_PORT || 3000}`,
+      url: `http://${process.env.WEB_API_HOST || process.env.WEB_HOST || '127.0.0.1'
+        }:${process.env.WEB_API_PORT || process.env.WEB_PORT || 3000}`,
       user: httpAuthUser,
       pass: httpAuthPass,
     },
     documentupdater: {
-      url: `http://${
-        process.env.DOCUPDATER_HOST ||
+      url: `http://${process.env.DOCUPDATER_HOST ||
         process.env.DOCUMENT_UPDATER_HOST ||
         '127.0.0.1'
-      }:3003`,
+        }:3003`,
     },
     docstore: {
       url: `http://${process.env.DOCSTORE_HOST || '127.0.0.1'}:3016`,
@@ -292,8 +290,7 @@ module.exports = {
     v1_history: {
       url:
         process.env.V1_HISTORY_URL ||
-        `http://${process.env.V1_HISTORY_HOST || '127.0.0.1'}:${
-          process.env.V1_HISTORY_PORT || '3100'
+        `http://${process.env.V1_HISTORY_HOST || '127.0.0.1'}:${process.env.V1_HISTORY_PORT || '3100'
         }/api`,
       urlForGitBridge: process.env.V1_HISTORY_URL_FOR_GIT_BRIDGE,
       user: process.env.V1_HISTORY_USER || 'staging',
@@ -823,7 +820,7 @@ module.exports = {
       .filter(x => x !== ''),
     trustedUsersRegex: process.env.CAPTCHA_TRUSTED_USERS_REGEX
       ? // Enforce matching of the entire input.
-        new RegExp(`^${process.env.CAPTCHA_TRUSTED_USERS_REGEX}$`)
+      new RegExp(`^${process.env.CAPTCHA_TRUSTED_USERS_REGEX}$`)
       : null,
     disabled: {
       invite: true,
@@ -1002,9 +999,24 @@ module.exports = {
     tprFileViewRefreshButton: [],
     tprFileViewNotOriginalImporter: [],
     contactUsModal: [],
-    sourceEditorExtensions: [],
-    sourceEditorComponents: [],
-    pdfLogEntryHeaderActionComponents: [],
+    sourceEditorExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/extensions/llm-inline-completion'
+      ),
+    ],
+    sourceEditorComponents: [
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/components/llm-source-editor-component'
+      ),
+    ],
+    pdfLogEntryHeaderActionComponents: [
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/components/pdf-log-entry-ask-ai-button'
+      ),
+    ],
     pdfLogEntryComponents: [],
     pdfLogEntriesComponents: [],
     pdfPreviewPromotions: [],
@@ -1096,7 +1108,12 @@ module.exports = {
     referenceSearchSetting: [],
     errorLogsComponents: [],
     referenceIndices: [],
-    railEntries: [],
+    railEntries: [
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/components/llm-rail-pane'
+      ),
+    ],
     railPopovers: [],
   },
 
@@ -1113,6 +1130,7 @@ module.exports = {
     'admin-tools', // import after authentication
     'template-gallery',
     'git-bridge',
+    'llm',
   ],
   viewIncludes: {},
 

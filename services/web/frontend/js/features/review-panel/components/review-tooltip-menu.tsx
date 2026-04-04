@@ -37,6 +37,7 @@ import useEventListener from '@/shared/hooks/use-event-listener'
 import useReviewPanelLayout from '../hooks/use-review-panel-layout'
 import { usePermissionsContext } from '@/features/ide-react/context/permissions-context'
 import { sendMB } from '@/infrastructure/event-tracking'
+import getMeta from '@/utils/meta'
 
 const EDIT_MODE_SWITCH_WIDGET_HEIGHT = 40
 const CM_LINE_RIGHT_PADDING = 8
@@ -69,9 +70,9 @@ const ReviewTooltipMenu: FC = () => {
 
     const effects = isCursorNearViewportEdge(view, main.anchor)
       ? [
-          buildAddNewCommentRangeEffect(main),
-          EditorView.scrollIntoView(main.anchor, { y: 'center' }),
-        ]
+        buildAddNewCommentRangeEffect(main),
+        EditorView.scrollIntoView(main.anchor, { y: 'center' }),
+      ]
       : [buildAddNewCommentRangeEffect(main)]
 
     view.dispatch({ effects })
@@ -91,13 +92,13 @@ const ReviewTooltipMenu: FC = () => {
   }
 
   return ReactDOM.createPortal(
-    <ReviewTooltipMenuContent onAddComment={addComment} />,
+    <ReviewTooltipMenuContent onAddComment={addComment} onHide={() => setShow(false)} />,
     tooltipView.dom
   )
 }
 
-const ReviewTooltipMenuContent = memo<{ onAddComment: () => void }>(
-  function ReviewTooltipMenuContent({ onAddComment }) {
+const ReviewTooltipMenuContent = memo<{ onAddComment: () => void; onHide: () => void }>(
+  function ReviewTooltipMenuContent({ onAddComment, onHide }) {
     const { t } = useTranslation()
     const view = useCodeMirrorViewContext()
     const state = useCodeMirrorStateContext()
@@ -110,6 +111,8 @@ const ReviewTooltipMenuContent = memo<{ onAddComment: () => void }>(
       CSSProperties | undefined
     >()
     const [visible, setVisible] = useState(false)
+
+    const llmEnabled = !!(getMeta('ol-ExposedSettings') as any)?.llmEnabled
 
     const handleAddCommentClick = useCallback(() => {
       sendMB('add-comment', {
@@ -232,6 +235,29 @@ const ReviewTooltipMenuContent = memo<{ onAddComment: () => void }>(
           <MaterialIcon type="chat" />
           {t('add_comment')}
         </button>
+        {llmEnabled && (
+          <>
+            <div className="review-tooltip-menu-divider" />
+            <button
+              className="review-tooltip-menu-button"
+              onClick={() => {
+                const selectedText = view.state.sliceDoc(
+                  state.selection.main.from,
+                  state.selection.main.to
+                )
+                document.dispatchEvent(
+                  new CustomEvent('llm-ask-ai-selection', {
+                    detail: { text: selectedText },
+                  })
+                )
+                onHide()
+              }}
+            >
+              <MaterialIcon type="smart_toy" />
+              {t('ask_ai', 'Ask AI')}
+            </button>
+          </>
+        )}
         {showChangesButtons && (
           <>
             <div className="review-tooltip-menu-divider" />

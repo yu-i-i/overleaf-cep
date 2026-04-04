@@ -57,7 +57,7 @@ async function loadManifest() {
       webpackManifest = {}
   }
 }
-function loadManifestFromWebpackDevServer(done = function () {}) {
+function loadManifestFromWebpackDevServer(done = function () { }) {
   fetchJson(new URL(`/manifest.json`, Settings.apis.webpack.url), {
     headers: {
       Host: 'localhost',
@@ -417,6 +417,8 @@ export default async function (webRouter, privateApiRouter, publicApiRouter) {
       cioWriteKey: Settings.analytics?.cio?.writeKey,
       cioSiteId: Settings.analytics?.cio?.siteId,
       linkedInInsightsPartnerId: Settings.analytics?.linkedIn?.partnerId,
+      llmAllowUserSettings: Settings.llm?.allowUserSettings ?? false,
+      llmEnabled: Settings.llm?.enabled ?? false,
     }
     next()
   })

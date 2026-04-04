@@ -2,6 +2,7 @@ import type { DefaultNavbarMetadata } from '@/shared/components/types/default-na
 import NavDropdownMenu from '@/shared/components/navbar/nav-dropdown-menu'
 import NavDropdownLinkItem from '@/shared/components/navbar/nav-dropdown-link-item'
 import { useSendProjectListMB } from '@/features/project-list/components/project-list-events'
+import getMeta from '@/utils/meta'
 
 export default function AdminMenu({
   canDisplayAdminMenu,
@@ -66,6 +67,11 @@ export default function AdminMenu({
       {canDisplayScriptLogMenu ? (
         <NavDropdownLinkItem href="/admin/script-logs">
           View Script Logs
+        </NavDropdownLinkItem>
+      ) : null}
+      {(getMeta('ol-ExposedSettings') as any)?.llmEnabled ? (
+        <NavDropdownLinkItem href="/admin/llm/settings">
+          LLM Settings
         </NavDropdownLinkItem>
       ) : null}
     </NavDropdownMenu>
