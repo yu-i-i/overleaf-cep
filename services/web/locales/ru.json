@@ -422,6 +422,7 @@
   "search_bib_files": "Поиск по автору, названию, году",
   "search_projects": "Поиск по проектам",
   "search_references": "Поиск .bib файлов в проекте",
+  "search_replace": "Заменить",
   "security": "Безопасность",
   "select_a_new_owner_for_projects": "Выберите нового владельца для проектов этого пользователя",
   "select_all_projects": "Выбрать все проекты",

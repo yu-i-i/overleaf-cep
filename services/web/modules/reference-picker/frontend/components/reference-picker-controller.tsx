@@ -17,29 +17,33 @@ export default function ReferencePickerController() {
   const onApply = useCallback(
     (selectedKeys: string[]) => {
       if (!view || from == null || to == null) return
-      let insert = selectedKeys.join(', ')
 
-      // Smart separator handling for cursor-only insertion (from === to)
-      if (from === to && insert.length > 0) {
-        const bFrom = braceFrom ?? from
-        const bTo = braceTo ?? to
-        // Add ", " before inserted keys if adjacent to existing content
-        if (from > bFrom) {
-          const charBefore = view.state.doc.sliceString(from - 1, from)
-          if (!/[,\s]/.test(charBefore)) {
-            insert = ', ' + insert
-          }
-        }
-        // Add ", " after inserted keys if adjacent to existing content
-        if (to < bTo) {
-          const charAfter = view.state.doc.sliceString(to, to + 1)
-          if (!/[,\s]/.test(charAfter)) {
-            insert = insert + ', '
-          }
-        }
-      }
+      const doc = view.state.doc
+      const bFrom = braceFrom ?? from
+      const bTo = braceTo ?? to
 
-      view.dispatch({ changes: { from, to, insert } })
+      let insertCore = selectedKeys.join(', ')
+
+      // Expand over spaces/tabs and commas around selection
+      let start = from
+      let end = to
+      while (start > bFrom && /[ \t,]/.test(doc.sliceString(start - 1, start))) start--
+      while (end < bTo && /[ \t,]/.test(doc.sliceString(end, end + 1))) end++
+
+      let prefix = ''
+      let suffix = ''
+      if (start > bFrom && doc.sliceString(start - 1, start) !== '\n') prefix = ', '
+      if (end < bTo && insertCore) suffix = ', '
+
+      const insert = prefix + insertCore + suffix
+
+      // Compute cursor position after inserted tokens
+      const cursorPos = start + prefix.length + insertCore.length + (end === bTo ? 0 : 1)
+
+      view.dispatch({
+        changes: { from: start, to: end, insert },
+        selection: { anchor: cursorPos },
+      })
       view.focus()
     },
     [view, from, to, braceFrom, braceTo]
@@ -50,12 +54,11 @@ export default function ReferencePickerController() {
       const detail = evt.detail || {}
 
       if (detail.insertFrom == null) {
-        // Not inside a cite — insert \cite{} and open modal
         if (!view) return
         const pos = view.state.selection.main.head
         const insertText = '\\cite{}'
         view.dispatch({
-          changes: { from: pos, to: pos, insert: insertText },
+          changes: { from: pos, to: pos, insert: insertText }
         })
         const newFrom = pos + insertText.indexOf('{') + 1
         setFrom(newFrom)
@@ -75,11 +78,7 @@ export default function ReferencePickerController() {
     }
 
     window.addEventListener('reference:openPicker', handler as EventListener)
-    return () =>
-      window.removeEventListener(
-        'reference:openPicker',
-        handler as EventListener
-      )
+    return () => window.removeEventListener('reference:openPicker', handler as EventListener)
   }, [view])
 
   return (
