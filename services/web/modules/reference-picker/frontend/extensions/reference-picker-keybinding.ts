@@ -13,7 +13,7 @@ function parseTokens(
   text: string
 ): { value: string; start: number; end: number }[] {
   const tokens: { value: string; start: number; end: number }[] = []
-  const re = /[^\s,]+/g
+  const re = /[^\s,%]+/g
   let m
   while ((m = re.exec(text)) !== null) {
     tokens.push({ value: m[0], start: m.index, end: m.index + m[0].length })
@@ -49,18 +49,10 @@ function openPickerIfInCite(view: EditorView): boolean {
       const selTo = Math.min(braceTo, mainSel.to)
       const hasSelection = selFrom < selTo
 
+      const fullContent = view.state.doc.sliceString(braceFrom, braceTo)
       if (hasSelection) {
         const selectedText = view.state.doc.sliceString(selFrom, selTo)
-
-        // Don't open modal if the selection contains unpaired braces
-        const opens = (selectedText.match(/{/g) || []).length
-        const closes = (selectedText.match(/}/g) || []).length
-        if (opens !== closes) {
-          return startCompletion(view)
-        }
-
         // Parse the full cite content into tokens for partial-key expansion
-        const fullContent = view.state.doc.sliceString(braceFrom, braceTo)
         const tokens = parseTokens(fullContent)
 
         // Relative selection offsets within the cite content
@@ -92,20 +84,31 @@ function openPickerIfInCite(view: EditorView): boolean {
           })
         )
       } else {
-        // No selection — insert at cursor position
+        let insertPos = pos
+        // If the insert position is inside a token, move it forward
+        const relPos = pos - braceFrom
+        if (relPos > 0 && !/[\s,%]/.test(fullContent[relPos - 1])) {
+          for (let j = relPos; j <= fullContent.length; j++) {
+            const ch = fullContent[j]
+            if (j === fullContent.length || /[\s,%]/.test(ch)) {
+              insertPos = braceFrom + j
+              break
+            }
+          }
+        }
+
         window.dispatchEvent(
           new CustomEvent('reference:openPicker', {
             detail: {
               braceFrom,
               braceTo,
-              insertFrom: pos,
-              insertTo: pos,
+              insertFrom: insertPos,
+              insertTo: insertPos,
               selectedTokens: [],
             },
           })
         )
       }
-
       return true
     }
   } catch {
