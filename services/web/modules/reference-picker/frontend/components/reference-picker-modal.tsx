@@ -6,38 +6,55 @@ import {
   OLModalHeader,
   OLModalTitle,
 } from '@/shared/components/ol/ol-modal'
+import OLFormGroup from '@/shared/components/ol/ol-form-group'
+import OLFormControl from '@/shared/components/ol/ol-form-control'
+import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
 import OLButton from '@/shared/components/ol/ol-button'
+import OLRow from '@/shared/components/ol/ol-row'
+import OLCol from '@/shared/components/ol/ol-col'
+import OLTag from '@/shared/components/ol/ol-tag'
+import MaterialIcon from '@/shared/components/material-icon'
 import { useReferencesContext } from '@/features/ide-react/context/references-context'
-import Tag from '@/shared/components/tag'
 import { useTranslation } from 'react-i18next'
 import type { Bib2JsonEntry } from '@/features/ide-react/references/types'
 
 type FocusArea = 'search' | 'list' | 'footer'
 
-const SEARCH_FIELD_OPTIONS = [
-  { label: 'Author', value: 'author' },
-  { label: 'Title', value: 'title' },
-  { label: 'Year', value: 'year' },
-  { label: 'Journal', value: 'journal' },
-  { label: 'Key', value: 'EntryKey' },
-] as const
+function highlight(text: string, tokens: string[]) {
+  if (!text || tokens.length === 0) return text
 
-const DEFAULT_FIELDS = ['author', 'title', 'year', 'journal', 'EntryKey']
+  const parts: React.ReactNode[] = [text]
+  let globalIndex = 0
 
-function matchesFields(
-  entry: Bib2JsonEntry,
-  query: string,
-  fields: string[]
-): boolean {
-  const q = query.toLowerCase()
-  const noFilter = fields.length === 0
-  if ((noFilter || fields.includes('EntryKey')) && entry.EntryKey.toLowerCase().includes(q)) return true
-  const f = entry.Fields
-  if ((noFilter || fields.includes('title')) && f.title?.toLowerCase().includes(q)) return true
-  if ((noFilter || fields.includes('author')) && f.author?.toLowerCase().includes(q)) return true
-  if ((noFilter || fields.includes('journal')) && f.journal?.toLowerCase().includes(q)) return true
-  if ((noFilter || fields.includes('year')) && f.year?.toLowerCase().includes(q)) return true
-  return false
+  tokens.forEach(token => {
+    const next: React.ReactNode[] = []
+    parts.forEach(part => {
+      if (typeof part !== 'string') {
+        next.push(part)
+        return
+      }
+
+      const lower = part.toLowerCase()
+      const t = token.toLowerCase()
+      let start = 0
+      let idx
+
+      while ((idx = lower.indexOf(t, start)) !== -1) {
+        if (idx > start) next.push(part.slice(start, idx))
+        next.push(
+          <span key={`${idx}-${token}-${globalIndex++}`} className="found-token">
+            {part.slice(idx, idx + t.length)}
+          </span>
+        )
+        start = idx + t.length
+      }
+
+      if (start < part.length) next.push(part.slice(start))
+    })
+    parts.splice(0, parts.length, ...next)
+  })
+
+  return parts
 }
 
 export default function ReferencePickerModal({
@@ -56,78 +73,97 @@ export default function ReferencePickerModal({
 
   const [query, setQuery] = useState('')
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
-
   const [results, setResults] = useState<{ _source: Bib2JsonEntry }[]>([])
-  const [selectedFields, setSelectedFields] =
-    useState<string[]>(DEFAULT_FIELDS)
 
-  // Ref holding initial key tokens that still need to be matched against
-  // actual bib entries once the first search completes.
   const pendingInitialKeysRef = useRef<string[]>([])
+  const requestIdRef = useRef(0)
+  const searchFnRef = useRef(searchLocalReferences)
 
-  // Reset state and load fresh entries every time the modal opens
-  const [openCount, setOpenCount] = useState(0)
   useEffect(() => {
-    if (show) {
-      setQuery('')
-      setSelectedKeys([])
-      setResults([])
-      pendingInitialKeysRef.current = [...initialKeys]
-      setOpenCount(c => c + 1)
-    }
-  }, [show, initialKeys])
+    searchFnRef.current = searchLocalReferences
+  }, [searchLocalReferences])
+
+  const tokens = useMemo(
+    () => query.toLowerCase().trim().split(/\s+/).filter(Boolean),
+    [query]
+  )
 
   useEffect(() => {
     if (!show) return
-    let cancelled = false
+
+    requestIdRef.current++
+
+    setQuery('')
+    setSelectedKeys([])
+    setResults([])
+
+    pendingInitialKeysRef.current = [...initialKeys]
+
+    const requestId = ++requestIdRef.current
 
     const perform = async () => {
-      // The module's enhanced index handles empty query as "list all"
-      const r = await searchLocalReferences(query.trim() || '')
-      if (cancelled) return
+      const r = await searchFnRef.current('')
 
-      // Apply field filtering client-side
-      if (query.trim() && selectedFields.length > 0 && selectedFields.length < DEFAULT_FIELDS.length) {
-        setResults(r.hits.filter(h => matchesFields(h._source, query.trim(), selectedFields)))
-      } else {
-        setResults(r.hits)
-      }
+      if (requestId !== requestIdRef.current) return
 
-      // Match pending initial keys (from selection) against known bib keys
+      setResults(r.hits)
+
       if (pendingInitialKeysRef.current.length > 0) {
         const knownKeys = new Set(r.hits.map(h => h._source.EntryKey))
-        const matched = pendingInitialKeysRef.current.filter(k =>
-          knownKeys.has(k)
-        )
-        if (matched.length > 0) {
-          setSelectedKeys(matched)
-        }
+        const matched = pendingInitialKeysRef.current.filter(k => knownKeys.has(k))
+        if (matched.length > 0) setSelectedKeys(matched)
         pendingInitialKeysRef.current = []
       }
     }
 
     perform()
-    return () => {
-      cancelled = true
-    }
-    // openCount ensures a fresh search on every modal open
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, searchLocalReferences, selectedFields, show, openCount])
+  }, [show, initialKeys])
 
-  const filteredKeys = useMemo(
-    () => results.map(r => r._source.EntryKey),
-    [results]
-  )
+  useEffect(() => {
+    if (!show) return
+
+    const requestId = ++requestIdRef.current
+
+    const perform = async () => {
+      const r = await searchFnRef.current(query.trim() || '')
+
+      if (requestId !== requestIdRef.current) return
+
+      setResults(r.hits)
+    }
+
+    perform()
+  }, [query])
+
+  const filteredKeys = results.map(r => r._source.EntryKey)
 
   const [focusArea, setFocusArea] = useState<FocusArea>('search')
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
   const searchRef = useRef<HTMLInputElement | null>(null)
-  const footerRef = useRef<HTMLDivElement | null>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
+  const insertButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  const removeOne = useCallback((key: string) => {
+    setSelectedKeys(prev => {
+      const index = prev.indexOf(key)
+      if (index === -1) return prev
+      return [...prev.slice(0, index), ...prev.slice(index + 1)]
+    })
+  }, [])
+
+  const addOne = useCallback((key: string) => {
+    setSelectedKeys(prev => [...prev, key])
+  }, [])
 
   const toggleKey = useCallback((key: string) => {
-    setSelectedKeys(prev =>
-      prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]
-    )
+    setSelectedKeys(prev => {
+      const index = prev.indexOf(key)
+      if (index !== -1) {
+        // remove one occurrence
+        return [...prev.slice(0, index), ...prev.slice(index + 1)]
+      }
+      return [...prev, key]
+    })
   }, [])
 
   const handleApply = useCallback(() => {
@@ -164,8 +200,9 @@ export default function ReferencePickerModal({
           )
         } else if (event.key === ' ') {
           event.preventDefault()
-          if (focusedIndex != null && filteredKeys[focusedIndex]) {
-            toggleKey(filteredKeys[focusedIndex])
+          if (focusedIndex !== null) {
+            const k = filteredKeys[focusedIndex]
+            if (k) toggleKey(k)
           }
         } else if (event.key === 'Enter') {
           event.preventDefault()
@@ -174,165 +211,171 @@ export default function ReferencePickerModal({
       }
 
       if (event.key === 'Tab') {
+        const isShift = event.shiftKey
         event.preventDefault()
-        const areas: FocusArea[] = ['search', 'list', 'footer']
-        const currentIdx = areas.indexOf(focusArea)
-        const nextIdx = event.shiftKey
-          ? (currentIdx - 1 + areas.length) % areas.length
-          : (currentIdx + 1) % areas.length
-        const nextArea = areas[nextIdx]
-        setFocusArea(nextArea)
-        if (nextArea === 'list') {
-          setFocusedIndex(0)
-        } else if (nextArea === 'search') {
-          setFocusedIndex(null)
-          setTimeout(() => searchRef.current?.focus(), 0)
-        } else {
-          setFocusedIndex(null)
-          setTimeout(
-            () => footerRef.current?.querySelector('button')?.focus(),
-            0
-          )
+        event.stopPropagation()
+
+        if (!isShift) {
+          if (focusArea === 'search') {
+            setFocusArea('list')
+            setFocusedIndex(0)
+            return
+          }
+          if (focusArea === 'list') {
+            setFocusArea('footer')
+            setFocusedIndex(null)
+            cancelButtonRef.current?.focus()
+            return
+          }
+          if (focusArea === 'footer') {
+            if (document.activeElement === cancelButtonRef.current) {
+              insertButtonRef.current?.focus()
+              return
+            } else {
+              setFocusArea('search')
+              setFocusedIndex(null)
+              searchRef.current?.focus()
+              return
+            }
+          }
+        }
+
+        if (isShift) {
+          if (focusArea === 'search') {
+            setFocusArea('footer')
+            setFocusedIndex(null)
+            insertButtonRef.current?.focus()
+            return
+          }
+          if (focusArea === 'list') {
+            setFocusArea('search')
+            setFocusedIndex(null)
+            searchRef.current?.focus()
+            return
+          }
+          if (focusArea === 'footer') {
+            if (document.activeElement === insertButtonRef.current) {
+              cancelButtonRef.current?.focus()
+              return
+            } else {
+              setFocusArea('list')
+              setFocusedIndex(prev => prev ?? 0)
+              return
+            }
+          }
         }
       }
     },
-    [focusArea, focusedIndex, filteredKeys, toggleKey, handleApply]
+    [focusArea, filteredKeys, focusedIndex, toggleKey, handleApply]
   )
 
   useEffect(() => {
     if (focusArea === 'list' && focusedIndex !== null) {
-      const el = document.getElementById(
-        `reference-picker-item-${focusedIndex}`
-      )
-      if (el) {
-        el.focus()
-        searchRef.current?.setAttribute('aria-activedescendant', el.id)
-      }
-    }
-    if (focusArea !== 'list') {
-      searchRef.current?.removeAttribute('aria-activedescendant')
+      const el = document.getElementById(`reference-picker-item-${focusedIndex}`)
+      if (el) el.focus()
     }
   }, [focusArea, focusedIndex])
-
-  const toggleField = useCallback((value: string) => {
-    setSelectedFields(prev =>
-      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
-    )
-  }, [])
 
   return (
     <OLModal show={show} onHide={onClose} size="lg">
       <OLModalHeader>
-        <OLModalTitle data-testid="reference-picker-title">
-          {t('references_picker_title')}
-        </OLModalTitle>
+        <OLModalTitle>{t('references_picker_title')}</OLModalTitle>
       </OLModalHeader>
-      <OLModalBody>
-        <div onKeyDown={onKeyDown} className="reference-picker">
-          <input
-            aria-label={t('search_references')}
-            type="search"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            autoFocus
-            ref={searchRef}
-            className="form-control"
-            data-testid="reference-picker-search"
-          />
-
-          <div className="search-selectors">
-            {SEARCH_FIELD_OPTIONS.map(s => (
-              <label key={s.value} className="search-selector-label">
-                <input
-                  type="checkbox"
-                  checked={selectedFields.includes(s.value)}
-                  onChange={() => toggleField(s.value)}
+      <div onKeyDown={onKeyDown}>
+        <OLModalBody className="references-search-modal">
+          <div className="container-fluid">
+            <OLRow>
+              <OLFormGroup>
+                <OLFormControl
+                  name="search"
+                  aria-label={t('search_references')}
+                  type="search"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder={t('search_references')}
+                  prepend={<MaterialIcon type="search" />}
+                  ref={searchRef}
                 />
-                <span>{s.label}</span>
-              </label>
-            ))}
-          </div>
+              </OLFormGroup>
+            </OLRow>
 
-          <div
-            className="selected-chips"
-            data-testid="reference-picker-selected-chips"
-          >
-            {selectedKeys.map(key => (
-              <Tag key={key} closeBtnProps={{ onClick: () => toggleKey(key) }}>
-                {key}
-              </Tag>
-            ))}
-          </div>
-
-          <div
-            role="listbox"
-            aria-label={t('reference_search_results')}
-            id="reference-picker-list"
-            data-testid="reference-picker-list"
-          >
-            {results.length === 0 ? (
-              <div
-                className="reference-picker-empty"
-                data-testid="reference-picker-empty"
-              >
-                {t('references_picker_empty_hint')}
-              </div>
-            ) : (
-              results.map((hit, index) => {
-                const key = hit._source.EntryKey
-                const { title = '', author = '', year = '', journal = '' } =
-                  hit._source.Fields ?? {}
-                const meta = [
-                  author,
-                  author && year ? ` — ${year}` : year,
-                  journal ? ` · ${journal}` : '',
-                ].join('')
-
-                return (
-                  <label
-                    id={`reference-picker-item-${index}`}
-                    key={key}
-                    className={`d-block ${focusedIndex === index ? 'focused' : ''}`}
-                    role="option"
-                    aria-selected={selectedKeys.includes(key)}
-                    tabIndex={0}
-                    onClick={() => setFocusedIndex(index)}
-                    data-entry-key={key}
-                    data-testid={`reference-picker-item-${key}`}
+            <OLRow>
+              <div className="selected-key-tag">
+                {selectedKeys.map((key, idx) => (
+                  <OLTag
+                    key={`${key}-${idx}`}
+                    closeBtnProps={{ onClick: () => removeOne(key) }}
                   >
-                    <div className="hit-head">
-                      <input
-                        type="checkbox"
-                        checked={selectedKeys.includes(key)}
-                        onChange={() => toggleKey(key)}
-                      />
-                      <span className="hit-key">{key}</span>
-                    </div>
-                    <div className="hit-main">
-                      <span className="hit-title">{title}</span>
-                      <span className="hit-meta">{meta}</span>
-                    </div>
-                  </label>
-                )
-              })
-            )}
+                    {key}
+                  </OLTag>
+                ))}
+              </div>
+            </OLRow>
+
+            <OLRow className="search-results">
+              <OLCol md={12} className="search-results-scroll-container">
+                <ul className="list-unstyled">
+                  {results.map((hit, index) => {
+                    const key = hit._source.EntryKey
+                    const { title = '', author = '', year = '', journal = '' } =
+                      hit._source.Fields ?? {}
+
+                    return (
+                      <li
+                        key={key}
+                        id={`reference-picker-item-${index}`}
+                        tabIndex={-1}
+                        onClick={() => {
+                          setFocusArea('list')
+                          setFocusedIndex(index)
+                          toggleKey(key)
+                        }}
+                        className={`search-result-hit ${
+                          focusedIndex === index ? 'focused' : ''
+                        } ${selectedKeys.includes(key) ? 'selected-search-result-hit' : ''}`}
+                      >
+                        <OLRow>
+                          <OLCol md={12}>
+                            <span className="hit-title">
+                              {highlight(title, tokens)}
+                            </span>
+                            <span className="float-end">
+                              {highlight(key, tokens)}
+                            </span>
+                          </OLCol>
+                        </OLRow>
+
+                        <OLRow>
+                          <OLCol md={12}>
+                            {[
+                              highlight(author, tokens),
+                              highlight(journal, tokens),
+                              highlight(year, tokens),
+                            ]
+                              .filter(Boolean)
+                              .reduce((acc, val, i) =>
+                                i === 0 ? [val] : acc.concat('\u00A0—\u00A0', val),
+                              [])}
+                          </OLCol>
+                        </OLRow>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </OLCol>
+            </OLRow>
           </div>
-        </div>
-      </OLModalBody>
-      <OLModalFooter>
-        <div ref={footerRef}>
-          <OLButton variant="secondary" onClick={onClose}>
+        </OLModalBody>
+
+        <OLModalFooter>
+          <OLButton variant="secondary" onClick={onClose} ref={cancelButtonRef}>
             {t('cancel')}
           </OLButton>
-          <OLButton
-            variant="primary"
-            onClick={handleApply}
-            data-testid="reference-picker-insert"
-          >
-            {t('insert')}
+          <OLButton variant="primary" onClick={handleApply} ref={insertButtonRef}>
+            {initialKeys.length ? t('search_replace') : t('insert')}
           </OLButton>
-        </div>
-      </OLModalFooter>
+        </OLModalFooter>
+      </div>
     </OLModal>
   )
 }
