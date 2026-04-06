@@ -1138,7 +1138,7 @@ module.exports = {
     referenceIndices: [
       Path.resolve(
         __dirname,
-        '../modules/reference-picker/frontend/reference-index/enhanced-reference-index.ts'
+        '../modules/reference-picker/frontend/reference-index/advanced-reference-index.ts'
       ),
     ],
     railEntries: [],
