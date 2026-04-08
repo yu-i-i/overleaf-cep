@@ -1,4 +1,4 @@
-import { callbackifyMultiResult } from '@overleaf/promise-utils'
+import { callbackifyMultiResult, callbackify } from '@overleaf/promise-utils'
 import OError from '@overleaf/o-error'
 import settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
@@ -62,13 +62,33 @@ async function joinProject(projectId, user) {
   }
 }
 
+async function leaveProject(projectId, lastUserLeft) {
+  logger.debug({ projectId, lastUserLeft }, 'sending leave project request to web')
+  const url = new URL(settings.apis.web.url)
+  url.pathname = Path.posix.join('project', projectId, 'leave')
+  try {
+    await fetchJson(url, {
+      method: 'POST',
+      basicAuth: {
+        user: settings.apis.web.user,
+        password: settings.apis.web.pass,
+      },
+      json: { lastUserLeft },
+    })
+  } catch (error) {
+    logger.warn({ error, projectId }, 'leave project request failed')
+  }
+}
+
 export default {
   joinProject: callbackifyMultiResult(joinProject, [
     'project',
     'privilegeLevel',
     'userMetadata',
   ]),
+  leaveProject: callbackify(leaveProject),
   promises: {
     joinProject,
+    leaveProject,
   },
 }

@@ -344,6 +344,13 @@ export interface Meta {
   'ol-validationStatus': ValidationStatus
   'ol-viaDomainCapture': boolean
   'ol-wikiEnabled': boolean
+  'ol-webdavConfig': {
+    url: string
+    basePath: string
+    enabled: boolean
+    hasUsername: boolean
+    hasPassword: boolean
+  } | null
   'ol-writefullEnabled': boolean
   'ol-writefullEnv': WritefullPublicEnv
   'ol-wsUrl': string

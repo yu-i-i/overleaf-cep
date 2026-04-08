@@ -1122,6 +1122,10 @@ module.exports = {
         __dirname,
         '../modules/git-bridge/frontend/js/card/components/git-integration-card.tsx'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/webdav/frontend/js/components/webdav-integration-card'
+      ),
     ],
     referenceSearchSetting: [],
     errorLogsComponents: [],
@@ -1144,6 +1148,7 @@ module.exports = {
     'template-gallery',
     'git-bridge',
     'zotero',
+    'webdav',
   ],
   viewIncludes: {},
 

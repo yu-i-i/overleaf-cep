@@ -322,6 +322,16 @@ const _ProjectController = {
         )
       : ProjectCreationHandler.promises.createBasicProject(userId, projectName))
 
+    // If webdavConfig is provided at project creation, save it (no connection test)
+    const webdavConfig = req.body.webdavConfig
+    if (webdavConfig?.url) {
+      try {
+        await ProjectUpdateHandler.promises.setWebDAVConfig(project._id, webdavConfig)
+      } catch (err) {
+        // Non-fatal: project is still created even if WebDAV config fails
+      }
+    }
+
     ProjectAuditLogHandler.addEntryIfManagedInBackground(
       project._id,
       'project-created',
@@ -543,6 +553,7 @@ const _ProjectController = {
           pendingEditor_refs: 1, // used for link sharing analytics
           reviewer_refs: 1,
           imageName: 1,
+          webdavConfig: 1,
         }),
         userIsMemberOfGroupSubscription: sessionUser
           ? (async () =>
@@ -961,6 +972,13 @@ const _ProjectController = {
         debugPdfDetach,
         showSymbolPalette,
         symbolPaletteAvailable: Features.hasFeature('symbol-palette'),
+        webdavConfig: project.webdavConfig ? {
+          url: project.webdavConfig.url,
+          basePath: project.webdavConfig.basePath,
+          enabled: project.webdavConfig.enabled,
+          hasUsername: !!project.webdavConfig.username,
+          hasPassword: !!project.webdavConfig.password,
+        } : null,
         userRestrictions: Array.from(req.userRestrictions || []),
         showAiFeatures,
         onAiFreeTrial:
@@ -1214,6 +1232,14 @@ const _ProjectController = {
       trashed,
       owner_ref: project.owner_ref,
       isV1Project: false,
+      webdavConfig: project.webdavConfig ? {
+        url: project.webdavConfig.url,
+        basePath: project.webdavConfig.basePath,
+        enabled: project.webdavConfig.enabled,
+        lastSyncDate: project.webdavConfig.lastSyncDate,
+        hasUsername: !!project.webdavConfig.username,
+        hasPassword: !!project.webdavConfig.password,
+      } : undefined,
     }
     if (accessLevel === PrivilegeLevels.READ_ONLY && source === Sources.TOKEN) {
       model.owner_ref = null

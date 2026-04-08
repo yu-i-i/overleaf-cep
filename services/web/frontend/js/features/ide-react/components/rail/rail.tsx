@@ -56,6 +56,10 @@ const moduleRailPopovers = (
   }[]
 ).map(({ import: { default: element } }) => element)
 
+const integrationPanelComponents = importOverleafModules(
+  'integrationPanelComponents'
+) as { import: { default: unknown }; path: string }[]
+
 export const RailLayout = () => {
   const { sendEvent } = useEditorAnalytics()
   const { t } = useTranslation()
@@ -112,7 +116,7 @@ export const RailLayout = () => {
         icon: 'integration_instructions',
         title: t('integrations'),
         component: <IntegrationsPanel />,
-        hide: !isOverleaf && !gitBridgeEnabled,
+        hide: !isOverleaf && !gitBridgeEnabled && moduleRailEntries.length === 0 && integrationPanelComponents.length === 0,
       },
       {
         key: 'review-panel',
