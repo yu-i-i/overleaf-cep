@@ -73,7 +73,6 @@
     "last 1 year",
     "safari > 14"
   ],
-
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.25",
     "@ai-sdk/openai": "^3.0.41",
@@ -189,6 +188,7 @@
     "utf-8-validate": "^5.0.2",
     "valid-data-url": "^2.0.0",
     "valid-url": "^1.0.9",
+    "webdav": "^5.7.1",
     "xml-crypto": "^2.1.6",
     "xml2js": "^0.6.2",
     "xregexp": "^4.3.0",

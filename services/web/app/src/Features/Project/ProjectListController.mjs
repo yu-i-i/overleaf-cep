@@ -651,7 +651,7 @@ async function _getProjects(
   const results = await Promise.all([
     ProjectGetter.promises.findAllUsersProjects(
       userId,
-      'name lastUpdated lastUpdatedBy publicAccesLevel archived trashed owner_ref tokens'
+      'name lastUpdated lastUpdatedBy publicAccesLevel archived trashed owner_ref tokens webdavConfig'
     ),
     TagsHandler.promises.getAllTags(userId),
   ])
@@ -795,6 +795,18 @@ function _formatProjectInfo(project, accessLevel, source, userId) {
     source,
     archived,
     trashed,
+    ...(project.webdavConfig?.enabled
+      ? {
+          webdavConfig: {
+            url: project.webdavConfig.url,
+            basePath: project.webdavConfig.basePath,
+            enabled: project.webdavConfig.enabled,
+            lastSyncDate: project.webdavConfig.lastSyncDate,
+            hasUsername: !!project.webdavConfig.username,
+            hasPassword: !!project.webdavConfig.password,
+          },
+        }
+      : {}),
   }
 }
 

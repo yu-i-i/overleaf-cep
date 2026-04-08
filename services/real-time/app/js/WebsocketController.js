@@ -193,6 +193,15 @@ export default WebsocketController = {
             }
           }
         )
+        // Notify web that last user left (for WebDAV sync etc.)
+        WebApiManager.leaveProject(projectId, true, function (err) {
+          if (err) {
+            logger.warn(
+              { err, projectId },
+              'error notifying web of project leave'
+            )
+          }
+        })
       }
       callback()
     }, WebsocketController.FLUSH_IF_EMPTY_DELAY)

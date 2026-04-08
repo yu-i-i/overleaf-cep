@@ -23,6 +23,7 @@ import FileWriter from '../../infrastructure/FileWriter.mjs'
 import EditorRealTimeController from '../Editor/EditorRealTimeController.mjs'
 import { callbackifyMultiResult, callbackify } from '@overleaf/promise-utils'
 import { iterablePaths } from './IterablePath.mjs'
+import Modules from '../../infrastructure/Modules.mjs'
 
 const LOCK_NAMESPACE = 'sequentialProjectStructureUpdateLock'
 const VALID_ROOT_DOC_EXTENSIONS = Settings.validRootDocExtensions
@@ -379,6 +380,7 @@ const addFile = wrapWithLock({
       { newFiles, newProject: project },
       source
     )
+    Modules.promises.hooks.fire('projectFileAdded', projectId).catch(() => {})
     return { fileRef, folderId, createdBlob }
   },
 })
@@ -826,6 +828,7 @@ const deleteEntity = wrapWithLock(
       entityType,
       subtreeEntityIds,
     })
+    Modules.promises.hooks.fire('projectEntityDeleted', projectId, path.fileSystem).catch(() => {})
 
     return entityId
   }
@@ -939,13 +942,15 @@ const moveEntity = wrapWithLock(
       logger.error({ err }, 'error sending tpds update')
     }
 
-    return await DocumentUpdaterHandler.promises.updateProjectStructure(
+    const result = await DocumentUpdaterHandler.promises.updateProjectStructure(
       projectId,
       projectHistoryId,
       userId,
       changes,
       source
     )
+    Modules.promises.hooks.fire('projectEntityMoved', projectId, startPath, endPath).catch(() => {})
+    return result
   }
 )
 
@@ -998,13 +1003,15 @@ const renameEntity = wrapWithLock(
     } catch (err) {
       logger.error({ err }, 'error sending tpds update')
     }
-    return await DocumentUpdaterHandler.promises.updateProjectStructure(
+    const result = await DocumentUpdaterHandler.promises.updateProjectStructure(
       projectId,
       projectHistoryId,
       userId,
       changes,
       source
     )
+    Modules.promises.hooks.fire('projectEntityMoved', projectId, startPath, endPath).catch(() => {})
+    return result
   }
 )
 
@@ -1408,6 +1415,7 @@ const ProjectEntityUpdateHandler = {
       { oldFiles, newFiles, newProject },
       source
     )
+    Modules.promises.hooks.fire('projectFileAdded', projectId).catch(() => {})
 
     return updatedFileRef
   },
