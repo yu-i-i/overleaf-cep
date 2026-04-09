@@ -5,7 +5,7 @@ import ProjectHelper from '../Project/ProjectHelper.mjs'
 import { expressify } from '@overleaf/promise-utils'
 import { parseReq, z } from '../../infrastructure/Validation.mjs'
 import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
-import { User } from '../../models/User.mjs'
+import { GuestUserProjectCreationForbiddenError } from '../../../../modules/authentication/guest-user/app/src/GuestUserProjectCreationGuard.mjs'
 
 const numericId = z.string().regex(/^[0-9]+$/)
 const objectId = z.string().regex(/^[a-fA-F0-9]{24}$/)
@@ -83,38 +83,34 @@ const TemplatesController = {
   },
 
   async createProjectFromV1Template(req, res) {
-    const currentUser = SessionManager.getSessionUser(req.session)
-    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
-    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
-      return HttpErrorHandler.forbidden(
-        req,
-        res,
-        'Your account is not allowed to create projects.'
-      )
-    }
     const { body } = parseReq(req, createProjectFromV1TemplateSchema, {
       fallbackSchema: createProjectFromV1TemplateFallbackSchema,
     })
     const userId = SessionManager.getLoggedInUserId(req.session)
 
-console.log("BODY = ", body)
-
-    const project = await TemplatesManager.promises.createProjectFromV1Template(
-      body.brandVariationId,
-      body.compiler,
-      body.mainFile,
-      body.templateId,
-      body.templateName,
-      body.templateVersionId,
-      userId,
-      body.imageName,
-      body.language
-    )
-    delete req.session.templateData
-    if (!project) {
-      throw new Error('failed to create project from template')
+    try {
+      const project = await TemplatesManager.promises.createProjectFromV1Template(
+        body.brandVariationId,
+        body.compiler,
+        body.mainFile,
+        body.templateId,
+        body.templateName,
+        body.templateVersionId,
+        userId,
+        body.imageName,
+        body.language
+      )
+      delete req.session.templateData
+      if (!project) {
+        throw new Error('failed to create project from template')
+      }
+      return res.redirect(`/project/${project._id}`)
+    } catch (err) {
+      if (err instanceof GuestUserProjectCreationForbiddenError) {
+        return HttpErrorHandler.forbidden(req, res, err.message)
+      }
+      throw err
     }
-    return res.redirect(`/project/${project._id}`)
   },
 }
 

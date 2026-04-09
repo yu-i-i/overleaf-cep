@@ -23,7 +23,7 @@ import AnalyticsManager from '../Analytics/AnalyticsManager.mjs'
 import { multer, multerUploadHandler } from '../../infrastructure/Multer.mjs'
 import { parseReq, z, zz } from '../../infrastructure/Validation.mjs'
 import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
-import { User } from '../../models/User.mjs'
+import { GuestUserProjectCreationForbiddenError } from '../../../../modules/authentication/guest-user/app/src/GuestUserProjectCreationGuard.mjs'
 
 /**
  * @typedef {import('express').Request} Request
@@ -89,16 +89,6 @@ const upload = multerUploadHandler({
  * @param {Response} res
  */
 async function uploadProject(req, res) {
-  const currentUser = SessionManager.getSessionUser(req.session)
-  const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
-  if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
-    return HttpErrorHandler.forbidden(
-      req,
-      res,
-      'Your account is not allowed to create projects.'
-    )
-  }
-
   const timer = new metrics.Timer('project-upload')
   const userId = SessionManager.getLoggedInUserId(req.session)
   const { body, file } = parseReq(req, uploadProjectSchema, {
@@ -118,6 +108,9 @@ async function uploadProject(req, res) {
           { err: error, filePath: path, fileName: name },
           'error uploading project'
         )
+        if (error instanceof GuestUserProjectCreationForbiddenError) {
+          return HttpErrorHandler.forbidden(req, res, error.message)
+        }
         if (error instanceof InvalidZipFileError) {
           return res.status(422).json({
             success: false,
