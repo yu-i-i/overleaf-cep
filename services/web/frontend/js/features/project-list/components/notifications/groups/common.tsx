@@ -55,6 +55,9 @@ function CommonNotification({ notification }: CommonNotificationProps) {
   }
 
   const { _id: id, templateKey, html } = notification
+  const htmlContent = html ? (
+    <div dangerouslySetInnerHTML={{ __html: html }} />
+  ) : null
 
   return (
     <>
@@ -291,13 +294,13 @@ function CommonNotification({ notification }: CommonNotificationProps) {
         <Notification
           type="warning"
           onDismiss={() => id && handleDismiss(id)}
-          content={html}
+          content={htmlContent}
         />
       ) : (
         <Notification
           type="info"
           onDismiss={() => id && handleDismiss(id)}
-          content={html}
+          content={htmlContent}
         />
       )}
     </>

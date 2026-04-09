@@ -626,6 +626,15 @@ const RedisManager = {
     return crypto.createHash('sha1').update(docLines, 'utf8').digest('hex')
   },
 
+  async setProjectNotificationTimestamp(projectId) {
+    const key = keys.projectNotificationTimestamp({ project_id: projectId })
+    // SET NX: only set if key doesn't already exist.
+    // The timestamp records when the first tracked change occurred in this
+    // notification window.  Subsequent changes don't overwrite it so the
+    // processor can apply a min-delay debounce correctly.
+    await rclient.set(key, Date.now().toString(), 'NX')
+  },
+
   async cleanupTestRedis() {
     await RedisWrapper.cleanupTestRedis(rclient)
   },

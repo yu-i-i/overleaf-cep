@@ -5,143 +5,109 @@ import EmailPreferencesForm from '../../../../../../frontend/js/features/setting
 
 describe('<EmailPreferencesForm />', function () {
   beforeEach(function () {
-    window.metaAttributesCache.set('ol-newsletter-subscribed', true)
+    window.metaAttributesCache.set('ol-userNotificationPreferences', {
+      notificationEmailsEnabled: true,
+      projectCommentReplyEmails: true,
+      projectInviteEmails: true,
+      muteAllNotifications: false,
+    })
   })
 
   afterEach(function () {
     fetchMock.removeRoutes().clearHistory()
   })
 
-  it('shows subscribed state with unsubscribe button', function () {
+  it('shows notification preferences and send test email button', function () {
     render(<EmailPreferencesForm />)
 
-    screen.getByText('You are', { exact: false })
-    screen.getByRole('button', { name: 'Unsubscribe' })
-    screen.getByText('Please note: you will still receive important emails', {
-      exact: false,
-    })
+    screen.getByRole('button', { name: 'Send a test email' })
+    screen.getByLabelText('Receive notification emails')
+    screen.getByLabelText('Project comments and replies')
+    screen.getByLabelText('Project invite emails')
   })
 
-  it('shows unsubscribed state with subscribe button', function () {
-    window.metaAttributesCache.set('ol-newsletter-subscribed', false)
+  it('updates notification email preferences when toggling project comment/reply emails', async function () {
+    const preferencesMock = fetchMock.post(
+      '/user/notification-email-preferences',
+      {
+        status: 200,
+        body: {
+          notificationEmailsEnabled: true,
+          projectCommentReplyEmails: false,
+          projectInviteEmails: true,
+        },
+      }
+    )
     render(<EmailPreferencesForm />)
 
-    screen.getByText('You are', { exact: false })
-    screen.getByRole('button', { name: 'Subscribe' })
-    expect(
-      screen.queryByText(
-        'Please note: you will still receive important emails',
-        { exact: false }
-      )
-    ).to.not.exist
-  })
+    const checkbox = screen.getByLabelText('Project comments and replies')
+    fireEvent.click(checkbox)
 
-  it('calls unsubscribe endpoint when clicking unsubscribe', async function () {
-    const unsubscribeMock = fetchMock.post('/user/newsletter/unsubscribe', {
-      status: 200,
-      body: { subscribed: false },
-    })
-    render(<EmailPreferencesForm />)
-
-    const button = screen.getByRole('button', { name: 'Unsubscribe' })
-    fireEvent.click(button)
-
-    expect(unsubscribeMock.callHistory.called()).to.be.true
-    expect(unsubscribeMock.callHistory.calls().at(-1)?.url).to.equal(
-      'https://www.test-overleaf.com/user/newsletter/unsubscribe'
+    expect(preferencesMock.callHistory.called()).to.be.true
+    expect(preferencesMock.callHistory.calls().at(-1)?.url).to.equal(
+      'https://www.test-overleaf.com/user/notification-email-preferences'
     )
   })
 
-  it('calls subscribe endpoint when clicking subscribe', async function () {
-    window.metaAttributesCache.set('ol-newsletter-subscribed', false)
-    const subscribeMock = fetchMock.post('/user/newsletter/subscribe', {
-      status: 200,
-      body: { subscribed: true },
-    })
+  it('updates notification email preferences when toggling project invite emails', async function () {
+    const preferencesMock = fetchMock.post(
+      '/user/notification-email-preferences',
+      {
+        status: 200,
+        body: {
+          notificationEmailsEnabled: true,
+          projectCommentReplyEmails: true,
+          projectInviteEmails: false,
+        },
+      }
+    )
     render(<EmailPreferencesForm />)
 
-    const button = screen.getByRole('button', { name: 'Subscribe' })
-    fireEvent.click(button)
+    const checkbox = screen.getByLabelText('Project invite emails')
+    fireEvent.click(checkbox)
 
-    expect(subscribeMock.callHistory.called()).to.be.true
-    expect(subscribeMock.callHistory.calls().at(-1)?.url).to.equal(
-      'https://www.test-overleaf.com/user/newsletter/subscribe'
+    expect(preferencesMock.callHistory.called()).to.be.true
+    expect(preferencesMock.callHistory.calls().at(-1)?.url).to.equal(
+      'https://www.test-overleaf.com/user/notification-email-preferences'
     )
   })
 
-  it('shows loading state while request is in flight', async function () {
+  it('sends a test email when clicking the button', async function () {
+    const testEmailMock = fetchMock.post('/user/send-test-email', {
+      status: 200,
+      body: { message: 'Email Sent' },
+    })
+    render(<EmailPreferencesForm />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send a test email' }))
+
+    expect(testEmailMock.callHistory.called()).to.be.true
+    expect(testEmailMock.callHistory.calls().at(-1)?.url).to.equal(
+      'https://www.test-overleaf.com/user/send-test-email'
+    )
+    await screen.findByText('Email Sent')
+  })
+
+  it('shows loading state while sending test email', async function () {
     let finishRequest: (value: any) => void = () => {}
     fetchMock.post(
-      '/user/newsletter/unsubscribe',
+      '/user/send-test-email',
       new Promise(resolve => (finishRequest = resolve))
     )
     render(<EmailPreferencesForm />)
 
-    const button = screen.getByRole('button', { name: 'Unsubscribe' })
-    fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button', { name: 'Send a test email' }))
+    await screen.findByRole('button', { name: 'Sending…' })
 
-    await screen.findByRole('button', { name: 'Saving…' })
-
-    finishRequest({ status: 200, body: { subscribed: false } })
-    await screen.findByRole('button', { name: 'Subscribe' })
+    finishRequest({ status: 200, body: { message: 'Email Sent' } })
+    await screen.findByText('Email Sent')
   })
 
-  it('shows success notification after successful action', async function () {
-    fetchMock.post('/user/newsletter/unsubscribe', {
-      status: 200,
-      body: { subscribed: false },
-    })
+  it('shows error notification on server error when sending test email', async function () {
+    fetchMock.post('/user/send-test-email', 500)
     render(<EmailPreferencesForm />)
 
-    const button = screen.getByRole('button', { name: 'Unsubscribe' })
-    fireEvent.click(button)
-
-    await screen.findByText('Thanks, your settings have been updated.')
-  })
-
-  it('shows error notification on server error', async function () {
-    fetchMock.post('/user/newsletter/unsubscribe', 500)
-    render(<EmailPreferencesForm />)
-
-    const button = screen.getByRole('button', { name: 'Unsubscribe' })
-    fireEvent.click(button)
-
+    fireEvent.click(screen.getByRole('button', { name: 'Send a test email' }))
     await screen.findByText('Something went wrong. Please try again.')
-  })
-
-  it('shows error notification with message on 4xx error', async function () {
-    fetchMock.post('/user/newsletter/unsubscribe', {
-      status: 400,
-      body: { message: 'Unable to update preferences' },
-    })
-    render(<EmailPreferencesForm />)
-
-    const button = screen.getByRole('button', { name: 'Unsubscribe' })
-    fireEvent.click(button)
-
-    await screen.findByText('Unable to update preferences')
-  })
-
-  it('toggles between subscribed and unsubscribed states', async function () {
-    fetchMock.post('/user/newsletter/unsubscribe', {
-      status: 200,
-      body: { subscribed: false },
-    })
-    fetchMock.post('/user/newsletter/subscribe', {
-      status: 200,
-      body: { subscribed: true },
-    })
-    render(<EmailPreferencesForm />)
-
-    // Initially subscribed
-    screen.getByRole('button', { name: 'Unsubscribe' })
-
-    // Unsubscribe
-    fireEvent.click(screen.getByRole('button', { name: 'Unsubscribe' }))
-    await screen.findByRole('button', { name: 'Subscribe' })
-
-    // Subscribe again
-    fireEvent.click(screen.getByRole('button', { name: 'Subscribe' }))
-    await screen.findByRole('button', { name: 'Unsubscribe' })
   })
 })

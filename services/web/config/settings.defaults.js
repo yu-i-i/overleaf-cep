@@ -1141,6 +1141,7 @@ module.exports = {
     'authentication/saml',
     'authentication/oidc',
     'admin-tools', // import after authentication
+    'notifications-control',
     'template-gallery',
     'git-bridge',
     'zotero',

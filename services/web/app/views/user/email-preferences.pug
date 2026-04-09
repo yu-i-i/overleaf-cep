@@ -5,8 +5,13 @@ block entrypointVar
 	- entrypoint = 'pages/user/email-preferences'
 
 block append meta
-	meta(name='ol-newsletter-subscribed' data-type='boolean' content=subscribed)
 	meta(name='ol-user' data-type='json' content=user)
+	meta(name='ol-userNotificationPreferences' data-type='json' content=JSON.stringify({
+		notificationEmailsEnabled: notificationPreferences.enabled,
+		projectCommentReplyEmails: notificationPreferences.projectCommentReply,
+		projectInviteEmails: notificationPreferences.projectInvite,
+		muteAllNotifications: false,
+	}))
 
 block vars
 	- isWebsiteRedesign = true

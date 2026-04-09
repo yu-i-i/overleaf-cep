@@ -27,7 +27,6 @@ import { EditorLeftMenuProvider } from '@/features/editor-left-menu/components/e
 import DarkModePdfSetting from '@/features/settings/components/appearance-settings/dark-mode-pdf-setting'
 
 import { useProjectSettingsContext } from '@/features/editor-left-menu/context/project-settings-context'
-import { useFeatureFlag } from '@/shared/context/split-test-context'
 import ProjectNotificationsSetting from '@/features/settings/components/editor-settings/project-notifications-setting'
 import getMeta from '@/utils/meta'
 
@@ -88,8 +87,6 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
 
   // TODO ide-redesign-cleanup: Rename this field and move it directly into this context
   const { leftMenuShown, setLeftMenuShown } = useLayoutContext()
-
-  const hasEmailNotifications = useFeatureFlag('email-notifications')
 
   const allSettingsTabs: SettingsEntry[] = useMemo(
     () => [
@@ -247,7 +244,6 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
             ],
           },
         ],
-        hidden: !hasEmailNotifications,
       },
 
       {
@@ -264,7 +260,7 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
         hidden: !isOverleaf,
       },
     ],
-    [t, overallTheme, hasEmailNotifications, isOverleaf]
+    [t, overallTheme, isOverleaf]
   )
 
   const settingsTabs = useMemo(

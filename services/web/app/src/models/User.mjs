@@ -195,6 +195,11 @@ export const UserSchema = new Schema(
       zotero: Schema.Types.Mixed,
       papers: Schema.Types.Mixed,
     },
+    notificationEmailPreferences: {
+      enabled: { type: Boolean, default: true },
+      projectCommentReply: { type: Boolean, default: true },
+      projectInvite: { type: Boolean, default: true },
+    },
     writefull: {
       // whether we have attached an autocreated account or autoloading for the user
       initialized: { type: Boolean, default: false },

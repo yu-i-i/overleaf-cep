@@ -455,10 +455,10 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
     UserController.subscribe
   )
 
-  webRouter.get(
-    '/user/email-preferences',
+  webRouter.post(
+    '/user/newsletter/subscribe',
     AuthenticationController.requireLogin(),
-    UserPagesController.emailPreferencesPage
+    UserController.subscribe
   )
 
   webRouter.post(
@@ -889,6 +889,16 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
     '/notifications/:notificationId',
     AuthenticationController.requireLogin(),
     NotificationsController.markNotificationAsRead
+  )
+  webRouter.get(
+    '/notifications/preferences/project/:projectId',
+    AuthenticationController.requireLogin(),
+    NotificationsController.getProjectPreferences
+  )
+  webRouter.post(
+    '/notifications/preferences/project/:projectId',
+    AuthenticationController.requireLogin(),
+    NotificationsController.saveProjectPreferences
   )
 
   webRouter.get(
