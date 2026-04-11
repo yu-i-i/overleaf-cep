@@ -1,0 +1,40 @@
+services:
+  redis:
+    extends:
+      file: ./redis/compose.yaml
+      service: redis
+
+  mongo:
+    extends:
+      file: ./mongo/compose.yaml
+      service: mongo
+
+  overleaf:
+    extends:
+      file: ./overleaf/compose.yaml
+      service: overleaf
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  nginx:
+    extends:
+      file: ./nginx/compose.yaml
+      service: nginx
+    depends_on:
+      overleaf:
+        condition: service_healthy
+
+  git-bridge:
+    extends:
+      file: ./git-bridge/compose.yaml
+      service: git-bridge
+
+  languagetool:
+    extends:
+      file: ./languagetool/compose.yaml
+      service: languagetool
+
+

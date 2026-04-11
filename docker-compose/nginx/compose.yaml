@@ -1,0 +1,26 @@
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx
+    hostname: nginx
+    restart: always
+    volumes:
+      - "./key.pem:/certs/nginx_key.pem:ro"
+      - "./ca.pem:/certs/nginx_certificate.pem:ro"
+      - "./nginx.conf:/etc/nginx/nginx.conf:ro"
+    ports:
+      - "0.0.0.0:443:443"
+      - "0.0.0.0:80:80"
+      - ":::443:443"
+      - ":::80:80"
+    environment:
+      NGINX_WORKER_PROCESSES: "4"
+      NGINX_WORKER_CONNECTIONS: "768"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsI --connect-timeout 10 http://localhost || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
