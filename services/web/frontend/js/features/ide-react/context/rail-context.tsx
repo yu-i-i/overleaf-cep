@@ -24,25 +24,26 @@ export type RailTabKey =
   | 'chat'
   | 'full-project-search'
   | 'workbench'
+  | 'symbol-palette'
 
 export type RailModalKey = 'keyboard-shortcuts' | 'contact-us' | 'dictionary'
 
 const RailContext = createContext<
   | {
-      selectedTab: RailTabKey
-      isOpen: boolean
-      setIsOpen: Dispatch<SetStateAction<boolean>>
-      panelRef: React.RefObject<ImperativePanelHandle>
-      togglePane: () => void
-      handlePaneExpand: () => void
-      handlePaneCollapse: () => void
-      resizing: boolean
-      setResizing: Dispatch<SetStateAction<boolean>>
-      activeModal: RailModalKey | null
-      setActiveModal: Dispatch<SetStateAction<RailModalKey | null>>
-      openTab: (tab: RailTabKey) => void
-      selectTab: (tab: RailTabKey) => void
-    }
+    selectedTab: RailTabKey
+    isOpen: boolean
+    setIsOpen: Dispatch<SetStateAction<boolean>>
+    panelRef: React.RefObject<ImperativePanelHandle>
+    togglePane: () => void
+    handlePaneExpand: () => void
+    handlePaneCollapse: () => void
+    resizing: boolean
+    setResizing: Dispatch<SetStateAction<boolean>>
+    activeModal: RailModalKey | null
+    setActiveModal: Dispatch<SetStateAction<RailModalKey | null>>
+    openTab: (tab: RailTabKey) => void
+    selectTab: (tab: RailTabKey) => void
+  }
   | undefined
 >(undefined)
 
