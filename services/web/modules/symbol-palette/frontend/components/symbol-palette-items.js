@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { useEditorPropertiesContext } from '@/features/ide-react/context/editor-properties-context'
 import SymbolPaletteItem from './symbol-palette-item'
 
 export default function SymbolPaletteItems({
@@ -19,7 +18,6 @@ export default function SymbolPaletteItems({
   const getItemRects = () => {
     return itemRefs.current.map(ref => ref?.getBoundingClientRect?.() ?? null)
   }
-  const { toggleSymbolPalette } = useEditorPropertiesContext()
 
   const handleKeyDown = useCallback(
     event => {
@@ -67,10 +65,9 @@ export default function SymbolPaletteItems({
         case 'Enter':
         case ' ':
           handleSelect(items[focusedIndex])
-          toggleSymbolPalette()
+          window.dispatchEvent(new CustomEvent('editor:focus'))
           break
         case 'Escape':
-          toggleSymbolPalette()
           window.dispatchEvent(new CustomEvent('editor:focus'))
           break
 
