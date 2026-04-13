@@ -3,9 +3,46 @@ import UserCreator from '../../../../../app/src/Features/User/UserCreator.mjs'
 import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.mjs'
 import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.mjs'
 import { User } from '../../../../../app/src/models/User.mjs'
+import JWT from 'jsonwebtoken'
 
 const OIDCAuthenticationManager = {
-  async findOrCreateUser(profile, auditLog) {
+  _extractRolesFromIdToken(idToken) {
+    if (!idToken) return []
+
+    const decoded = JWT.decode(idToken)
+    const roles = decoded?.roles
+
+    if (Array.isArray(roles)) {
+      return roles.filter(r => typeof r === 'string' && r.length > 0)
+    }
+    if (typeof roles === 'string' && roles.length > 0) {
+      return [roles]
+    }
+    return []
+  },
+  async _syncGuestUserRole(userId, roles) {
+    const guestUserRole = Settings.oidc?.guestUserRole
+    if (!guestUserRole || !userId) return
+
+    const shouldBeGuest = roles.includes(guestUserRole)
+    if (shouldBeGuest) {
+      await User.updateOne(
+        { _id: userId },
+        { $addToSet: { adminRoles: 'guest-user' } }
+      ).exec()
+      return
+    }
+
+    await User.updateOne(
+      { _id: userId },
+      { $pull: { adminRoles: 'guest-user' } }
+    ).exec()
+    await User.updateOne(
+      { _id: userId, adminRoles: { $size: 0 } },
+      { $unset: { adminRoles: '' } }
+    ).exec()
+  },
+  async findOrCreateUser(profile, auditLog, { idToken } = {}) {
     const {
       attUserId,
       attAdmin,
@@ -25,7 +62,8 @@ const OIDCAuthenticationManager = {
         isAdmin = (profile[attAdmin] === valAdmin)
       }
     }
-    const oidcUserData = null // Possibly it can be used later
+    const roles = OIDCAuthenticationManager._extractRolesFromIdToken(idToken)
+    const oidcUserData = null
     let user
     try {
       user = await ThirdPartyIdentityManager.promises.login(providerId, oidcUserId, oidcUserData)
@@ -77,6 +115,8 @@ const OIDCAuthenticationManager = {
 //    }
     }
 
+    await OIDCAuthenticationManager._syncGuestUserRole(user._id, roles)
+
     let userDetails = updateUserDetailsOnLogin ? { first_name : firstName, last_name: lastName } : {}
     if (attAdmin && valAdmin) {
       user.isAdmin = isAdmin
@@ -92,14 +132,16 @@ const OIDCAuthenticationManager = {
     }
     return user
   },
-  async linkAccount(userId, profile, auditLog) {
+  async linkAccount(userId, profile, auditLog, { idToken } = {}) {
     const {
       attUserId,
       providerId,
     } = Settings.oidc
     const oidcUserId = (attUserId === 'email') ? profile.emails[0].value : profile[attUserId]
-    const oidcUserData = null // Possibly it can be used later
+    const roles = OIDCAuthenticationManager._extractRolesFromIdToken(idToken)
+    const oidcUserData = null
     await ThirdPartyIdentityManager.promises.link(userId, providerId, oidcUserId, oidcUserData, auditLog)
+    await OIDCAuthenticationManager._syncGuestUserRole(userId, roles)
   },
 }
 

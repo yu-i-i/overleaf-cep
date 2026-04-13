@@ -59,12 +59,14 @@ const OIDCAuthenticationController = {
       if(req.session.intent === 'link') {
         ;({ user, info } = await OIDCAuthenticationController._doLink(
           req,
-          profile
+          profile,
+          { idToken, accessToken, refreshToken }
         ))
       } else {
         ;({ user, info } = await OIDCAuthenticationController._doLogin(
           req,
-          profile
+          profile,
+          { idToken, accessToken, refreshToken }
         ))
       }
     } catch (error) {
@@ -78,7 +80,7 @@ const OIDCAuthenticationController = {
     }
     return done(null, user, info)
   },
-  async _doLogin(req, profile) {
+  async _doLogin(req, profile, { idToken }) {
     const { fromKnownDevice } = AuthenticationController.getAuditInfo(req)
     const auditLog = {
       ipAddress: req.ip,
@@ -87,7 +89,11 @@ const OIDCAuthenticationController = {
 
     let user
     try {
-      user = await OIDCAuthenticationManager.promises.findOrCreateUser(profile, auditLog)
+      user = await OIDCAuthenticationManager.promises.findOrCreateUser(
+        profile,
+        auditLog,
+        { idToken }
+      )
     } catch (error) {
       logger.debug({ email : profile.emails[0].value }, `OIDC login failed: ${error}`)
       return {
@@ -112,14 +118,19 @@ const OIDCAuthenticationController = {
       }
     }
   },
-  async _doLink(req, profile) {
+  async _doLink(req, profile, { idToken }) {
     const { user: { _id: userId }, ip } = req
     try {
       const auditLog = {
         ipAddress: ip,
         initiatorId: userId,
       }
-      await OIDCAuthenticationManager.promises.linkAccount(userId, profile, auditLog)
+      await OIDCAuthenticationManager.promises.linkAccount(
+        userId,
+        profile,
+        auditLog,
+        { idToken }
+      )
     } catch (error) {
       logger.error(error.info, error.message)
       return {

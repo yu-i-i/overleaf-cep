@@ -2783,6 +2783,7 @@
   "user_category_all": "All users",
   "user_category_deleted": "Deleted users",
   "user_category_inactive": "Inactive users",
+  "user_category_guest": "Guest users",
   "user_category_ldap": "LDAP users",
   "user_category_local": "Local users",
   "user_category_oidc": "OIDC users",

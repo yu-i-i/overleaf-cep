@@ -4,6 +4,8 @@ import TemplatesManager from './TemplatesManager.mjs'
 import ProjectHelper from '../Project/ProjectHelper.mjs'
 import logger from '@overleaf/logger'
 import { expressify } from '@overleaf/promise-utils'
+import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
+import { User } from '../../models/User.mjs'
 
 const TemplatesController = {
   async getV1Template(req, res) {
@@ -36,6 +38,15 @@ const TemplatesController = {
   },
 
   async createProjectFromV1Template(req, res) {
+    const currentUser = SessionManager.getSessionUser(req.session)
+    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+      return HttpErrorHandler.forbidden(
+        req,
+        res,
+        'Your account is not allowed to create projects.'
+      )
+    }
     const userId = SessionManager.getLoggedInUserId(req.session)
 
     const project = await TemplatesManager.promises.createProjectFromV1Template(

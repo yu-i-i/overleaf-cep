@@ -45,6 +45,7 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
     firstName: '',
     lastName: '',
     isAdmin: false,
+    isGuestUser: false,
     isExternal: false,
   })
 
@@ -60,6 +61,7 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
           first_name: userData.firstName.trim(),
           last_name: userData.lastName.trim(),
           isAdmin: userData.isAdmin,
+          isGuestUser: userData.isGuestUser,
           isExternal: userData.isExternal,
         }
       })
@@ -150,6 +152,18 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
                   label={t('set_admin_account')}
                   checked={userData.isAdmin}
                   aria-label={t('set_admin_account')}
+                />
+              </OLFormGroup>
+            </OLCol>
+            <OLCol xs={6}>
+              <OLFormGroup controlId="is-guest-user-checkbox">
+                <OLFormCheckbox
+                  autoComplete="off"
+                  onChange={handleCheckboxChange}
+                  name="isGuestUser"
+                  label="Guest user (cannot create projects)"
+                  checked={userData.isGuestUser}
+                  aria-label="Guest user (cannot create projects)"
                 />
               </OLFormGroup>
             </OLCol>

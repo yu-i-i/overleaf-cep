@@ -13,6 +13,8 @@ import multer from 'multer'
 import lodash from 'lodash'
 import { expressify } from '@overleaf/promise-utils'
 import { DuplicateNameError } from '../Errors/Errors.js'
+import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
+import { User } from '../../models/User.mjs'
 
 const defaultsDeep = lodash.defaultsDeep
 
@@ -29,38 +31,50 @@ const upload = multer(
 )
 
 function uploadProject(req, res, next) {
-  const timer = new metrics.Timer('project-upload')
-  const userId = SessionManager.getLoggedInUserId(req.session)
-  const { path } = req.file
-  const name = Path.basename(req.body.name, '.zip')
-  return ProjectUploadManager.createProjectFromZipArchive(
-    userId,
-    name,
-    path,
-    function (error, project) {
-      fs.unlink(path, function () {})
-      timer.done()
-      if (error != null) {
-        logger.error(
-          { err: error, filePath: path, fileName: name },
-          'error uploading project'
-        )
-        if (error instanceof InvalidZipFileError) {
-          return res.status(422).json({
-            success: false,
-            error: req.i18n.translate(error.message),
-          })
-        } else {
-          return res.status(500).json({
-            success: false,
-            error: req.i18n.translate('upload_failed'),
-          })
-        }
-      } else {
-        return res.json({ success: true, project_id: project._id })
-      }
+  ;(async () => {
+    const currentUser = SessionManager.getSessionUser(req.session)
+    const userWithRoles = await User.findById(currentUser._id, 'adminRoles').lean()
+    if (Array.isArray(userWithRoles?.adminRoles) && userWithRoles.adminRoles.includes('guest-user')) {
+      return HttpErrorHandler.forbidden(
+        req,
+        res,
+        'Your account is not allowed to create projects.'
+      )
     }
-  )
+
+    const timer = new metrics.Timer('project-upload')
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const { path } = req.file
+    const name = Path.basename(req.body.name, '.zip')
+    return ProjectUploadManager.createProjectFromZipArchive(
+      userId,
+      name,
+      path,
+      function (error, project) {
+        fs.unlink(path, function () {})
+        timer.done()
+        if (error != null) {
+          logger.error(
+            { err: error, filePath: path, fileName: name },
+            'error uploading project'
+          )
+          if (error instanceof InvalidZipFileError) {
+            return res.status(422).json({
+              success: false,
+              error: req.i18n.translate(error.message),
+            })
+          } else {
+            return res.status(500).json({
+              success: false,
+              error: req.i18n.translate('upload_failed'),
+            })
+          }
+        } else {
+          return res.json({ success: true, project_id: project._id })
+        }
+      }
+    )
+  })().catch(next)
 }
 
 async function uploadFile(req, res, next) {

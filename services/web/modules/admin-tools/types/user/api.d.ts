@@ -15,6 +15,7 @@ export type Filters = {
   all?: boolean
   admin?: boolean
   inactive?: boolean
+  guestUser?: boolean
   suspended?: boolean
   deleted?: boolean
   local?: boolean
@@ -43,6 +44,7 @@ export type UserApi = {
   authMethods: string[]
   allowUpdateDetails: boolean
   allowUpdateIsAdmin: boolean
+  isGuestUser?: boolean
   suspended: boolean
   inactive: boolean
   deleted?: boolean
