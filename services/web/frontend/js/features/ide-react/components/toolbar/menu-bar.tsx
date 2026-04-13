@@ -81,7 +81,13 @@ export const ToolbarMenuBar = () => {
     () => [
       {
         id: 'file-file-tree',
-        children: ['new_file', 'new_folder', 'upload_file', 'copy_project'],
+        children: [
+          'new_file',
+          'new_folder',
+          'upload_file',
+          'copy_project',
+          'convert_to_docx',
+        ],
       },
       { id: 'file-tools', children: ['show_version_history', 'word_count'] },
       { id: 'submit', children: ['submit-project', 'manage-template'] },
