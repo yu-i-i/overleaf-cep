@@ -1157,11 +1157,27 @@ module.exports = {
     'authentication/saml',
     'authentication/oidc',
     'admin-tools', // import after authentication
+    'instance-stats',
     'template-gallery',
     'git-bridge',
     'zotero',
   ],
   viewIncludes: {},
+
+  instanceStats: {
+    // Site-admin only endpoint; default to enabled to make deployment predictable.
+    enabled:
+      process.env.INSTANCE_STATS_ENABLED != null
+        ? process.env.INSTANCE_STATS_ENABLED === 'true'
+        : true,
+    // Used for the `window=all` query so responses remain bounded.
+    retentionDays: intFromEnv('INSTANCE_STATS_RETENTION_DAYS', 365),
+    userSegmentation: {
+      // When enabled, active_users and user_count are split into [standard, guest]
+      // using users whose adminRoles array contains "guest-user".
+      enabled: process.env.INSTANCE_STATS_USER_SEGMENTATION_ENABLED === 'true',
+    },
+  },
 
   csp: {
     enabled: process.env.CSP_ENABLED === 'true',
