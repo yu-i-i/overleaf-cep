@@ -24,6 +24,7 @@ export type RailTabKey =
   | 'chat'
   | 'full-project-search'
   | 'workbench'
+  | 'bib-editor'
 
 export type RailModalKey = 'keyboard-shortcuts' | 'contact-us' | 'dictionary'
 
