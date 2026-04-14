@@ -19,8 +19,12 @@ function _userId(req) {
 }
 
 function _sendError(res, status, message, err) {
+    const payload = { error: message }
+    if (err?.conflictedPaths) {
+        payload.conflictedPaths = err.conflictedPaths
+    }
     if (err) logger.warn({ err }, `git-integrate: ${message}`)
-    res.status(status).json({ error: message })
+    res.status(status).json(payload)
 }
 
 // ── GET /git-integrate/project/:project_id ─────────────────────────────────
@@ -87,11 +91,16 @@ export async function push(req, res) {
     const projectId = _getProjectId(req)
     const { commitMessage } = req.body || {}
     try {
-        await GitIntegrateHandler.pushProject(
+        const result = await GitIntegrateHandler.pushProject(
             projectId,
             typeof commitMessage === 'string' ? commitMessage.trim() : undefined
         )
-        res.json({ success: true })
+        if (result.conflictBranch) {
+            // Remote had diverged; OL content was pushed to a new conflict branch.
+            res.json({ success: false, conflictBranch: result.conflictBranch })
+        } else {
+            res.json({ success: true })
+        }
     } catch (err) {
         _sendError(res, 400, err.message || 'Push failed', err)
     }

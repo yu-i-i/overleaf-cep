@@ -40,9 +40,18 @@ async function _request(token, baseUrl, endpoint, options = {}) {
         clearTimeout(timer)
         if (!response.ok) {
             const err = await response.json().catch(() => ({}))
-            throw new Error(
-                `GitLab API error on '${endpoint}': ${response.status} ${response.statusText}. ${err.message || ''}`
-            )
+            const body = err.message || err.error || ''
+            let msg
+            if (response.status === 401) {
+                msg = `GitLab authentication failed on '${endpoint}': the token has been revoked or is invalid.`
+            } else if (response.status === 403) {
+                msg = `GitLab permission denied on '${endpoint}': the token lacks required scopes (needs read_repository and write_repository, or api).`
+            } else if (response.status === 404) {
+                msg = `GitLab resource not found on '${endpoint}': check that the repository and branch still exist and the token has access.`
+            } else {
+                msg = `GitLab API error on '${endpoint}': ${response.status} ${response.statusText}. ${body}`
+            }
+            throw new Error(msg)
         }
         if (response.status === 204) return null
         return response.json()
@@ -123,6 +132,19 @@ export class GitLabProvider {
     }
 
     /**
+     * Returns the current HEAD commit SHA of a branch.
+     */
+    async getCurrentCommitSha(token, repoId, branch, opts = {}) {
+        const baseUrl = opts.baseUrl || DEFAULT_BASE_URL
+        const encodedId = encodeURIComponent(repoId)
+        const data = await _request(
+            token, baseUrl,
+            `projects/${encodedId}/repository/branches/${encodeURIComponent(branch)}`
+        )
+        return data.commit.id
+    }
+
+    /**
      * Fetches every blob path in the repository tree (paginated).
      * Returns a Set of file paths that already exist on the given branch.
      */
@@ -154,6 +176,10 @@ export class GitLabProvider {
      * Returns Array<{ path: string, content: Buffer }>.
      */
     async pullFiles(token, repoId, branch, opts = {}) {
+        return this.pullFilesAtRef(token, repoId, branch, opts)
+    }
+
+    async pullFilesAtRef(token, repoId, ref, opts = {}) {
         const baseUrl = opts.baseUrl || DEFAULT_BASE_URL
         const encodedId = encodeURIComponent(repoId)
 
@@ -163,7 +189,7 @@ export class GitLabProvider {
         while (true) {
             const items = await _request(
                 token, baseUrl,
-                `projects/${encodedId}/repository/tree?recursive=true&ref=${encodeURIComponent(branch)}&per_page=100&page=${page}`
+                `projects/${encodedId}/repository/tree?recursive=true&ref=${encodeURIComponent(ref)}&per_page=100&page=${page}`
             )
             if (!Array.isArray(items) || items.length === 0) break
             for (const item of items) {
@@ -182,7 +208,7 @@ export class GitLabProvider {
                 const encodedPath = p.split('/').map(encodeURIComponent).join('/')
                 const data = await _request(
                     token, baseUrl,
-                    `projects/${encodedId}/repository/files/${encodedPath}?ref=${encodeURIComponent(branch)}`
+                    `projects/${encodedId}/repository/files/${encodedPath}?ref=${encodeURIComponent(ref)}`
                 )
                 return { path: data.file_path, content: Buffer.from(data.content, 'base64') }
             }))
@@ -211,11 +237,59 @@ export class GitLabProvider {
             }
         })
 
-        if (actions.length === 0) return
+        if (actions.length === 0) return { sha: null }
 
-        await _request(token, baseUrl, `projects/${encodedId}/repository/commits`, {
+        const result = await _request(token, baseUrl, `projects/${encodedId}/repository/commits`, {
             method: 'POST',
             body: JSON.stringify({ branch, commit_message: commitMessage, actions }),
         })
+        return { sha: result.id }
+    }
+
+    /**
+     * Pushes all OL files to a *new* branch, created from the current HEAD of
+     * `baseBranch`.  Uses GitLab's `start_branch` parameter to create the new
+     * branch and commit in a single API call.
+     *
+     * @param {string} token
+     * @param {string} repoId
+     * @param {string} baseBranch
+     * @param {string} newBranchName
+     * @param {string} commitMessage
+     * @param {Array<{ path: string, content: string|Buffer }>} files
+     * @param {{ baseUrl?: string }} opts
+     * @returns {Promise<{ sha: string }>}
+     */
+    async pushFilesToNewBranch(token, repoId, baseBranch, newBranchName, commitMessage, files, opts = {}) {
+        const baseUrl = opts.baseUrl || DEFAULT_BASE_URL
+        const encodedId = encodeURIComponent(repoId)
+
+        // Determine which paths exist on baseBranch so we can choose
+        // 'create' vs 'update' actions correctly on the new branch.
+        const existingPaths = await this._getExistingPaths(token, baseUrl, repoId, baseBranch)
+
+        const actions = files.map(f => {
+            const cleanPath = f.path.replace(/^\/+/, '').replace(/\/+/g, '/')
+            const action = existingPaths.has(cleanPath) ? 'update' : 'create'
+            return {
+                action,
+                file_path: cleanPath,
+                content: _encodeContent(f.content),
+                encoding: 'base64',
+            }
+        })
+
+        if (actions.length === 0) return { sha: null }
+
+        const result = await _request(token, baseUrl, `projects/${encodedId}/repository/commits`, {
+            method: 'POST',
+            body: JSON.stringify({
+                branch: newBranchName,
+                start_branch: baseBranch,
+                commit_message: commitMessage,
+                actions,
+            }),
+        })
+        return { sha: result.id }
     }
 }

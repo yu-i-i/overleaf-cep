@@ -15,6 +15,7 @@
  *   repo_id:           string,          // "owner/repo" or GitLab project path
  *   branch:            string,
  *   encrypted_token:   string,
+ *   last_sync_sha:     string | null,   // SHA of the last successfully synced remote commit
  *   created_at:        Date,
  *   updated_at:        Date,
  * }
@@ -46,6 +47,7 @@ export const GitIntegrateModel = {
             repoId: doc.repo_id,
             branch: doc.branch,
             token: decrypted.token,
+            lastSyncSha: doc.last_sync_sha || null,
             updatedAt: doc.updated_at,
         }
     },
@@ -61,6 +63,7 @@ export const GitIntegrateModel = {
             baseUrl: doc.base_url || null,
             repoId: doc.repo_id,
             branch: doc.branch,
+            lastSyncSha: doc.last_sync_sha || null,
             updatedAt: doc.updated_at,
         }
     },
@@ -90,5 +93,17 @@ export const GitIntegrateModel = {
 
     async deleteConnection(projectId) {
         await _coll().deleteOne({ project_id: new ObjectId(projectId) })
+    },
+
+    /**
+     * Updates the stored SHA of the last successfully synced remote commit.
+     * Called after every successful push or pull so conflict detection can
+     * determine whether the remote has changed since we last touched it.
+     */
+    async updateLastSyncSha(projectId, sha) {
+        await _coll().updateOne(
+            { project_id: new ObjectId(projectId) },
+            { $set: { last_sync_sha: sha, updated_at: new Date() } }
+        )
     },
 }

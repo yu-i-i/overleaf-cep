@@ -54,9 +54,20 @@ async function _request(token, baseUrl, endpoint, options = {}) {
         clearTimeout(timer)
         if (!response.ok) {
             const err = await response.json().catch(() => ({}))
-            throw new Error(
-                `GitHub API error on '${endpoint}': ${response.status} ${response.statusText}. ${err.message || ''}`
-            )
+            const body = err.message || err.error || ''
+            let msg
+            if (response.status === 401) {
+                msg = `GitHub authentication failed on '${endpoint}': the token has been revoked or is invalid.`
+            } else if (response.status === 403) {
+                msg = `GitHub permission denied on '${endpoint}': the token lacks required scopes (needs the 'repo' scope or equivalent fine-grained permissions).`
+            } else if (response.status === 404) {
+                msg = `GitHub resource not found on '${endpoint}': check that the repository and branch still exist and the token has read access.`
+            } else if (response.status === 422) {
+                msg = `GitHub rejected the update on '${endpoint}' (non-fast-forward or validation error). ${body}`
+            } else {
+                msg = `GitHub API error on '${endpoint}': ${response.status} ${response.statusText}. ${body}`
+            }
+            throw new Error(msg)
         }
         if (response.status === 204) return null
         return response.json()
@@ -137,10 +148,36 @@ export class GitHubProvider {
         }
     }
 
+    /**
+     * Returns the current HEAD commit SHA of a branch.
+     * Throws if the branch does not exist.
+     *
+     * @param {string} token
+     * @param {string} repoId  "owner/repo"
+     * @param {string} branch
+     * @param {{ baseUrl?: string }} opts
+     * @returns {Promise<string>}
+     */
+    async getCurrentCommitSha(token, repoId, branch, opts = {}) {
+        const baseUrl = opts.baseUrl || DEFAULT_BASE_URL
+        const [owner, repo] = repoId.split('/')
+        const data = await _request(
+            token, baseUrl,
+            `repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`
+        )
+        return data.commit.sha
+    }
+
     // ── Internal git tree helpers ────────────────────────────────────────────
 
-    async _getLatestCommit(token, baseUrl, owner, repo, branch) {
-        const data = await _request(token, baseUrl, `repos/${owner}/${repo}/branches/${branch}`)
+    async _getCommitInfo(token, baseUrl, owner, repo, ref) {
+        const encodedRef = encodeURIComponent(ref)
+        let data
+        if (/^[0-9a-f]{40}$/.test(ref)) {
+            data = await _request(token, baseUrl, `repos/${owner}/${repo}/git/commits/${encodedRef}`)
+            return { sha: data.sha, treeSha: data.tree.sha }
+        }
+        data = await _request(token, baseUrl, `repos/${owner}/${repo}/branches/${encodedRef}`)
         return {
             sha: data.commit.sha,
             treeSha: data.commit.commit.tree.sha,
@@ -183,19 +220,18 @@ export class GitHubProvider {
      * Returns Array<{ path: string, content: Buffer }>.
      * Uses the git-trees API (single request) + parallel blob fetches.
      */
-    async pullFiles(token, repoId, branch, opts = {}) {
+    async pullFilesAtRef(token, repoId, ref, opts = {}) {
         const baseUrl = opts.baseUrl || DEFAULT_BASE_URL
         const [owner, repo] = repoId.split('/')
 
-        // Get the full recursive tree in one call.
-        const { sha: commitSha } = await this._getLatestCommit(token, baseUrl, owner, repo, branch)
+        // Get the full recursive tree in one call for the requested ref.
+        const { treeSha } = await this._getCommitInfo(token, baseUrl, owner, repo, ref)
         const treeData = await _request(
             token, baseUrl,
-            `repos/${owner}/${repo}/git/trees/${commitSha}?recursive=1`
+            `repos/${owner}/${repo}/git/trees/${treeSha}?recursive=1`
         )
         const blobs = (treeData.tree || []).filter(item => item.type === 'blob')
 
-        // Fetch each blob content in parallel batches of 5.
         const CONCURRENCY = 5
         const result = []
         for (let i = 0; i < blobs.length; i += CONCURRENCY) {
@@ -207,6 +243,10 @@ export class GitHubProvider {
             result.push(...fetched)
         }
         return result
+    }
+
+    async pullFiles(token, repoId, branch, opts = {}) {
+        return this.pullFilesAtRef(token, repoId, branch, opts)
     }
 
     /**
@@ -246,7 +286,7 @@ export class GitHubProvider {
             }
         }
 
-        if (treeItems.length === 0) return
+        if (treeItems.length === 0) return { sha: null }
 
         const newTreeSha = await this._createTree(
             token, baseUrl, owner, repo, baseTreeSha, treeItems
@@ -255,5 +295,65 @@ export class GitHubProvider {
             token, baseUrl, owner, repo, commitMessage, newTreeSha, parentSha
         )
         await this._updateRef(token, baseUrl, owner, repo, newCommitSha, branch)
+        return { sha: newCommitSha }
+    }
+
+    /**
+     * Pushes all OL files to a *new* branch (used when divergence is detected
+     * and a clean push to the existing branch would overwrite remote-only changes).
+     *
+     * The new branch is created from the current HEAD of `baseBranch` so that
+     * the two branches share a common ancestor, making a subsequent PR merge
+     * straightforward.
+     *
+     * @param {string} token
+     * @param {string} repoId
+     * @param {string} baseBranch  existing branch to branch off from
+     * @param {string} newBranchName
+     * @param {string} commitMessage
+     * @param {Array<{ path: string, content: string|Buffer }>} files
+     * @param {{ baseUrl?: string }} opts
+     * @returns {Promise<{ sha: string }>}
+     */
+    async pushFilesToNewBranch(token, repoId, baseBranch, newBranchName, commitMessage, files, opts = {}) {
+        const baseUrl = opts.baseUrl || DEFAULT_BASE_URL
+        const [owner, repo] = repoId.split('/')
+
+        const { sha: parentSha, treeSha: baseTreeSha } =
+            await this._getLatestCommit(token, baseUrl, owner, repo, baseBranch)
+
+        const CONCURRENCY = 5
+        const treeItems = []
+        for (let i = 0; i < files.length; i += CONCURRENCY) {
+            const batch = files.slice(i, i + CONCURRENCY)
+            const blobShas = await Promise.all(
+                batch.map(f => this._createBlob(token, baseUrl, owner, repo, f.content))
+            )
+            for (let j = 0; j < batch.length; j++) {
+                const cleanPath = batch[j].path.replace(/^\/+/, '').replace(/\/+/g, '/')
+                if (!cleanPath) continue
+                treeItems.push({
+                    path: cleanPath,
+                    mode: '100644',
+                    type: 'blob',
+                    sha: blobShas[j],
+                })
+            }
+        }
+
+        if (treeItems.length === 0) return { sha: null }
+
+        const newTreeSha = await this._createTree(
+            token, baseUrl, owner, repo, baseTreeSha, treeItems
+        )
+        const newCommitSha = await this._createCommit(
+            token, baseUrl, owner, repo, commitMessage, newTreeSha, parentSha
+        )
+        // Create a new ref pointing to the commit instead of updating an existing one.
+        await _request(token, baseUrl, `repos/${owner}/${repo}/git/refs`, {
+            method: 'POST',
+            body: JSON.stringify({ ref: `refs/heads/${newBranchName}`, sha: newCommitSha }),
+        })
+        return { sha: newCommitSha }
     }
 }

@@ -44,7 +44,7 @@ const PROVIDERS = [
         baseUrlEditable: false,
         defaultBaseUrl: '',
         placeholder: 'ghp_...',
-        permissionsHint: 'Classic token: repo scope (includes private repositories). Fine-grained token: Contents → Read & Write, Metadata → Read.',
+        permissionsHint: 'Classic token: repo scope (includes private repositories). Fine-grained token: Read access to metadata; Read and Write access to administration and code.',
     },
     {
         id: 'gitlab',
@@ -97,6 +97,7 @@ interface Connection {
     baseUrl: string | null
     repoId: string
     branch: string
+    lastSyncSha: string | null
     updatedAt: string
 }
 
@@ -128,8 +129,10 @@ export default function GitIntegrateModal({
     const [commitMessage, setCommitMessage] = useState('')
     const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle')
     const [pushError, setPushError] = useState<string | null>(null)
+    const [conflictBranch, setConflictBranch] = useState<string | null>(null)
     const [pullStatus, setPullStatus] = useState<'idle' | 'pulling' | 'success' | 'error'>('idle')
     const [pullError, setPullError] = useState<string | null>(null)
+    const [pullErrorPaths, setPullErrorPaths] = useState<string[] | null>(null)
     const [pullResult, setPullResult] = useState<{ textCount: number, binaryCount: number } | null>(null)
 
     // Shared loading / error
@@ -161,6 +164,7 @@ export default function GitIntegrateModal({
         setError(null)
         setPushStatus('idle')
         setPushError(null)
+        setConflictBranch(null)
         setPullStatus('idle')
         setPullError(null)
         setPullResult(null)
@@ -300,16 +304,24 @@ export default function GitIntegrateModal({
     const handlePush = useCallback(async () => {
         setPushStatus('pushing')
         setPushError(null)
+        setConflictBranch(null)
         try {
-            await postJSON(`/git-integrate/project/${projectId}/push`, {
-                body: { commitMessage: commitMessage.trim() || undefined },
-            })
-            setPushStatus('success')
-            // Refresh connection metadata (updatedAt)
-            const data: { connection: Connection | null } = await getJSON(
-                `/git-integrate/project/${projectId}`
+            const data: { success: boolean, conflictBranch?: string } = await postJSON(
+                `/git-integrate/project/${projectId}/push`,
+                { body: { commitMessage: commitMessage.trim() || undefined } }
             )
-            setConnection(data.connection)
+            if (data.conflictBranch) {
+                // Remote had diverged — OL content was pushed to a conflict branch.
+                setConflictBranch(data.conflictBranch)
+                setPushStatus('idle')
+            } else {
+                setPushStatus('success')
+                // Refresh connection metadata (updatedAt)
+                const meta: { connection: Connection | null } = await getJSON(
+                    `/git-integrate/project/${projectId}`
+                )
+                setConnection(meta.connection)
+            }
         } catch (err: any) {
             setPushError(err?.data?.error || t('git_integrate_push_error', 'Push failed.'))
             setPushStatus('error')
@@ -317,12 +329,13 @@ export default function GitIntegrateModal({
     }, [projectId, commitMessage, t])
 
     const handlePull = useCallback(async () => {
-        if (!window.confirm(t(
+        if (!conflictBranch && !window.confirm(t(
             'git_integrate_pull_confirm',
-            'Pull from Git will overwrite local changes in this project with the content from the Git repository. Continue?'
+            'Pull from Git will merge the remote repository content into this project. Any files that exist in the Git repository will overwrite their local counterparts. Continue?'
         ))) return
         setPullStatus('pulling')
         setPullError(null)
+        setPullErrorPaths(null)
         setPullResult(null)
         try {
             const data: { textCount: number, binaryCount: number } = await postJSON(
@@ -330,11 +343,15 @@ export default function GitIntegrateModal({
             )
             setPullStatus('success')
             setPullResult(data)
+            // Clear any previous conflict state now that the user has synced.
+            setConflictBranch(null)
+            setPushStatus('idle')
         } catch (err: any) {
             setPullError(err?.data?.error || t('git_integrate_pull_error', 'Pull failed.'))
+            setPullErrorPaths(err?.data?.conflictedPaths || null)
             setPullStatus('error')
         }
-    }, [projectId, t])
+    }, [projectId, conflictBranch, t])
 
     const handleChangeConnection = useCallback(() => {
         setStep('provider')
@@ -653,6 +670,28 @@ export default function GitIntegrateModal({
                         {pushStatus === 'error' && pushError && (
                             <Notification type="error" content={pushError} className="mb-2" />
                         )}
+                        {conflictBranch && (
+                            <Notification
+                                type="warning"
+                                className="mb-2"
+                                content={
+                                    <>
+                                        <strong>{t('git_integrate_conflict_title', 'Merge conflict detected.')}</strong>
+                                        {' '}
+                                        {t(
+                                            'git_integrate_conflict_body',
+                                            'The remote branch had new commits since your last sync. Your Overleaf content has been pushed to a new branch'
+                                        )}
+                                        {' '}<code>{conflictBranch}</code>.
+                                        {' '}
+                                        {t(
+                                            'git_integrate_conflict_instructions',
+                                            'Please merge this branch into your default branch (using a pull request or your local git client), then click “Sync from Git” below.'
+                                        )}
+                                    </>
+                                }
+                            />
+                        )}
                         {pullStatus === 'success' && pullResult && (
                             <Notification
                                 type="success"
@@ -664,7 +703,22 @@ export default function GitIntegrateModal({
                             />
                         )}
                         {pullStatus === 'error' && pullError && (
-                            <Notification type="error" content={pullError} className="mb-2" />
+                            <Notification
+                                type="error"
+                                className="mb-2"
+                                content={
+                                    <>
+                                        <p>{pullError}</p>
+                                        {pullErrorPaths && pullErrorPaths.length > 0 && (
+                                            <ul className="git-integrate-conflict-paths">
+                                                {pullErrorPaths.map(path => (
+                                                    <li key={path}>{path}</li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </>
+                                }
+                            />
                         )}
                     </div>
                 )}
@@ -752,18 +806,20 @@ export default function GitIntegrateModal({
                 )}
                 {step === 'connected' && (
                     <OLButton
-                        variant="secondary"
+                        variant={conflictBranch ? 'primary' : 'secondary'}
                         onClick={handlePull}
                         disabled={pullStatus === 'pulling' || pushStatus === 'pushing'}
                     >
                         {pullStatus === 'pulling'
                             ? t('git_integrate_pulling', 'Pulling…')
-                            : t('git_integrate_pull', 'Pull from Git')}
+                            : conflictBranch
+                                ? t('git_integrate_pull_after_conflict', 'Sync from Git (I merged)')
+                                : t('git_integrate_pull', 'Pull from Git')}
                     </OLButton>
                 )}
                 {step === 'connected' && (
                     <OLButton
-                        variant="primary"
+                        variant={conflictBranch ? 'secondary' : 'primary'}
                         onClick={handlePush}
                         disabled={pushStatus === 'pushing' || pullStatus === 'pulling'}
                     >

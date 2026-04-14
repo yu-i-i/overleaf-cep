@@ -47,9 +47,18 @@ async function _request(token, baseUrl, endpoint, options = {}) {
         clearTimeout(timer)
         if (!response.ok) {
             const err = await response.json().catch(() => ({}))
-            throw new Error(
-                `Gitea/Forgejo API error on '${endpoint}': ${response.status} ${response.statusText}. ${err.message || ''}`
-            )
+            const body = err.message || err.error || ''
+            let msg
+            if (response.status === 401) {
+                msg = `Gitea/Forgejo authentication failed on '${endpoint}': the token has been revoked or is invalid.`
+            } else if (response.status === 403) {
+                msg = `Gitea/Forgejo permission denied on '${endpoint}': the token lacks required permissions (repository → Read & Write).`
+            } else if (response.status === 404) {
+                msg = `Gitea/Forgejo resource not found on '${endpoint}': check that the repository and branch still exist and the token has access.`
+            } else {
+                msg = `Gitea/Forgejo API error on '${endpoint}': ${response.status} ${response.statusText}. ${body}`
+            }
+            throw new Error(msg)
         }
         if (response.status === 204) return null
         return response.json()
@@ -121,6 +130,19 @@ export class GiteaProvider {
         return list.map(b => ({ name: b.name, protected: b.protected }))
     }
 
+    /**
+     * Returns the current HEAD commit SHA of a branch.
+     */
+    async getCurrentCommitSha(token, repoId, branch, opts = {}) {
+        const baseUrl = this._baseUrl(opts)
+        const [owner, repo] = repoId.split('/')
+        const data = await _request(
+            token, baseUrl,
+            `repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`
+        )
+        return data.commit.id
+    }
+
     /**     * Creates a new repository owned by the authenticated user.
      */
     async createRepository(token, name, isPrivate, opts = {}) {
@@ -146,6 +168,7 @@ export class GiteaProvider {
     /**     * Pushes all files using Gitea's batch-file contents endpoint.
      * Falls back to individual file updates if the batch endpoint is unavailable
      * (older Gitea instances).
+     * Returns { sha } of the latest commit after the push.
      */
     async pushFiles(token, repoId, branch, commitMessage, files, opts = {}) {
         const baseUrl = this._baseUrl(opts)
@@ -158,7 +181,7 @@ export class GiteaProvider {
             encoding: 'base64',
         }))
 
-        if (fileOps.length === 0) return
+        if (fileOps.length === 0) return { sha: null }
 
         // Attempt batch endpoint first.
         try {
@@ -176,6 +199,10 @@ export class GiteaProvider {
                 token, baseUrl, owner, repo, branch, commitMessage, files
             )
         }
+
+        // Return the current commit SHA after the push.
+        const sha = await this.getCurrentCommitSha(token, repoId, branch, opts).catch(() => null)
+        return { sha }
     }
 
     async _pushFilesSequentially(token, baseUrl, owner, repo, branch, commitMessage, files) {
@@ -216,14 +243,25 @@ export class GiteaProvider {
      * Returns Array<{ path: string, content: Buffer }>.
      * Uses the git/trees recursive endpoint + per-blob fetches.
      */
+    async _getCommitShaForRef(token, baseUrl, owner, repo, ref) {
+        const encodedRef = encodeURIComponent(ref)
+        if (/^[0-9a-f]{40}$/.test(ref)) {
+            const commitData = await _request(token, baseUrl, `repos/${owner}/${repo}/git/commits/${encodedRef}`)
+            return commitData.id || commitData.sha
+        }
+        const branchData = await _request(token, baseUrl, `repos/${owner}/${repo}/branches/${encodedRef}`)
+        return branchData.commit.id
+    }
+
     async pullFiles(token, repoId, branch, opts = {}) {
+        return this.pullFilesAtRef(token, repoId, branch, opts)
+    }
+
+    async pullFilesAtRef(token, repoId, ref, opts = {}) {
         const baseUrl = this._baseUrl(opts)
         const [owner, repo] = repoId.split('/')
 
-        // Get the commit SHA for the branch, then fetch the full recursive tree.
-        const branchData = await _request(token, baseUrl, `repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`)
-        const commitSha = branchData.commit.id
-
+        const commitSha = await this._getCommitShaForRef(token, baseUrl, owner, repo, ref)
         const treeData = await _request(
             token, baseUrl,
             `repos/${owner}/${repo}/git/trees/${commitSha}?recursive=true`
@@ -242,5 +280,36 @@ export class GiteaProvider {
             result.push(...fetched)
         }
         return result
+    }
+
+    /**
+     * Pushes all OL files to a *new* branch, created from the current HEAD of
+     * `baseBranch`.  Creates the branch via the Gitea branches API and then
+     * pushes the files to it.
+     *
+     * @param {string} token
+     * @param {string} repoId
+     * @param {string} baseBranch
+     * @param {string} newBranchName
+     * @param {string} commitMessage
+     * @param {Array<{ path: string, content: string|Buffer }>} files
+     * @param {{ baseUrl?: string }} opts
+     * @returns {Promise<{ sha: string }>}
+     */
+    async pushFilesToNewBranch(token, repoId, baseBranch, newBranchName, commitMessage, files, opts = {}) {
+        const baseUrl = this._baseUrl(opts)
+        const [owner, repo] = repoId.split('/')
+
+        // Create the new branch from baseBranch.
+        await _request(token, baseUrl, `repos/${owner}/${repo}/branches`, {
+            method: 'POST',
+            body: JSON.stringify({
+                new_branch_name: newBranchName,
+                old_branch_name: baseBranch,
+            }),
+        })
+
+        // Push OL content to the newly created branch.
+        return this.pushFiles(token, repoId, newBranchName, commitMessage, files, opts)
     }
 }
