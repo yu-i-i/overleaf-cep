@@ -28,6 +28,7 @@ import ProjectEntityUpdateHandler from '../../../../app/src/Features/Project/Pro
 import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
 import HistoryManager from '../../../../app/src/Features/History/HistoryManager.mjs'
 import EditorController from '../../../../app/src/Features/Editor/EditorController.mjs'
+import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.mjs'
 import { GitIntegrateModel } from './GitIntegrateModel.mjs'
 import { createProvider } from './providers/ProviderFactory.mjs'
 
@@ -196,6 +197,11 @@ export const GitIntegrateHandler = {
 
         logger.info({ projectId }, 'git-integrate: starting push')
 
+        // Flush any buffered in-memory edits from the document-updater to
+        // MongoDB before reading doc content.  Without this, docs that the
+        // user is currently editing return stale content from the last flush.
+        await DocumentUpdaterHandler.promises.flushProjectToMongo(projectId)
+
         // Collect all text documents
         const docs = await ProjectEntityHandler.promises.getAllDocs(projectId)
         // Collect all binary file references
@@ -345,6 +351,12 @@ export const GitIntegrateHandler = {
         if (!project) throw new Error('Project not found.')
 
         logger.info({ projectId }, 'git-integrate: starting pull')
+
+        // Flush buffered edits to MongoDB so getAllDocs returns the live content.
+        // The document-updater keeps real-time edits in Redis/memory; without this
+        // the local snapshot we compare against the base commit is stale, making
+        // the merge logic think local === base and overwrite Overleaf changes.
+        await DocumentUpdaterHandler.promises.flushProjectToMongo(projectId)
 
         const gitProvider = createProvider(connection.provider)
         const opts = connection.baseUrl ? { baseUrl: connection.baseUrl } : {}
