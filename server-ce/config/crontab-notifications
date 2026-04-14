@@ -1,0 +1,2 @@
+* * * * *    root  /overleaf/cron/process-notification-emails.sh >> /var/log/overleaf/cron-process-notification-emails.log 2>&1
+*/5 * * * *  root  /overleaf/cron/process-project-notifications.sh >> /var/log/overleaf/cron-process-project-notifications.log 2>&1

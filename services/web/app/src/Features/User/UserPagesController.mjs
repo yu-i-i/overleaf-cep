@@ -200,39 +200,6 @@ async function reconfirmAccountPage(req, res) {
   res.render('user/reconfirm', pageData)
 }
 
-async function emailPreferencesPage(req, res) {
-  const userId = SessionManager.getLoggedInUserId(req.session)
-  const user = await UserGetter.promises.getUser(userId, {
-    _id: 1,
-    email: 1,
-    first_name: 1,
-    last_name: 1,
-  })
-
-  if (!user) {
-    throw new Error('User not found')
-  }
-
-  let subscribed = false
-
-  const analyticsId = await UserAnalyticsIdCache.get(userId)
-  if (analyticsId) {
-    const [preferences] = await Modules.promises.hooks.fire(
-      'getSubscriptionPreferences',
-      analyticsId
-    )
-
-    subscribed = Boolean(preferences?.newsletter)
-  }
-
-  res.render('user/email-preferences', {
-    title: 'newsletter_info_title',
-    customerIoEnabled: true,
-    subscribed,
-    user,
-  })
-}
-
 const UserPagesController = {
   accountSuspended: expressify(accountSuspended),
   logout: expressify(logout),
@@ -313,8 +280,6 @@ const UserPagesController = {
       }
     )
   },
-
-  emailPreferencesPage: expressify(emailPreferencesPage),
 
   async compromisedPasswordPage(req, res) {
     res.render('user/compromised_password')

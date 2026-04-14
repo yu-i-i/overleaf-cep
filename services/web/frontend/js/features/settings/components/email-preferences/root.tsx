@@ -25,9 +25,8 @@ function EmailPreferencesContent() {
   return (
     <OLPageContentCard>
       <div className="page-header">
-        <h1>{t('newsletter_info_title')}</h1>
+        <h1>{t('notification_email_preferences_title')}</h1>
       </div>
-      <p>{t('newsletter_info_summary')}</p>
       <EmailPreferencesForm />
     </OLPageContentCard>
   )

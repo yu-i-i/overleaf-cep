@@ -2,6 +2,7 @@ import logger from '@overleaf/logger'
 import * as MessageManager from './MessageManager.js'
 import * as MessageFormatter from './MessageFormatter.js'
 import * as ThreadManager from '../Threads/ThreadManager.js'
+import * as NotificationsManager from '../Notifications/NotificationsManager.js'
 import { ObjectId } from '../../mongodb.js'
 
 const DEFAULT_MESSAGE_LIMIT = 50
@@ -372,6 +373,17 @@ async function _sendMessage(userId, projectId, content, clientThreadId, res) {
     userId,
     content,
     Date.now()
+  )
+  NotificationsManager.createThreadMessageNotifications(
+    projectId,
+    thread,
+    message._id,
+    userId
+  ).catch(error =>
+    logger.err(
+      { error, projectId, threadId: thread.thread_id },
+      'error creating comment notification'
+    )
   )
   message = MessageFormatter.formatMessageForClientSide(message)
   message.room_id = projectId

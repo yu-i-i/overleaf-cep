@@ -165,6 +165,19 @@ const UpdateManager = {
       )
       profile.log('RedisManager.updateDocument')
 
+      // Record that this project has a pending tracked-change notification.
+      // Fire-and-forget: a failure here must not abort the document update.
+      if (update.meta?.tc) {
+        RedisManager.promises
+          .setProjectNotificationTimestamp(projectId)
+          .catch(err =>
+            logger.warn(
+              { err, projectId },
+              'failed to set project notification timestamp for tracked change'
+            )
+          )
+      }
+
       UpdateManager._adjustHistoryUpdatesMetadata(
         historyUpdates,
         pathname,

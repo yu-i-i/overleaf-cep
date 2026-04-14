@@ -10,7 +10,6 @@ import LinkingSection from './linking-section'
 import BetaProgramSection from './beta-program-section'
 import LabsProgramSection from './labs-program-section'
 import SessionsSection from './sessions-section'
-import NewsletterSection from './newsletter-section'
 import LeaveSection from './leave-section'
 import * as eventTracking from '../../../infrastructure/event-tracking'
 import { UserProvider } from '../../../shared/context/user-context'
@@ -21,7 +20,6 @@ import { SSOAlert } from './emails/sso-alert'
 import OLRow from '@/shared/components/ol/ol-row'
 import OLCol from '@/shared/components/ol/ol-col'
 import OLPageContentCard from '@/shared/components/ol/ol-page-content-card'
-import { isSplitTestEnabled } from '@/utils/splitTestUtils'
 import NotificationsSection from './notifications-section'
 
 function SettingsPageRoot() {
@@ -46,7 +44,6 @@ function SettingsPageRoot() {
 function SettingsPageContent() {
   const { t } = useTranslation()
   const { isOverleaf, labsEnabled } = getMeta('ol-ExposedSettings')
-  const inNotificationsSplitTest = isSplitTestEnabled('email-notifications')
   return (
     <UserProvider>
       <OLPageContentCard>
@@ -85,11 +82,7 @@ function SettingsPageContent() {
           {isOverleaf ? (
             <>
               <hr />
-              {inNotificationsSplitTest ? (
-                <NotificationsSection />
-              ) : (
-                <NewsletterSection />
-              )}
+              <NotificationsSection />
               <hr />
               <LeaveSection />
             </>

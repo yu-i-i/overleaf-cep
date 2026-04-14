@@ -18,9 +18,16 @@ describe('NotificationsController', function () {
         getUserNotifications: sinon.stub().callsArgWith(1),
       },
     }
+    ctx.preferencesHandler = {
+      promises: {
+        getProjectPreferences: sinon.stub().resolves({}),
+        saveProjectPreferences: sinon.stub().resolves({}),
+      },
+    }
     ctx.req = {
       params: {
         notificationId,
+        projectId: 'project-id-123',
       },
       session: {
         user: {
@@ -39,6 +46,13 @@ describe('NotificationsController', function () {
       '../../../../app/src/Features/Notifications/NotificationsHandler',
       () => ({
         default: ctx.handler,
+      })
+    )
+
+    vi.doMock(
+      '../../../../app/src/Features/Notifications/NotificationsPreferencesHandler',
+      () => ({
+        default: ctx.preferencesHandler,
       })
     )
 
@@ -97,5 +111,63 @@ describe('NotificationsController', function () {
         }),
       })
     })
+  })
+
+  it('should return project preferences for a project', async function (ctx) {
+    const expectedPreferences = {
+      trackedChangesOnOwnProject: true,
+      trackedChangesOnInvitedProject: true,
+      commentOnOwnProject: true,
+      commentOnInvitedProject: true,
+      repliesOnOwnProject: true,
+      repliesOnInvitedProject: true,
+      repliesOnAuthoredThread: true,
+      repliesOnParticipatingThread: true,
+      sendCommentReplyEmails: false,
+    }
+    ctx.preferencesHandler.promises.getProjectPreferences.resolves(
+      expectedPreferences
+    )
+
+    await ctx.controller.getProjectPreferences(ctx.req, {
+      json: body => {
+        body.should.deep.equal(expectedPreferences)
+      },
+    })
+
+    ctx.preferencesHandler.promises.getProjectPreferences.calledWith(
+      userId,
+      ctx.req.params.projectId
+    ).should.equal(true)
+  })
+
+  it('should save project preferences for a project', async function (ctx) {
+    const expectedPreferences = {
+      trackedChangesOnOwnProject: false,
+      trackedChangesOnInvitedProject: false,
+      commentOnOwnProject: false,
+      commentOnInvitedProject: false,
+      repliesOnOwnProject: false,
+      repliesOnInvitedProject: false,
+      repliesOnAuthoredThread: true,
+      repliesOnParticipatingThread: true,
+      sendCommentReplyEmails: false,
+    }
+    ctx.req.body = expectedPreferences
+    ctx.preferencesHandler.promises.saveProjectPreferences.resolves(
+      expectedPreferences
+    )
+
+    await ctx.controller.saveProjectPreferences(ctx.req, {
+      json: body => {
+        body.should.deep.equal(expectedPreferences)
+      },
+    })
+
+    ctx.preferencesHandler.promises.saveProjectPreferences.calledWith(
+      userId,
+      ctx.req.params.projectId,
+      expectedPreferences
+    ).should.equal(true)
   })
 })

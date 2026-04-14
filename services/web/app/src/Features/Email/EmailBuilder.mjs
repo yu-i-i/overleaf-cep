@@ -360,6 +360,82 @@ templates.projectInvite = ctaTemplate({
   },
 })
 
+templates.projectNotification = ctaTemplate({
+  subject(opts) {
+    const event = opts.isComment ? 'comment' : 'reply'
+    return `New project ${event} on ${_.escape(opts.projectName)} — ${settings.appName}`
+  },
+  title(opts) {
+    return opts.isComment ? 'New Comment' : 'New Reply'
+  },
+  greeting(opts) {
+    return ''
+  },
+  message(opts, isPlainText) {
+    const message = opts.isComment
+      ? `A new comment has been posted in ${_.escape(opts.projectName)}.`
+      : `A new reply has been posted in ${_.escape(opts.projectName)}.`
+
+    return [EmailMessageHelper.cleanHTML(message, isPlainText)]
+  },
+  secondaryMessage(opts) {
+    return [
+      `View the project to read the full thread and respond.`,
+    ]
+  },
+  ctaText() {
+    return 'View comment'
+  },
+  ctaURL(opts) {
+    const baseUrl = settings.siteUrl.replace(/\/$/, '')
+    return `${baseUrl}/project/${opts.projectId}`
+  },
+  gmailGoToAction(opts) {
+    const url = `${settings.siteUrl.replace(/\/$/, '')}/project/${opts.projectId}`
+    return {
+      target: url,
+      name: 'View comment',
+      description: `View the recent ${opts.isComment ? 'comment' : 'reply'} on ${_.escape(
+        opts.projectName
+      )}`,
+    }
+  },
+})
+
+templates.trackedChangesNotification = ctaTemplate({
+  subject(opts) {
+    return `New tracked changes in ${_.escape(opts.projectName)} — ${settings.appName}`
+  },
+  title() {
+    return 'New Tracked Changes'
+  },
+  greeting() {
+    return ''
+  },
+  message(opts, isPlainText) {
+    const message = `New tracked changes are pending your review in ${_.escape(opts.projectName)}.`
+    return [EmailMessageHelper.cleanHTML(message, isPlainText)]
+  },
+  secondaryMessage() {
+    return ['Open the project to review, accept, or reject the changes.']
+  },
+  ctaText() {
+    return 'Review changes'
+  },
+  ctaURL(opts) {
+    const baseUrl = settings.siteUrl.replace(/\/$/, '')
+    return `${baseUrl}/project/${opts.projectId}`
+  },
+  gmailGoToAction(opts) {
+    const url = `${settings.siteUrl.replace(/\/$/, '')}/project/${opts.projectId}`
+    return {
+      target: url,
+      name: 'Review changes',
+      description: `Review tracked changes in ${_.escape(opts.projectName)}`,
+    }
+  },
+})
+
 templates.reconfirmEmail = ctaTemplate({
   subject() {
     return `Reconfirm Email - ${settings.appName}`

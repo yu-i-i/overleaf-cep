@@ -45,6 +45,18 @@ const CollaboratorsInviteHandler = {
       .read()
   },
 
+  _shouldSendProjectInviteEmail(userPreferences) {
+    if (!userPreferences) {
+      return true
+    }
+
+    if (userPreferences.enabled === false) {
+      return false
+    }
+
+    return userPreferences.projectInvite !== false
+  },
+
   async _sendMessages(projectId, sendingUser, invite) {
     const { email } = invite
     logger.debug(
@@ -62,11 +74,25 @@ const CollaboratorsInviteHandler = {
           'error sending notification for invite'
         )
       })
-    CollaboratorsEmailHandler.promises
-      .notifyUserOfProjectInvite(projectId, invite.email, invite, sendingUser)
-      .catch(err => {
-        logger.err({ err, projectId, email }, 'error sending email for invite')
-      })
+
+    const existingUser = await UserGetter.promises.getUserByAnyEmail(email, {
+      _id: 1,
+      notificationEmailPreferences: 1,
+    })
+    const shouldSendEmail =
+      existingUser == null ||
+      CollaboratorsInviteHandler._shouldSendProjectInviteEmail(
+        existingUser.notificationEmailPreferences
+      )
+
+    if (shouldSendEmail) {
+      CollaboratorsEmailHandler.promises
+        .notifyUserOfProjectInvite(projectId, invite.email, invite, sendingUser)
+        .catch(err => {
+          logger.err({ err, projectId, email }, 'error sending email for invite')
+        })
+    }
+
     await notificationJob
   },
 
