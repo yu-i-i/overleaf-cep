@@ -1027,7 +1027,12 @@ module.exports = {
       ),
     ],
     contactUsModal: [],
-    sourceEditorExtensions: [],
+    sourceEditorExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/extensions/bib-editor-extension.ts'
+      ),
+    ],
     sourceEditorComponents: [],
     pdfLogEntryHeaderActionComponents: [],
     pdfLogEntryComponents: [],
@@ -1043,7 +1048,12 @@ module.exports = {
     ],
     sourceEditorToolbarComponents: [],
     sourceEditorToolbarEndButtons: [],
-    rootContextProviders: [],
+    rootContextProviders: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/components/bib-editor-root-provider.tsx'
+      ),
+    ],
     mainEditorLayoutModals: [
       Path.resolve(
         __dirname,
@@ -1141,7 +1151,12 @@ module.exports = {
         '../modules/reference-picker/frontend/reference-index/advanced-reference-index.ts'
       ),
     ],
-    railEntries: [],
+    railEntries: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/components/bib-editor-rail-entry.tsx'
+      ),
+    ],
     railPopovers: [],
   },
 
@@ -1160,6 +1175,7 @@ module.exports = {
     'template-gallery',
     'git-bridge',
     'zotero',
+    'bib-editor',
   ],
   viewIncludes: {},
 

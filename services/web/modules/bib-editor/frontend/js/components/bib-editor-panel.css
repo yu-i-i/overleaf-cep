@@ -1,0 +1,293 @@
+/* BibEditor sidebar panel styles */
+
+/* --- Theme variables (dark by default, overridden for light theme) --- */
+:root {
+  --bib-panel-bg: var(--bg-dark-primary);
+  --bib-panel-color: var(--content-primary-dark);
+  --bib-panel-secondary-color: var(--content-secondary-dark);
+  --bib-panel-border: var(--border-divider-dark);
+  --bib-panel-card-hover-border: #ffffff;
+  --bib-panel-card-hover-bg: var(--bg-dark-secondary);
+}
+
+[data-theme='light'] {
+  --bib-panel-bg: var(--white);
+  --bib-panel-color: var(--content-primary);
+  --bib-panel-secondary-color: var(--content-secondary);
+  --bib-panel-border: var(--border-divider);
+  --bib-panel-card-hover-border: var(--neutral-80);
+  --bib-panel-card-hover-bg: var(--bg-light-secondary);
+}
+
+.bib-editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.bib-editor-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 12px;
+}
+
+/* Placeholder (when no .bib file is open) */
+.bib-editor-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 24px;
+  color: var(--bib-panel-secondary-color);
+}
+
+.bib-editor-placeholder-icon {
+  font-size: 48px;
+  opacity: 0.4;
+  margin-bottom: 12px;
+}
+
+.bib-editor-placeholder-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.bib-editor-placeholder-body {
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 240px;
+}
+
+/* Entry List */
+.bib-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bib-list-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.bib-list-search {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.bib-list-count {
+  font-size: 12px;
+  color: var(--bib-panel-secondary-color);
+  padding: 4px 0;
+}
+
+.bib-list-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bib-list-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--bib-panel-secondary-color);
+  font-size: 13px;
+}
+
+/* Entry Card */
+.bib-entry-card {
+  border: 1px solid var(--bib-panel-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.bib-entry-card:hover {
+  border-color: var(--bib-panel-card-hover-border);
+  background-color: var(--bib-panel-card-hover-bg);
+}
+
+.bib-entry-card:focus {
+  outline: 2px solid var(--blue-50);
+  outline-offset: -2px;
+}
+
+.bib-entry-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.bib-entry-card-type {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bib-panel-secondary-color);
+  text-transform: lowercase;
+  font-family: var(--font-mono);
+}
+
+.bib-entry-card-key {
+  font-size: 11px;
+  color: var(--bib-panel-secondary-color);
+  font-family: var(--font-mono);
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bib-entry-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--bib-panel-color);
+  /* Clamp to 2 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bib-entry-card-meta {
+  font-size: 12px;
+  color: var(--bib-panel-secondary-color);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bib-entry-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.bib-entry-card-actions .btn {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+/* Entry Form */
+.bib-entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bib-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bib-form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bib-panel-color);
+}
+
+.bib-form-required {
+  color: var(--content-danger);
+}
+
+.bib-form-error {
+  color: var(--content-danger);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.bib-form-input,
+.bib-form-select,
+.bib-form-textarea {
+  font-size: 13px;
+}
+
+.bib-form-input-error {
+  border-color: var(--content-danger) !important;
+}
+
+.bib-form-textarea {
+  resize: vertical;
+  min-height: 48px;
+}
+
+.bib-form-key-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.bib-form-key-row .form-control {
+  flex: 1;
+}
+
+/* DOI import row */
+.bib-doi-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.bib-doi-row .form-control {
+  flex: 1;
+}
+
+.bib-doi-success {
+  color: var(--content-positive, #2e7d32);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.bib-form-divider {
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--border-primary);
+  opacity: 0.5;
+}
+
+.bib-form-toggle {
+  padding: 0;
+  font-size: 12px;
+}
+
+.bib-form-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-primary);
+}
+
+/* Author field */
+.bib-author-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bib-author-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.bib-author-row .form-control {
+  flex: 1;
+}
+
+.bib-author-move,
+.bib-author-remove {
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
