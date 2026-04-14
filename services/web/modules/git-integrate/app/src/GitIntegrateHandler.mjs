@@ -564,11 +564,40 @@ export const GitIntegrateHandler = {
         }
 
         if (conflicts.length > 0) {
-            const err = new Error(
-                `Merge conflict detected on the following file(s): ${conflicts.join(', ')}. Please resolve the conflict in Git before pulling again.`
+            // Automatic merge is not possible — push Overleaf content to a new
+            // conflict branch so neither side's work is lost.  This mirrors the
+            // behaviour used for push divergence: the user resolves the conflict
+            // in Git (via PR or local merge) then pulls again.
+            logger.info(
+                { projectId, conflicts },
+                'git-integrate: pull merge conflict, pushing to conflict branch'
             )
-            err.conflictedPaths = conflicts
-            throw err
+            const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+            const conflictBranch = `overleaf/${ts}`
+
+            // We need the full list of local files to push to the conflict branch.
+            // Re-use what we already read.
+            const filesToPush = []
+            for (const [filePath, entry] of localFiles.entries()) {
+                const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+                filesToPush.push({ path: cleanPath, content: entry.content })
+            }
+
+            const message = `Overleaf: merge conflict branch ${ts}`
+            await gitProvider.pushFilesToNewBranch(
+                connection.token,
+                connection.repoId,
+                connection.branch,
+                conflictBranch,
+                message,
+                filesToPush,
+                opts
+            )
+            logger.info(
+                { projectId, conflictBranch },
+                'git-integrate: conflict branch pushed'
+            )
+            return { conflictBranch }
         }
 
         const tmpFiles = []

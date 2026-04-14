@@ -264,7 +264,7 @@ export class GitHubProvider {
         const [owner, repo] = repoId.split('/')
 
         const { sha: parentSha, treeSha: baseTreeSha } =
-            await this._getLatestCommit(token, baseUrl, owner, repo, branch)
+            await this._getCommitInfo(token, baseUrl, owner, repo, branch)
 
         // Create a blob for every file (in parallel, capped to avoid rate limits)
         const CONCURRENCY = 5
@@ -320,7 +320,7 @@ export class GitHubProvider {
         const [owner, repo] = repoId.split('/')
 
         const { sha: parentSha, treeSha: baseTreeSha } =
-            await this._getLatestCommit(token, baseUrl, owner, repo, baseBranch)
+            await this._getCommitInfo(token, baseUrl, owner, repo, baseBranch)
 
         const CONCURRENCY = 5
         const treeItems = []

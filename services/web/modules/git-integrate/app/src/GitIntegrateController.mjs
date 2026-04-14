@@ -112,8 +112,14 @@ export async function pull(req, res) {
     const projectId = _getProjectId(req)
     const userId = _userId(req)
     try {
-        const { textCount, binaryCount } = await GitIntegrateHandler.pullProject(projectId, userId)
-        res.json({ success: true, textCount, binaryCount })
+        const result = await GitIntegrateHandler.pullProject(projectId, userId)
+        if (result.conflictBranch) {
+            // Merge conflict — OL content was pushed to a new conflict branch.
+            res.json({ success: false, conflictBranch: result.conflictBranch })
+        } else {
+            const { textCount, binaryCount } = result
+            res.json({ success: true, textCount, binaryCount })
+        }
     } catch (err) {
         _sendError(res, 400, err.message || 'Pull failed', err)
     }

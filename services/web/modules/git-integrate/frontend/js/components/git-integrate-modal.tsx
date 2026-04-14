@@ -331,21 +331,27 @@ export default function GitIntegrateModal({
     const handlePull = useCallback(async () => {
         if (!conflictBranch && !window.confirm(t(
             'git_integrate_pull_confirm',
-            'Pull from Git will merge the remote repository content into this project. Any files that exist in the Git repository will overwrite their local counterparts. Continue?'
+            'Sync from Git will merge remote changes into this project. Local changes that cannot be merged automatically will be pushed to a new branch for manual resolution. Continue?'
         ))) return
         setPullStatus('pulling')
         setPullError(null)
         setPullErrorPaths(null)
         setPullResult(null)
         try {
-            const data: { textCount: number, binaryCount: number } = await postJSON(
+            const data: { success: boolean, textCount?: number, binaryCount?: number, conflictBranch?: string } = await postJSON(
                 `/git-integrate/project/${projectId}/pull`, { body: {} }
             )
-            setPullStatus('success')
-            setPullResult(data)
-            // Clear any previous conflict state now that the user has synced.
-            setConflictBranch(null)
-            setPushStatus('idle')
+            if (data.conflictBranch) {
+                // Automatic merge failed — Overleaf content pushed to a conflict branch.
+                setConflictBranch(data.conflictBranch)
+                setPullStatus('idle')
+            } else {
+                setPullStatus('success')
+                setPullResult({ textCount: data.textCount ?? 0, binaryCount: data.binaryCount ?? 0 })
+                // Clear any previous conflict state now that the user has synced.
+                setConflictBranch(null)
+                setPushStatus('idle')
+            }
         } catch (err: any) {
             setPullError(err?.data?.error || t('git_integrate_pull_error', 'Pull failed.'))
             setPullErrorPaths(err?.data?.conflictedPaths || null)
@@ -680,13 +686,13 @@ export default function GitIntegrateModal({
                                         {' '}
                                         {t(
                                             'git_integrate_conflict_body',
-                                            'The remote branch had new commits since your last sync. Your Overleaf content has been pushed to a new branch'
+                                            'Changes were made both in Overleaf and in the Git repository that cannot be merged automatically. Your Overleaf content has been pushed to a new branch'
                                         )}
                                         {' '}<code>{conflictBranch}</code>.
                                         {' '}
                                         {t(
                                             'git_integrate_conflict_instructions',
-                                            'Please merge this branch into your default branch (using a pull request or your local git client), then click “Sync from Git” below.'
+                                            'Merge this branch into your default branch using a pull request or your local Git client, then click "Sync from Git" below.'
                                         )}
                                     </>
                                 }
