@@ -1,0 +1,288 @@
+extends ../../../../../app/views/layout-marketing
+
+block content
+	//- Toast notification (outside card so position:fixed works properly)
+	#emailAlert.alert.d-none(role='alert' style='position:fixed;top:20px;right:20px;z-index:99999;min-width:320px;max-width:500px;box-shadow:0 4px 12px rgba(0,0,0,0.15);')
+	style.
+		.email-admin-container { max-width: 900px; margin: 0 auto; }
+		.section-header { font-size: 1.1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; padding-bottom: 0.25rem; border-bottom: 1px solid #dee2e6; }
+		.form-text { font-size: 0.85rem; }
+		.driver-section { display: none; }
+		.driver-section.active { display: block; }
+
+	.email-admin-container
+		.page-header
+			h1 Email Configuration
+
+		.card
+			.card-body
+				//- General Settings
+				h5.section-header General
+				.row.mb-3
+					.col-md-6
+						label.form-label(for='fromAddress') From Address
+						input.form-control#fromAddress(type='email' placeholder='noreply@example.com')
+						.form-text The sender address for all Overleaf emails. Required.
+					.col-md-6
+						label.form-label(for='replyTo') Reply-To Address
+						input.form-control#replyTo(type='email' placeholder='support@example.com')
+						.form-text Optional reply-to address.
+
+				//- Driver Selection
+				h5.section-header Email Driver
+				.row.mb-3
+					.col-md-6
+						label.form-label(for='driver') Driver
+						select.form-select#driver
+							option(value='smtp') SMTP
+							option(value='ses') AWS SES
+						.form-text Choose between SMTP server or Amazon SES.
+
+				//- SMTP Settings
+				#smtpSection.driver-section
+					h5.section-header SMTP Configuration
+					.row.mb-3
+						.col-md-6
+							label.form-label(for='smtpHost') SMTP Host
+							input.form-control#smtpHost(type='text' placeholder='smtp.example.com')
+						.col-md-3
+							label.form-label(for='smtpPort') Port
+							input.form-control#smtpPort(type='number' value='587')
+						.col-md-3
+							label.form-label(for='smtpName') EHLO Hostname
+							input.form-control#smtpName(type='text' placeholder='')
+							.form-text Optional EHLO hostname.
+					.row.mb-3
+						.col-md-4
+							.form-check.form-switch
+								input.form-check-input#smtpSecure(type='checkbox')
+								label.form-check-label(for='smtpSecure') Use TLS
+								.form-text Connect using TLS (port 465).
+						.col-md-4
+							.form-check.form-switch
+								input.form-check-input#smtpIgnoreTLS(type='checkbox')
+								label.form-check-label(for='smtpIgnoreTLS') Ignore TLS
+								.form-text Skip STARTTLS upgrade.
+						.col-md-4
+							.form-check.form-switch
+								input.form-check-input#smtpTlsRejectUnauth(type='checkbox' checked)
+								label.form-check-label(for='smtpTlsRejectUnauth') Verify TLS Certificate
+								.form-text Reject unauthorized TLS connections.
+					.row.mb-3
+						.col-md-6
+							label.form-label(for='smtpUser') Username
+							input.form-control#smtpUser(type='text' placeholder='')
+						.col-md-6
+							label.form-label(for='smtpPass') Password
+							form(autocomplete='off' style='display:contents')
+								input.form-control#smtpPass(type='password' placeholder='' autocomplete='new-password')
+					.row.mb-3
+						.col-md-4
+							.form-check.form-switch
+								input.form-check-input#smtpLogger(type='checkbox')
+								label.form-check-label(for='smtpLogger') Enable Logger
+								.form-text Enable nodemailer SMTP logging.
+
+				//- AWS SES Settings
+				#sesSection.driver-section
+					h5.section-header AWS SES Configuration
+					.row.mb-3
+						.col-md-6
+							label.form-label(for='sesAccessKeyId') Access Key ID
+							input.form-control#sesAccessKeyId(type='text' placeholder='')
+						.col-md-6
+							label.form-label(for='sesSecretKey') Secret Key
+							form(autocomplete='off' style='display:contents')
+								input.form-control#sesSecretKey(type='password' placeholder='' autocomplete='new-password')
+					.row.mb-3
+						.col-md-6
+							label.form-label(for='sesRegion') Region
+							input.form-control#sesRegion(type='text' value='us-east-1')
+
+				//- Advanced Settings
+				h5.section-header Advanced
+				.row.mb-3
+					.col-md-6
+						label.form-label(for='textEncoding') Text Encoding
+						input.form-control#textEncoding(type='text' placeholder='')
+						.form-text Optional text encoding for emails.
+					.col-md-6
+						label.form-label(for='customFooter') Custom Email Footer
+						textarea.form-control#customFooter(rows='2' placeholder='')
+						.form-text HTML allowed. Appended to all outgoing emails.
+
+				//- Test Email
+				h5.section-header Test Email
+				.row.mb-3
+					.col-md-6
+						label.form-label(for='testRecipient') Recipient Address
+						input.form-control#testRecipient(type='email' placeholder='admin@example.com')
+					.col-md-6.d-flex.align-items-end
+						button.btn.btn-outline-primary#btnTestEmail(type='button') Send Test Email
+				#emailTestResult
+
+				//- Save
+				hr
+				.d-flex.justify-content-between.align-items-center
+					div
+						button.btn.btn-primary#btnSaveEmail(type='button') Save Configuration
+						span.ms-3#emailSaveStatus
+					.text-muted.small A server restart is recommended after saving for full effect.
+
+	script(nonce=scriptNonce).
+		const csrfToken = document.querySelector('meta[name="ol-csrfToken"]')?.content || '';
+		let emailConfig = !{emailConfig};
+
+		function emailFetch(url, opts = {}) {
+			opts.headers = opts.headers || {};
+			opts.headers['X-Csrf-Token'] = csrfToken;
+			opts.headers['x-csrf-token'] = csrfToken;
+			opts.headers['csrf-token'] = csrfToken;
+			opts.credentials = 'same-origin';
+			if (opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData)) {
+				opts.body._csrf = csrfToken;
+				opts.headers['Content-Type'] = 'application/json';
+				opts.body = JSON.stringify(opts.body);
+			} else if (opts.method && opts.method !== 'GET' && !opts.body) {
+				opts.headers['Content-Type'] = 'application/json';
+				opts.body = JSON.stringify({ _csrf: csrfToken });
+			}
+			const sep = url.includes('?') ? '&' : '?';
+			return fetch(url + sep + '_csrf=' + encodeURIComponent(csrfToken), opts);
+		}
+
+		function showAlert(message, type) {
+			const el = document.getElementById('emailAlert');
+			const bgColors = { success: '#d1e7dd', danger: '#f8d7da', warning: '#fff3cd', info: '#cff4fc' };
+			const borderColors = { success: '#badbcc', danger: '#f5c2c7', warning: '#ffecb5', info: '#b6effb' };
+			el.className = 'alert alert-' + type;
+			el.style.backgroundColor = bgColors[type] || '#f8f9fa';
+			el.style.borderColor = borderColors[type] || '#dee2e6';
+			el.style.opacity = '1';
+			el.textContent = message;
+			el.classList.remove('d-none');
+			setTimeout(() => el.classList.add('d-none'), 5000);
+		}
+
+		function toggleDriverSections() {
+			const driver = document.getElementById('driver').value;
+			document.getElementById('smtpSection').classList.toggle('active', driver === 'smtp');
+			document.getElementById('sesSection').classList.toggle('active', driver === 'ses');
+		}
+
+		function loadConfig(cfg) {
+			if (!cfg) return;
+			document.getElementById('fromAddress').value = cfg.fromAddress || '';
+			document.getElementById('replyTo').value = cfg.replyTo || '';
+			document.getElementById('driver').value = cfg.driver || 'smtp';
+
+			if (cfg.smtp) {
+				document.getElementById('smtpHost').value = cfg.smtp.host || '';
+				document.getElementById('smtpPort').value = cfg.smtp.port || 587;
+				document.getElementById('smtpName').value = cfg.smtp.name || '';
+				document.getElementById('smtpSecure').checked = !!cfg.smtp.secure;
+				document.getElementById('smtpIgnoreTLS').checked = !!cfg.smtp.ignoreTLS;
+				document.getElementById('smtpTlsRejectUnauth').checked = cfg.smtp.tlsRejectUnauth !== false;
+				document.getElementById('smtpUser').value = cfg.smtp.user || '';
+				document.getElementById('smtpPass').value = cfg.smtp.pass || '';
+				document.getElementById('smtpLogger').checked = !!cfg.smtp.logger;
+			}
+
+			if (cfg.ses) {
+				document.getElementById('sesAccessKeyId').value = cfg.ses.accessKeyId || '';
+				document.getElementById('sesSecretKey').value = cfg.ses.secretKey || '';
+				document.getElementById('sesRegion').value = cfg.ses.region || 'us-east-1';
+			}
+
+			document.getElementById('textEncoding').value = cfg.textEncoding || '';
+			document.getElementById('customFooter').value = cfg.customFooter || '';
+			toggleDriverSections();
+		}
+
+		function gatherConfig() {
+			return {
+				fromAddress: document.getElementById('fromAddress').value,
+				replyTo: document.getElementById('replyTo').value,
+				driver: document.getElementById('driver').value,
+				smtp: {
+					host: document.getElementById('smtpHost').value,
+					port: parseInt(document.getElementById('smtpPort').value, 10) || 587,
+					secure: document.getElementById('smtpSecure').checked,
+					ignoreTLS: document.getElementById('smtpIgnoreTLS').checked,
+					name: document.getElementById('smtpName').value,
+					logger: document.getElementById('smtpLogger').checked,
+					user: document.getElementById('smtpUser').value,
+					pass: document.getElementById('smtpPass').value,
+					tlsRejectUnauth: document.getElementById('smtpTlsRejectUnauth').checked,
+				},
+				ses: {
+					accessKeyId: document.getElementById('sesAccessKeyId').value,
+					secretKey: document.getElementById('sesSecretKey').value,
+					region: document.getElementById('sesRegion').value,
+				},
+				textEncoding: document.getElementById('textEncoding').value,
+				customFooter: document.getElementById('customFooter').value,
+			};
+		}
+
+		async function saveConfig() {
+			const config = gatherConfig();
+			config._csrf = csrfToken;
+			document.getElementById('emailSaveStatus').innerHTML = '<span class="text-muted">Saving...</span>';
+			try {
+				const res = await emailFetch('/admin/email/config', {
+					method: 'POST',
+					body: config,
+				});
+				const data = await res.json();
+				if (data.success) {
+					document.getElementById('emailSaveStatus').innerHTML = '<span class="text-success">Saved!</span>';
+					showAlert(data.message || 'Configuration saved.', 'success');
+				} else {
+					document.getElementById('emailSaveStatus').innerHTML = '<span class="text-danger">Error</span>';
+					showAlert(data.error || 'Save failed', 'danger');
+				}
+			} catch (e) {
+				document.getElementById('emailSaveStatus').innerHTML = '<span class="text-danger">Error</span>';
+				showAlert('Network error: ' + e.message, 'danger');
+			}
+		}
+
+		async function testEmail() {
+			const recipient = document.getElementById('testRecipient').value;
+			if (!recipient) {
+				showAlert('Enter a recipient email address', 'warning');
+				return;
+			}
+			const result = document.getElementById('emailTestResult');
+			result.innerHTML = '<span class="text-muted">Sending test email...</span>';
+			try {
+				const res = await emailFetch('/admin/email/test', {
+					method: 'POST',
+					body: { testRecipient: recipient, _csrf: csrfToken },
+				});
+				const data = await res.json();
+				if (data.success) {
+					result.innerHTML = '<span class="text-success">' + escapeHtml(data.message) + '</span>';
+					showAlert(data.message, 'success');
+				} else {
+					result.innerHTML = '<span class="text-danger">' + escapeHtml(data.message) + '</span>';
+					showAlert(data.message, 'danger');
+				}
+			} catch (e) {
+				result.innerHTML = '<span class="text-danger">Network error: ' + escapeHtml(e.message) + '</span>';
+			}
+		}
+
+		function escapeHtml(s) {
+			const d = document.createElement('div');
+			d.appendChild(document.createTextNode(s || ''));
+			return d.innerHTML;
+		}
+
+		document.addEventListener('DOMContentLoaded', () => {
+			loadConfig(emailConfig);
+			document.getElementById('driver').addEventListener('change', toggleDriverSections);
+			document.getElementById('btnSaveEmail').addEventListener('click', saveConfig);
+			document.getElementById('btnTestEmail').addEventListener('click', testEmail);
+		});

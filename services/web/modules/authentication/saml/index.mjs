@@ -1,9 +1,12 @@
+import { isSAMLEnabled } from '../ssoConfigLoader.mjs'
+
 let samlModule = {}
-if (process.env.EXTERNAL_AUTH?.includes('saml')) {
+const samlEnabled = process.env.EXTERNAL_AUTH?.includes('saml') || await isSAMLEnabled()
+if (samlEnabled) {
   const { default: SAMLModuleManager } = await import('./app/src/SAMLModuleManager.mjs')
   const { default: router } = await import('./app/src/SAMLRouter.mjs')
   const { default: nonCsrfRouter } = await import('./app/src/SAMLNonCsrfRouter.mjs')
-  SAMLModuleManager.initSettings()
+  await SAMLModuleManager.initSettings()
   SAMLModuleManager.initPolicy()
   samlModule = {
     name: 'saml-authentication',

@@ -1,8 +1,11 @@
+import { isLDAPEnabled } from '../ssoConfigLoader.mjs'
+
 let ldapModule = {}
-if (process.env.EXTERNAL_AUTH?.includes('ldap')) {
+const ldapEnabled = process.env.EXTERNAL_AUTH?.includes('ldap') || await isLDAPEnabled()
+if (ldapEnabled) {
   const { default: LDAPModuleManager } = await import('./app/src/LDAPModuleManager.mjs')
   const { default: router } = await import('./app/src/LDAPRouter.mjs')
-  LDAPModuleManager.initSettings()
+  await LDAPModuleManager.initSettings()
   LDAPModuleManager.initPolicy()
   ldapModule = {
     name: 'ldap-authentication',

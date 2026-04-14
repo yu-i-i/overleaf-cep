@@ -23,7 +23,7 @@ const OIDCAuthenticationController = {
           delete req.session.intent
 // After linking, log out from the OIDC provider and redirect back to '/user/settings'.
 // Keycloak supports this; Authentik does not (yet).
-          const logoutUrl = process.env.OVERLEAF_OIDC_LOGOUT_URL
+          const logoutUrl = Settings._oidcDbProvider?.logoutURL || process.env.OVERLEAF_OIDC_LOGOUT_URL
           const redirectUri = `${Settings.siteUrl.replace(/\/+$/, '')}/user/settings`
           return res.redirect(`${logoutUrl}?id_token_hint=${info.idToken}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`)
 	}
@@ -151,7 +151,7 @@ const OIDCAuthenticationController = {
 // TODO: instead of storing idToken in session, use refreshToken to obtain a new idToken?
     const idTokenHint = req.session.idToken
     await UserController.doLogout(req)
-    const logoutUrl = process.env.OVERLEAF_OIDC_LOGOUT_URL
+    const logoutUrl = Settings._oidcDbProvider?.logoutURL || process.env.OVERLEAF_OIDC_LOGOUT_URL
     const redirectUri = Settings.siteUrl
     res.redirect(`${logoutUrl}?id_token_hint=${idTokenHint}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`)
   },

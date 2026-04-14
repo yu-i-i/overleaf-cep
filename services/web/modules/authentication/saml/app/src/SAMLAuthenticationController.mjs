@@ -138,11 +138,18 @@ const SAMLAuthenticationController = {
   },
   getSPMetadata(req, res) {
     const samlStratery = passport._strategy('saml')
+    const dbProvider = Settings._samlDbProvider
+    const decryptionCert = dbProvider?.decryptionCert
+      ? readFilesContentFromEnv(dbProvider.decryptionCert)
+      : readFilesContentFromEnv(process.env.OVERLEAF_SAML_DECRYPTION_CERT)
+    const publicCert = dbProvider?.publicCert
+      ? readFilesContentFromEnv(dbProvider.publicCert)
+      : readFilesContentFromEnv(process.env.OVERLEAF_SAML_PUBLIC_CERT)
     res.setHeader('Content-Disposition', `attachment; filename="${samlStratery._saml.options.issuer}-meta.xml"`)
     xmlResponse(res,
       samlStratery.generateServiceProviderMetadata(
-        readFilesContentFromEnv(process.env.OVERLEAF_SAML_DECRYPTION_CERT),
-        readFilesContentFromEnv(process.env.OVERLEAF_SAML_PUBLIC_CERT)
+        decryptionCert,
+        publicCert
       )
     )
   },

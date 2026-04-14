@@ -1,0 +1,965 @@
+extends ../../../../../app/views/layout-marketing
+include ../../../../../app/views/_mixins/formMessages
+
+block content
+	//- Toast notification (outside card so position:fixed works regardless of parent)
+	#toast-notification.alert.d-none(role='alert' style='position:fixed;top:20px;right:20px;z-index:99999;min-width:320px;max-width:500px;box-shadow:0 4px 12px rgba(0,0,0,0.15);')
+		span#toast-message
+	#main-content.content.content-alt
+		.container
+			.row
+				.col-sm-12
+					.card
+						.card-body
+							.page-header
+								h1 SSO Configuration
+								p.text-muted Manage authentication settings, providers, and login page appearance.
+
+							//- Navigation tabs
+							ul.nav.nav-tabs.mb-4(role='tablist')
+								li.nav-item
+									a.nav-link.active(
+										data-bs-toggle='tab'
+										href='#tab-login-page'
+										role='tab'
+									) 
+										i.fa.fa-sign-in.me-1 
+										|  Login Page
+								li.nav-item
+									a.nav-link(
+										data-bs-toggle='tab'
+										href='#tab-ldap'
+										role='tab'
+									)
+										i.fa.fa-address-book.me-1 
+										|  LDAP
+								li.nav-item
+									a.nav-link(
+										data-bs-toggle='tab'
+										href='#tab-providers'
+										role='tab'
+									)
+										i.fa.fa-key.me-1 
+										|  SSO Providers
+							
+							//- Tab content
+							.tab-content
+
+								//- ============================================
+								//- LOGIN PAGE TAB
+								//- ============================================
+								#tab-login-page.tab-pane.active(role='tabpanel')
+									.card.mb-4
+										.card-header
+											h5.mb-0 Login Page Settings
+										.card-body
+											.mb-3
+												.form-check.form-switch
+													input#localLoginEnabled.form-check-input(type='checkbox')
+													label.form-check-label(for='localLoginEnabled') 
+														strong Enable local login (email/password)
+													.form-text.text-muted When disabled, only SSO providers will be shown on the login page.
+											.mb-3
+												label.form-label(for='loginPageTitle')
+													strong Login Page Title
+												input#loginPageTitle.form-control(type='text' placeholder='Leave empty for default "Log in"')
+												.form-text.text-muted Custom title shown above the login form.
+											.mb-3
+												label.form-label(for='loginPageLogo')
+													strong Logo URL
+												.input-group
+													input#loginPageLogo.form-control(type='text' placeholder='https://example.com/logo.png')
+													button#btnPreviewLogo.btn.btn-outline-secondary(type='button') Preview
+											.form-text.text-muted URL of a logo to display on the login page.
+										.mb-3
+											label.form-label(for='loginPageLogoWidth')
+												strong Logo Width
+											input#loginPageLogoWidth.form-control(type='text' placeholder='200px')
+											.form-text.text-muted CSS width value (e.g. 200px, 50%, auto). Default: 200px.
+											#logoPreview.text-center.mt-3.d-none
+										img#logoPreviewImg(style='max-height:100px;border:1px solid #dee2e6;border-radius:4px;padding:8px;')
+								//- ============================================
+								//- LDAP TAB
+								//- ============================================
+								#tab-ldap.tab-pane(role='tabpanel')
+									.card.mb-4
+										.card-header.d-flex.justify-content-between.align-items-center
+											h5.mb-0 LDAP Configuration
+											.form-check.form-switch.mb-0
+												input#ldapEnabled.form-check-input(type='checkbox')
+												label.form-check-label(for='ldapEnabled') Enable LDAP
+										.card-body#ldapSettings
+											//- Connection
+											h6.text-primary.border-bottom.pb-2.mb-3
+												i.fa.fa-plug.me-1
+												|  Connection
+											.row.mb-3
+												.col-md-8
+													label.form-label(for='ldapUrl')
+														strong LDAP URL 
+														span.text-danger *
+													input#ldapUrl.form-control(type='text' placeholder='ldap://ldap.example.com:389')
+												.col-md-4
+													label.form-label &nbsp;
+													.form-check.mt-2
+														input#ldapStarttls.form-check-input(type='checkbox')
+														label.form-check-label(for='ldapStarttls') Use STARTTLS
+												//- Wrap in a named form to avoid browser DOM warning about password field
+												form(autocomplete='off' style='display:contents')
+													.row.mb-3
+														.col-md-6
+															label.form-label(for='ldapBindDN') Bind DN
+															input#ldapBindDN.form-control(type='text' placeholder='cn=admin,dc=example,dc=com')
+														.col-md-6
+															label.form-label(for='ldapBindCredentials') Bind Credentials
+													form(autocomplete='off' style='display:contents')
+														input#ldapBindCredentials.form-control(type='password' placeholder='Password' autocomplete='new-password')
+											.row.mb-3
+														.col-md-6
+															label.form-label(for='ldapTimeout') Timeout (ms)
+															input#ldapTimeout.form-control(type='number' placeholder='10000')
+														.col-md-6
+															label.form-label(for='ldapConnectTimeout') Connect Timeout (ms)
+															input#ldapConnectTimeout.form-control(type='number' placeholder='5000')
+											//- TLS
+											h6.text-primary.border-bottom.pb-2.mb-3.mt-4
+												i.fa.fa-lock.me-1
+												|  TLS Options
+											.row.mb-3
+												.col-md-8
+													label.form-label(for='ldapTlsCA') TLS CA Certificate Path
+													input#ldapTlsCA.form-control(type='text' placeholder='/path/to/ca.pem or ["path1.pem","path2.pem"]')
+												.col-md-4
+													label.form-label &nbsp;
+													.form-check.mt-2
+														input#ldapTlsReject.form-check-input(type='checkbox' checked)
+														label.form-check-label(for='ldapTlsReject') Reject Unauthorized
+
+											//- Search
+											h6.text-primary.border-bottom.pb-2.mb-3.mt-4
+												i.fa.fa-search.me-1
+												|  Search Configuration
+											.row.mb-3
+												.col-md-8
+													label.form-label(for='ldapSearchBase')
+														strong Search Base 
+														span.text-danger *
+													input#ldapSearchBase.form-control(type='text' placeholder='ou=users,dc=example,dc=com')
+												.col-md-4
+													label.form-label(for='ldapSearchScope') Search Scope
+													select#ldapSearchScope.form-select
+														option(value='sub') sub (subtree)
+														option(value='one') one (single level)
+														option(value='base') base
+											.row.mb-3
+												.col-md-8
+													label.form-label(for='ldapSearchFilter')
+														strong Search Filter 
+														span.text-danger *
+													input#ldapSearchFilter.form-control(type='text' placeholder='(uid={{username}})')
+													.form-text Use #{'{{username}}'} as placeholder for the login name.
+												.col-md-4
+													label.form-label(for='ldapSearchAttributes') Search Attributes
+													input#ldapSearchAttributes.form-control(type='text' placeholder='["mail","cn","uid"]')
+											.row.mb-3
+												.col-md-4
+													label.form-label(for='ldapBindProperty') Bind Property
+													input#ldapBindProperty.form-control(type='text' placeholder='dn')
+												.col-md-4
+													.form-check.mt-4
+														input#ldapCache.form-check-input(type='checkbox')
+														label.form-check-label(for='ldapCache') Enable Cache
+
+											//- Attribute Mapping
+											h6.text-primary.border-bottom.pb-2.mb-3.mt-4
+												i.fa.fa-map-signs.me-1
+												|  Attribute Mapping
+											.row.mb-3
+												.col-md-4
+													label.form-label(for='ldapEmailAtt')
+														strong Email Attribute
+													input#ldapEmailAtt.form-control(type='text' placeholder='mail')
+												.col-md-4
+													label.form-label(for='ldapFirstNameAtt') First Name Attribute
+													input#ldapFirstNameAtt.form-control(type='text' placeholder='givenName')
+												.col-md-4
+													label.form-label(for='ldapLastNameAtt') Last Name Attribute
+													input#ldapLastNameAtt.form-control(type='text' placeholder='sn')
+											.row.mb-3
+												.col-md-4
+													label.form-label(for='ldapNameAtt') Full Name Attribute
+													input#ldapNameAtt.form-control(type='text' placeholder='cn (fallback if first/last not set)')
+												.col-md-4
+													label.form-label(for='ldapPlaceholder') Login Placeholder
+													input#ldapPlaceholder.form-control(type='text' placeholder='Username')
+
+											//- Admin
+											h6.text-primary.border-bottom.pb-2.mb-3.mt-4
+												i.fa.fa-user-secret.me-1
+												|  Admin Role Mapping
+											.row.mb-3
+												.col-md-4
+													label.form-label(for='ldapAdminAtt') Admin Attribute
+													input#ldapAdminAtt.form-control(type='text' placeholder='memberOf')
+												.col-md-4
+													label.form-label(for='ldapAdminVal') Admin Attribute Value
+													input#ldapAdminVal.form-control(type='text' placeholder='cn=admins,ou=groups,...')
+												.col-md-4
+													.form-check.mt-4
+														input#ldapUpdateDetails.form-check-input(type='checkbox')
+														label.form-check-label(for='ldapUpdateDetails') Update user details on login
+
+											//- Contacts
+											h6.text-primary.border-bottom.pb-2.mb-3.mt-4
+												i.fa.fa-users.me-1
+												|  LDAP Contacts (optional)
+											.row.mb-3
+												.col-md-6
+													label.form-label(for='ldapContactsFilter') Contacts Filter
+													input#ldapContactsFilter.form-control(type='text' placeholder='(objectClass=person)')
+												.col-md-6
+													label.form-label(for='ldapContactsSearchBase') Contacts Search Base
+													input#ldapContactsSearchBase.form-control(type='text')
+											.row.mb-3
+												.col-md-4
+													label.form-label(for='ldapContactsScope') Contacts Search Scope
+													input#ldapContactsScope.form-control(type='text' placeholder='sub')
+												.col-md-4
+													label.form-label(for='ldapContactsProp') Contacts Property
+													input#ldapContactsProp.form-control(type='text')
+												.col-md-4
+													label.form-label(for='ldapContactsNonLdap') Non-LDAP Value
+													input#ldapContactsNonLdap.form-control(type='text')
+
+											.mt-4
+												button#btnTestLdap.btn.btn-outline-primary.me-2(type='button')
+													i.fa.fa-check-circle.me-1
+													| Test LDAP Connection
+												span#ldapTestResult.ms-2
+
+								//- ============================================
+								//- SSO PROVIDERS TAB
+								//- ============================================
+								#tab-providers.tab-pane(role='tabpanel')
+									.d-flex.justify-content-between.align-items-center.mb-3
+										h5.mb-0 SSO Providers
+										.btn-group
+											button#btnAddOidc.btn.btn-primary(type='button')
+												i.fa.fa-plus.me-1
+												| Add OIDC
+											button#btnAddSaml.btn.btn-primary(type='button')
+												i.fa.fa-plus.me-1
+												| Add SAML
+									p.text-muted Drag providers to reorder them. The order determines their appearance on the login page.
+									#providers-list
+									#no-providers.text-center.text-muted.py-5(style='display:none;')
+										i.fa.fa-key.fa-3x.d-block.mb-3
+										| No SSO providers configured yet. Add an OIDC or SAML provider to get started.
+
+							//- ============================================
+							//- SAVE BUTTON
+							//- ============================================
+							hr.mt-4
+							.d-flex.justify-content-between.align-items-center
+								.text-muted
+									i.fa.fa-info-circle.me-1
+									|  Changes require a server restart to take effect.
+								.d-flex.align-items-center
+									span#saveStatus.me-3
+									button#btnSaveConfig.btn.btn-success.btn-lg(type='button')
+										i.fa.fa-save.me-1
+										| Save Configuration
+
+	//- ============================================
+	//- PROVIDER CARD TEMPLATE (hidden)
+	//- ============================================
+	template#oidc-provider-template
+		.card.mb-3.provider-card(draggable='true')
+			.card-header.d-flex.justify-content-between.align-items-center
+				.d-flex.align-items-center
+					span.drag-handle.me-2(style='cursor:grab;font-size:1.2em;') ☰
+					span.badge.bg-info.me-2 OIDC
+					strong.provider-name Provider
+					.form-check.form-switch.ms-3
+						input.form-check-input.provider-enabled(type='checkbox')
+						label.form-check-label Enabled
+				.btn-group.btn-group-sm
+					button.btn.btn-outline-primary.btn-test(type='button')
+						i.fa.fa-check-circle.me-1
+						| Test
+					button.btn.btn-outline-danger.btn-delete(type='button')
+						i.fa.fa-trash.me-1
+						| Delete
+			.card-body
+				.row.mb-3
+					.col-md-6
+						label.form-label
+							strong Display Name
+						input.form-control.provider-field(type='text' data-field='name')
+					.col-md-6
+						label.form-label
+							strong Button Label
+						input.form-control.provider-field(type='text' data-field='buttonLabel')
+				
+				//- OIDC Endpoints
+				h6.text-primary.border-bottom.pb-2.mb-3
+					i.fa.fa-globe.me-1
+					|  Endpoints
+				.row.mb-3
+					.col-md-6
+						label.form-label
+							strong Issuer URL 
+							span.text-danger *
+						input.form-control.provider-field(type='text' data-field='issuer' placeholder='https://accounts.example.com')
+					.col-md-6
+						label.form-label Authorization URL
+						input.form-control.provider-field(type='text' data-field='authorizationURL' placeholder='Auto-discovered from issuer if empty')
+				.row.mb-3
+					.col-md-6
+						label.form-label Token URL
+						input.form-control.provider-field(type='text' data-field='tokenURL')
+					.col-md-6
+						label.form-label UserInfo URL
+						input.form-control.provider-field(type='text' data-field='userInfoURL')
+				.row.mb-3
+					.col-md-6
+						label.form-label Logout URL
+						input.form-control.provider-field(type='text' data-field='logoutURL')
+					.col-md-6
+						label.form-label Scope
+						input.form-control.provider-field(type='text' data-field='scope' placeholder='openid profile email')
+				
+				//- OIDC Client
+				h6.text-primary.border-bottom.pb-2.mb-3.mt-3
+					i.fa.fa-cog.me-1
+					|  Client Configuration
+				.row.mb-3
+					.col-md-6
+						label.form-label
+							strong Client ID 
+							span.text-danger *
+						input.form-control.provider-field(type='text' data-field='clientID')
+					.col-md-6
+						label.form-label
+							strong Client Secret 
+							span.text-danger *
+						form(autocomplete='off' style='display:contents')
+							input.form-control.provider-field(type='password' data-field='clientSecret' autocomplete='new-password')
+				.row.mb-3
+					.col-md-4
+						label.form-label Provider ID
+						input.form-control.provider-field(type='text' data-field='providerID' placeholder='oidc')
+						.form-text Internal identifier for account linking
+					.col-md-4
+						label.form-label Provider Name
+						input.form-control.provider-field(type='text' data-field='providerName')
+					.col-md-4
+						label.form-label Provider Description
+						input.form-control.provider-field(type='text' data-field='providerDescription')
+				.row.mb-3
+					.col-md-6
+						label.form-label Provider Info Link
+						input.form-control.provider-field(type='text' data-field='providerInfoLink')
+					.col-md-3
+						.form-check.mt-4
+							input.form-check-input.provider-field(type='checkbox' data-field='hideWhenNotLinked')
+							label.form-check-label Hide when not linked
+				
+				//- OIDC Attribute Mapping
+				h6.text-primary.border-bottom.pb-2.mb-3.mt-3
+					i.fa.fa-map-signs.me-1
+					|  Attribute Mapping & Access
+				.row.mb-3
+					.col-md-3
+						label.form-label User ID Field
+						input.form-control.provider-field(type='text' data-field='userIdField' placeholder='id')
+					.col-md-3
+						label.form-label Admin Field
+						input.form-control.provider-field(type='text' data-field='isAdminField')
+					.col-md-3
+						label.form-label Admin Value
+						input.form-control.provider-field(type='text' data-field='isAdminFieldValue')
+					.col-md-3
+						label.form-label Allowed Email Domains
+						input.form-control.provider-field(type='text' data-field='allowedEmailDomains' placeholder='example.com,*.org')
+				.row.mb-3
+					.col-md-6
+						.form-check
+							input.form-check-input.provider-field(type='checkbox' data-field='updateUserDetailsOnLogin')
+							label.form-check-label Update user details on each login
+				
+				.test-result.mt-2
+
+	template#saml-provider-template
+		.card.mb-3.provider-card(draggable='true')
+			.card-header.d-flex.justify-content-between.align-items-center
+				.d-flex.align-items-center
+					span.drag-handle.me-2(style='cursor:grab;font-size:1.2em;') ☰
+					span.badge.bg-warning.text-dark.me-2 SAML
+					strong.provider-name Provider
+					.form-check.form-switch.ms-3
+						input.form-check-input.provider-enabled(type='checkbox')
+						label.form-check-label Enabled
+				.btn-group.btn-group-sm
+					button.btn.btn-outline-primary.btn-test(type='button')
+						i.fa.fa-check-circle.me-1
+						| Test
+					button.btn.btn-outline-danger.btn-delete(type='button')
+						i.fa.fa-trash.me-1
+						| Delete
+			.card-body
+				.row.mb-3
+					.col-md-6
+						label.form-label
+							strong Display Name
+						input.form-control.provider-field(type='text' data-field='name')
+					.col-md-6
+						label.form-label
+							strong Button Label
+						input.form-control.provider-field(type='text' data-field='buttonLabel')
+
+				//- SAML IdP Configuration
+				h6.text-primary.border-bottom.pb-2.mb-3
+					i.fa.fa-globe.me-1
+					|  Identity Provider
+				.row.mb-3
+					.col-md-6
+						label.form-label
+							strong SSO Entry Point URL 
+							span.text-danger *
+						input.form-control.provider-field(type='text' data-field='entryPoint' placeholder='https://idp.example.com/sso/saml')
+					.col-md-6
+						label.form-label Logout URL
+						input.form-control.provider-field(type='text' data-field='logoutURL')
+				.row.mb-3
+					.col-md-6
+						label.form-label
+							strong Issuer 
+							span.text-danger *
+						input.form-control.provider-field(type='text' data-field='issuer' placeholder='overleaf-sp')
+					.col-md-6
+						label.form-label Audience
+						input.form-control.provider-field(type='text' data-field='audience')
+
+				//- SAML Certificates
+				h6.text-primary.border-bottom.pb-2.mb-3.mt-3
+					i.fa.fa-certificate.me-1
+					|  Certificates & Keys
+				.row.mb-3
+					.col-md-6
+						label.form-label
+							strong IdP Certificate (path) 
+							span.text-danger *
+						input.form-control.provider-field(type='text' data-field='idpCert' placeholder='/path/to/idp-cert.pem')
+					.col-md-6
+						label.form-label Public Certificate (path)
+						input.form-control.provider-field(type='text' data-field='publicCert')
+				.row.mb-3
+					.col-md-6
+						label.form-label Private Key (path)
+					form(autocomplete='off' style='display:contents')
+						input.form-control.provider-field(type='password' data-field='privateKey' autocomplete='new-password')
+				.col-md-6
+					label.form-label Decryption Private Key (path)
+					form(autocomplete='off' style='display:contents')
+						input.form-control.provider-field(type='password' data-field='decryptionPvk' autocomplete='new-password')
+				.row.mb-3
+					.col-md-6
+						label.form-label Decryption Certificate (path)
+						input.form-control.provider-field(type='text' data-field='decryptionCert')
+					.col-md-6
+						label.form-label Signature Algorithm
+						select.form-select.provider-field(data-field='signatureAlgorithm')
+							option(value='') Default
+							option(value='sha1') SHA-1
+							option(value='sha256') SHA-256
+							option(value='sha512') SHA-512
+
+				//- SAML Advanced
+				h6.text-primary.border-bottom.pb-2.mb-3.mt-3
+					i.fa.fa-cogs.me-1
+					|  Advanced Options
+				.row.mb-3
+					.col-md-4
+						label.form-label Identifier Format
+						input.form-control.provider-field(type='text' data-field='identifierFormat')
+					.col-md-4
+						label.form-label Clock Skew (ms)
+						input.form-control.provider-field(type='number' data-field='acceptedClockSkewMs')
+					.col-md-4
+						label.form-label Auth Request Binding
+						select.form-select.provider-field(data-field='authnRequestBinding')
+							option(value='') Default (HTTP-Redirect)
+							option(value='HTTP-POST') HTTP-POST
+							option(value='HTTP-Redirect') HTTP-Redirect
+				.row.mb-3
+					.col-md-4
+						label.form-label AuthN Context
+						input.form-control.provider-field(type='text' data-field='authnContext' placeholder='JSON array or empty')
+					.col-md-4
+						label.form-label Validate InResponseTo
+						input.form-control.provider-field(type='text' data-field='validateInResponseTo')
+					.col-md-4
+						label.form-label Request ID Expiration (ms)
+						input.form-control.provider-field(type='number' data-field='requestIdExpirationPeriodMs')
+				.row.mb-3
+					.col-md-4
+						label.form-label Attr Consuming Service Index
+						input.form-control.provider-field(type='text' data-field='attributeConsumingServiceIndex')
+					.col-md-4
+						label.form-label Additional Params (JSON)
+						input.form-control.provider-field(type='text' data-field='additionalParams' placeholder='{}')
+					.col-md-4
+						label.form-label Additional Authorize Params (JSON)
+						input.form-control.provider-field(type='text' data-field='additionalAuthorizeParams' placeholder='{}')
+				.row.mb-3
+					.col-md-6
+						label.form-label Additional Logout Params (JSON)
+						input.form-control.provider-field(type='text' data-field='additionalLogoutParams' placeholder='{}')
+				.row.mb-3
+					.col-md-3
+						.form-check
+							input.form-check-input.provider-field(type='checkbox' data-field='forceAuthn')
+							label.form-check-label Force AuthN
+					.col-md-3
+						.form-check
+							input.form-check-input.provider-field(type='checkbox' data-field='disableRequestedAuthnContext')
+							label.form-check-label Disable Requested AuthN Context
+					.col-md-3
+						.form-check
+							input.form-check-input.provider-field(type='checkbox' data-field='wantAssertionsSigned')
+							label.form-check-label Want Assertions Signed
+					.col-md-3
+						.form-check
+							input.form-check-input.provider-field(type='checkbox' data-field='wantAuthnResponseSigned')
+							label.form-check-label Want Response Signed
+
+				//- SAML Attribute Mapping
+				h6.text-primary.border-bottom.pb-2.mb-3.mt-3
+					i.fa.fa-map-signs.me-1
+					|  Attribute Mapping
+				.row.mb-3
+					.col-md-3
+						label.form-label User ID Field
+						input.form-control.provider-field(type='text' data-field='userIdField' placeholder='nameID')
+					.col-md-3
+						label.form-label Email Field
+						input.form-control.provider-field(type='text' data-field='emailField' placeholder='nameID')
+					.col-md-3
+						label.form-label First Name Field
+						input.form-control.provider-field(type='text' data-field='firstNameField' placeholder='givenName')
+					.col-md-3
+						label.form-label Last Name Field
+						input.form-control.provider-field(type='text' data-field='lastNameField' placeholder='lastName')
+				.row.mb-3
+					.col-md-3
+						label.form-label Admin Field
+						input.form-control.provider-field(type='text' data-field='isAdminField')
+					.col-md-3
+						label.form-label Admin Value
+						input.form-control.provider-field(type='text' data-field='isAdminFieldValue')
+					.col-md-3
+						.form-check.mt-4
+							input.form-check-input.provider-field(type='checkbox' data-field='updateUserDetailsOnLogin')
+							label.form-check-label Update details on login
+				
+				.test-result.mt-2
+
+	style.
+		.provider-card { transition: all 0.2s ease; border-left: 4px solid #dee2e6; }
+		.provider-card.drag-over { border-left: 4px solid #0d6efd; background: #f0f4ff; }
+		.provider-card .card-header { background: #f8f9fa; }
+		.drag-handle:hover { color: #0d6efd; }
+		.nav-tabs .nav-link { font-weight: 500; }
+		.nav-tabs .nav-link.active { border-bottom: 3px solid #0d6efd; }
+		h6.text-primary { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+		.form-text { font-size: 0.8rem; }
+
+	script(nonce=scriptNonce).
+		const csrfToken = document.querySelector('meta[name="ol-csrfToken"]')?.content || '';
+		let ssoConfig = !{ssoConfig};
+
+		function ssoFetch(url, opts = {}) {
+			opts.headers = opts.headers || {};
+			opts.headers['X-Csrf-Token'] = csrfToken;
+			opts.headers['x-csrf-token'] = csrfToken;
+			opts.headers['csrf-token'] = csrfToken;
+			opts.credentials = 'same-origin';
+			if (opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData)) {
+				opts.body._csrf = csrfToken;
+				opts.headers['Content-Type'] = 'application/json';
+				opts.body = JSON.stringify(opts.body);
+			} else if (opts.method && opts.method !== 'GET' && !opts.body) {
+				opts.headers['Content-Type'] = 'application/json';
+				opts.body = JSON.stringify({ _csrf: csrfToken });
+			}
+			const sep = url.includes('?') ? '&' : '?';
+			return fetch(url + sep + '_csrf=' + encodeURIComponent(csrfToken), opts);
+		}
+		
+		document.addEventListener('DOMContentLoaded', () => {
+			loadConfig(ssoConfig);
+			document.getElementById('btnPreviewLogo').addEventListener('click', previewLogo);
+			document.getElementById('btnTestLdap').addEventListener('click', testLdap);
+			document.getElementById('btnAddOidc').addEventListener('click', () => addProvider('oidc'));
+			document.getElementById('btnAddSaml').addEventListener('click', () => addProvider('saml'));
+			document.getElementById('btnSaveConfig').addEventListener('click', saveConfig);
+			document.getElementById('ldapEnabled').addEventListener('change', toggleLdapFields);
+		});
+
+		function loadConfig(config) {
+			ssoConfig = config;
+			// Login page
+			document.getElementById('localLoginEnabled').checked = config.loginPage?.localLoginEnabled !== false;
+			document.getElementById('loginPageTitle').value = config.loginPage?.title || '';
+			document.getElementById('loginPageLogo').value = config.loginPage?.logoUrl || '';
+				document.getElementById('loginPageLogoWidth').value = config.loginPage?.logoWidth || '';
+			// LDAP
+			document.getElementById('ldapEnabled').checked = !!config.ldap?.enabled;
+			document.getElementById('ldapUrl').value = config.ldap?.url || '';
+			document.getElementById('ldapBindDN').value = config.ldap?.bindDN || '';
+			document.getElementById('ldapBindCredentials').value = '';
+			if (config.ldap?.bindCredentials && config.ldap.bindCredentials !== '') {
+				document.getElementById('ldapBindCredentials').placeholder = '(unchanged) ••••••••';
+			}
+			document.getElementById('ldapBindProperty').value = config.ldap?.bindProperty || '';
+			document.getElementById('ldapSearchBase').value = config.ldap?.searchBase || '';
+			document.getElementById('ldapSearchFilter').value = config.ldap?.searchFilter || '';
+			document.getElementById('ldapSearchScope').value = config.ldap?.searchScope || 'sub';
+			document.getElementById('ldapSearchAttributes').value = config.ldap?.searchAttributes || '';
+			document.getElementById('ldapCache').checked = !!config.ldap?.cache;
+			document.getElementById('ldapTimeout').value = config.ldap?.timeout || '';
+			document.getElementById('ldapConnectTimeout').value = config.ldap?.connectTimeout || '';
+			document.getElementById('ldapStarttls').checked = !!config.ldap?.starttls;
+			document.getElementById('ldapTlsCA').value = config.ldap?.tlsOptsCAPath || '';
+			document.getElementById('ldapTlsReject').checked = config.ldap?.tlsOptsRejectUnauth !== false;
+			document.getElementById('ldapPlaceholder').value = config.ldap?.placeholder || '';
+			document.getElementById('ldapEmailAtt').value = config.ldap?.emailAtt || '';
+			document.getElementById('ldapFirstNameAtt').value = config.ldap?.firstNameAtt || '';
+			document.getElementById('ldapLastNameAtt').value = config.ldap?.lastNameAtt || '';
+			document.getElementById('ldapNameAtt').value = config.ldap?.nameAtt || '';
+			document.getElementById('ldapAdminAtt').value = config.ldap?.isAdminAtt || '';
+			document.getElementById('ldapAdminVal').value = config.ldap?.isAdminAttValue || '';
+			document.getElementById('ldapUpdateDetails').checked = !!config.ldap?.updateUserDetailsOnLogin;
+			document.getElementById('ldapContactsFilter').value = config.ldap?.contactsFilter || '';
+			document.getElementById('ldapContactsSearchBase').value = config.ldap?.contactsSearchBase || '';
+			document.getElementById('ldapContactsScope').value = config.ldap?.contactsSearchScope || '';
+			document.getElementById('ldapContactsProp').value = config.ldap?.contactsProperty || '';
+			document.getElementById('ldapContactsNonLdap').value = config.ldap?.contactsNonLdapValue || '';
+			toggleLdapFields();
+			
+			// Providers
+			renderProviders(config.providers || []);
+		}
+
+		function toggleLdapFields() {
+			const enabled = document.getElementById('ldapEnabled').checked;
+			document.getElementById('ldapSettings').style.opacity = enabled ? '1' : '0.5';
+			document.getElementById('ldapSettings').style.pointerEvents = enabled ? 'auto' : 'none';
+		}
+
+		function gatherConfig() {
+			const config = {
+				_id: 'sso-settings',
+				loginPage: {
+					localLoginEnabled: document.getElementById('localLoginEnabled').checked,
+					title: document.getElementById('loginPageTitle').value.trim(),
+					logoUrl: document.getElementById('loginPageLogo').value.trim(),
+					logoWidth: document.getElementById('loginPageLogoWidth').value.trim(),
+				},
+				ldap: {
+					enabled: document.getElementById('ldapEnabled').checked,
+					url: document.getElementById('ldapUrl').value.trim(),
+					bindDN: document.getElementById('ldapBindDN').value.trim(),
+					bindCredentials: document.getElementById('ldapBindCredentials').value || '••••••••',
+					bindProperty: document.getElementById('ldapBindProperty').value.trim(),
+					searchBase: document.getElementById('ldapSearchBase').value.trim(),
+					searchFilter: document.getElementById('ldapSearchFilter').value.trim(),
+					searchScope: document.getElementById('ldapSearchScope').value,
+					searchAttributes: document.getElementById('ldapSearchAttributes').value.trim(),
+					cache: document.getElementById('ldapCache').checked,
+					timeout: document.getElementById('ldapTimeout').value.trim(),
+					connectTimeout: document.getElementById('ldapConnectTimeout').value.trim(),
+					starttls: document.getElementById('ldapStarttls').checked,
+					tlsOptsCAPath: document.getElementById('ldapTlsCA').value.trim(),
+					tlsOptsRejectUnauth: document.getElementById('ldapTlsReject').checked,
+					placeholder: document.getElementById('ldapPlaceholder').value.trim(),
+					emailAtt: document.getElementById('ldapEmailAtt').value.trim(),
+					firstNameAtt: document.getElementById('ldapFirstNameAtt').value.trim(),
+					lastNameAtt: document.getElementById('ldapLastNameAtt').value.trim(),
+					nameAtt: document.getElementById('ldapNameAtt').value.trim(),
+					isAdminAtt: document.getElementById('ldapAdminAtt').value.trim(),
+					isAdminAttValue: document.getElementById('ldapAdminVal').value.trim(),
+					updateUserDetailsOnLogin: document.getElementById('ldapUpdateDetails').checked,
+					contactsFilter: document.getElementById('ldapContactsFilter').value.trim(),
+					contactsSearchBase: document.getElementById('ldapContactsSearchBase').value.trim(),
+					contactsSearchScope: document.getElementById('ldapContactsScope').value.trim(),
+					contactsProperty: document.getElementById('ldapContactsProp').value.trim(),
+					contactsNonLdapValue: document.getElementById('ldapContactsNonLdap').value.trim(),
+				},
+				providers: gatherProviders(),
+			};
+			return config;
+		}
+
+		function gatherProviders() {
+			const providers = [];
+			document.querySelectorAll('.provider-card').forEach((card, index) => {
+				const data = JSON.parse(card.dataset.provider);
+				// Update from form fields
+				card.querySelectorAll('.provider-field').forEach(field => {
+					const key = field.dataset.field;
+					if (field.type === 'checkbox') {
+						data[key] = field.checked;
+					} else {
+						data[key] = field.value;
+					}
+				});
+				data.enabled = card.querySelector('.provider-enabled').checked;
+				data.name = card.querySelector('.provider-field[data-field="name"]').value;
+				data.order = index;
+				providers.push(data);
+			});
+			return providers;
+		}
+
+		function renderProviders(providers) {
+			const list = document.getElementById('providers-list');
+			const noProviders = document.getElementById('no-providers');
+			list.innerHTML = '';
+			providers.sort((a, b) => (a.order || 0) - (b.order || 0));
+			
+			if (providers.length === 0) {
+				noProviders.style.display = 'block';
+				return;
+			}
+			noProviders.style.display = 'none';
+			
+			providers.forEach(provider => {
+				const template = document.getElementById(provider.type + '-provider-template');
+				const card = template.content.cloneNode(true).querySelector('.provider-card');
+				card.dataset.provider = JSON.stringify(provider);
+				card.dataset.providerId = provider.id;
+				
+				// Set values
+				card.querySelector('.provider-name').textContent = provider.name;
+				card.querySelector('.provider-enabled').checked = !!provider.enabled;
+				card.querySelectorAll('.provider-field').forEach(field => {
+					const key = field.dataset.field;
+					if (provider[key] !== undefined) {
+						if (field.type === 'checkbox') {
+							field.checked = !!provider[key];
+						} else {
+							field.value = provider[key];
+						}
+					}
+				});
+				
+				// Name sync
+				const nameField = card.querySelector('.provider-field[data-field="name"]');
+				nameField.addEventListener('input', () => {
+					card.querySelector('.provider-name').textContent = nameField.value;
+				});
+				
+				// Test button
+				card.querySelector('.btn-test').addEventListener('click', () => testProvider(provider.id, card));
+				
+				// Delete button
+				card.querySelector('.btn-delete').addEventListener('click', () => {
+					if (confirm('Delete this provider? This cannot be undone.')) {
+						deleteProvider(provider.id, card);
+					}
+				});
+				
+				// Drag and drop
+				setupDragDrop(card);
+				
+				list.appendChild(card);
+			});
+		}
+
+		function setupDragDrop(card) {
+			card.addEventListener('dragstart', (e) => {
+				e.dataTransfer.setData('text/plain', card.dataset.providerId);
+				card.style.opacity = '0.5';
+			});
+			card.addEventListener('dragend', () => {
+				card.style.opacity = '1';
+				document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('drag-over'));
+			});
+			card.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				card.classList.add('drag-over');
+			});
+			card.addEventListener('dragleave', () => {
+				card.classList.remove('drag-over');
+			});
+			card.addEventListener('drop', (e) => {
+				e.preventDefault();
+				card.classList.remove('drag-over');
+				const draggedId = e.dataTransfer.getData('text/plain');
+				const list = document.getElementById('providers-list');
+				const draggedCard = list.querySelector(`[data-provider-id="${draggedId}"]`);
+				if (draggedCard && draggedCard !== card) {
+					const rect = card.getBoundingClientRect();
+					const midY = rect.top + rect.height / 2;
+					if (e.clientY < midY) {
+						list.insertBefore(draggedCard, card);
+					} else {
+						list.insertBefore(draggedCard, card.nextSibling);
+					}
+				}
+			});
+		}
+
+		async function saveConfig() {
+			const config = gatherConfig();
+			config._csrf = csrfToken;
+			document.getElementById('saveStatus').innerHTML = '<span class="text-muted">Saving...</span>';
+			try {
+				const res = await ssoFetch('/admin/sso/config', {
+					method: 'POST',
+					body: config,
+				});
+				const data = await res.json();
+				if (data.success) {
+					showToast('Configuration saved successfully! Restart the server for changes to take effect.', 'success');
+					document.getElementById('saveStatus').innerHTML = '<span class="text-success">✓ Saved</span>';
+				} else {
+					showToast(data.error || 'Failed to save', 'danger');
+					document.getElementById('saveStatus').innerHTML = '<span class="text-danger">✗ Error</span>';
+				}
+			} catch (err) {
+				showToast('Network error: ' + err.message, 'danger');
+				document.getElementById('saveStatus').innerHTML = '<span class="text-danger">✗ Error</span>';
+			}
+			setTimeout(() => {
+				document.getElementById('saveStatus').innerHTML = '';
+			}, 5000);
+		}
+
+		async function addProvider(type) {
+			try {
+				const res = await ssoFetch('/admin/sso/provider', {
+					method: 'POST',
+					body: { type, _csrf: csrfToken },
+				});
+				const data = await res.json();
+				if (data.success) {
+					// Reload config
+					const cfgRes = await ssoFetch('/admin/sso/config');
+					const cfg = await cfgRes.json();
+					renderProviders(cfg.providers || []);
+					showToast(`${type.toUpperCase()} provider added. Configure it and save.`, 'success');
+				} else {
+					showToast(data.error || 'Failed to add provider', 'danger');
+				}
+			} catch (err) {
+				showToast('Error: ' + err.message, 'danger');
+			}
+		}
+
+		async function deleteProvider(providerId, card) {
+			try {
+				const res = await ssoFetch(`/admin/sso/provider/${providerId}`, {
+					method: 'DELETE',
+				});
+				const data = await res.json();
+				if (data.success) {
+					card.remove();
+					const remaining = document.querySelectorAll('.provider-card');
+					if (remaining.length === 0) {
+						document.getElementById('no-providers').style.display = 'block';
+					}
+					showToast('Provider deleted', 'success');
+				}
+			} catch (err) {
+				showToast('Error: ' + err.message, 'danger');
+			}
+		}
+
+		async function testLdap() {
+			const result = document.getElementById('ldapTestResult');
+			result.innerHTML = '<span class="text-muted">Testing...</span>';
+			try {
+				const res = await ssoFetch('/admin/sso/test/ldap', {
+					method: 'POST',
+					body: { _csrf: csrfToken },
+				});
+				const data = await res.json();
+				if (data.success) {
+					result.innerHTML = '<span class="text-success">✓ ' + escapeHtml(data.message) + '</span>';
+				} else {
+					result.innerHTML = '<span class="text-danger">✗ ' + escapeHtml(data.message) + '</span>';
+				}
+			} catch (err) {
+				result.innerHTML = '<span class="text-danger">✗ ' + escapeHtml(err.message) + '</span>';
+			}
+		}
+
+		async function testProvider(providerId, card) {
+			const result = card.querySelector('.test-result');
+			result.innerHTML = '<span class="text-muted">Testing...</span>';
+			try {
+				const res = await ssoFetch(`/admin/sso/test/provider/${encodeURIComponent(providerId)}`, {
+					method: 'POST',
+					body: { _csrf: csrfToken },
+				});
+				const data = await res.json();
+				if (data.success) {
+					let msg = '<span class="text-success">✓ ' + escapeHtml(data.message) + '</span>';
+					if (data.details) {
+						msg += '<br><small class="text-muted">';
+						for (const [k, v] of Object.entries(data.details)) {
+							if (v) msg += escapeHtml(k) + ': ' + escapeHtml(v) + '<br>';
+						}
+						msg += '</small>';
+					}
+					result.innerHTML = msg;
+				} else {
+					result.innerHTML = '<span class="text-danger">✗ ' + escapeHtml(data.message) + '</span>';
+				}
+			} catch (err) {
+				result.innerHTML = '<span class="text-danger">✗ ' + escapeHtml(err.message) + '</span>';
+			}
+		}
+
+		function previewLogo() {
+			const url = document.getElementById('loginPageLogo').value.trim();
+			const width = document.getElementById('loginPageLogoWidth').value.trim() || '200px';
+			const preview = document.getElementById('logoPreview');
+			const img = document.getElementById('logoPreviewImg');
+			if (url) {
+				img.src = url;
+				img.style.maxWidth = width;
+				img.style.width = width;
+				preview.classList.remove('d-none');
+				img.onerror = () => {
+					preview.classList.add('d-none');
+					showToast('Could not load image from URL', 'warning');
+				};
+			} else {
+				preview.classList.add('d-none');
+			}
+		}
+
+		function showToast(message, type) {
+			const toast = document.getElementById('toast-notification');
+			const msg = document.getElementById('toast-message');
+			const bgColors = { success: '#d1e7dd', danger: '#f8d7da', warning: '#fff3cd', info: '#cff4fc' };
+			const borderColors = { success: '#badbcc', danger: '#f5c2c7', warning: '#ffecb5', info: '#b6effb' };
+			toast.className = 'alert alert-' + type;
+			toast.style.backgroundColor = bgColors[type] || '#f8f9fa';
+			toast.style.borderColor = borderColors[type] || '#dee2e6';
+			toast.style.opacity = '1';
+			msg.textContent = message;
+			setTimeout(() => {
+				toast.className = 'alert d-none';
+			}, 5000);
+		}
+
+		function escapeHtml(str) {
+			const div = document.createElement('div');
+			div.appendChild(document.createTextNode(str || ''));
+			return div.innerHTML;
+		}

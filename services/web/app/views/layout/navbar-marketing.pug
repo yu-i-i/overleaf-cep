@@ -75,6 +75,9 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 									+dropdown-menu-link-item(href='/admin/survey') Manage Surveys
 								if canDisplayScriptLogMenu
 									+dropdown-menu-link-item(href='/admin/script-logs') View Script Logs
+								if canDisplayAdminMenu
+									+dropdown-menu-link-item(href='/admin/sso') SSO Configuration
+									+dropdown-menu-link-item(href='/admin/email') Email Configuration
 
 					// loop over header_extras
 					each item in nav.header_extras
