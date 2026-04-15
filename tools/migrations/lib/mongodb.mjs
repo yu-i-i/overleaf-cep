@@ -51,6 +51,7 @@ export const db = {
   spellingPreferences: internalDb.collection('spellingPreferences'),
   splittests: internalDb.collection('splittests'),
   ssoConfigs: internalDb.collection('ssoConfigs'),
+  emailConfigs: internalDb.collection('emailConfigs'),
   subscriptions: internalDb.collection('subscriptions'),
   surveys: internalDb.collection('surveys'),
   systemmessages: internalDb.collection('systemmessages'),

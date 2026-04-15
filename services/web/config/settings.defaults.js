@@ -1156,6 +1156,7 @@ module.exports = {
     'authentication/ldap',
     'authentication/saml',
     'authentication/oidc',
+    'authentication/admin',
     'admin-tools', // import after authentication
     'template-gallery',
     'git-bridge',
