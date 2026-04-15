@@ -177,7 +177,7 @@ describe('ClsiManager', function () {
     }
 
     ctx.redis = {
-      auth() {},
+      auth() { },
       del: sinon.stub(),
       get: sinon.stub(),
       setex: sinon.stub().resolves(),
@@ -305,7 +305,7 @@ describe('ClsiManager', function () {
             url =>
               url.host === CLSI_HOST &&
               url.pathname ===
-                `/project/${ctx.project._id}/user/${ctx.user_id}/compile` &&
+              `/project/${ctx.project._id}/user/${ctx.user_id}/compile` &&
               url.searchParams.get('compileBackendClass') === 'c3d' &&
               url.searchParams.get('compileGroup') === 'standard'
           ),
@@ -335,6 +335,49 @@ describe('ClsiManager', function () {
             signal: sinon.match.instanceOf(AbortSignal),
           }
         )
+      })
+
+      it('should override the compile Docker image for typst projects', function (ctx) {
+        process.env.TYPST_DOCKER_IMAGE = 'pandoc/typst:latest'
+        ctx.project.compiler = 'typst'
+        ctx.project.imageName = undefined
+
+        ctx.FetchUtils.fetchStringWithResponse.should.have.been.calledWith(
+          sinon.match(
+            url =>
+              url.host === CLSI_HOST &&
+              url.pathname ===
+              `/project/${ctx.project._id}/user/${ctx.user_id}/compile` &&
+              url.searchParams.get('compileBackendClass') === 'c3d' &&
+              url.searchParams.get('compileGroup') === 'standard'
+          ),
+          {
+            method: 'POST',
+            json: sinon.match({
+              compile: {
+                options: {
+                  compiler: 'typst',
+                  imageName: 'pandoc/typst:latest',
+                  timeout: ctx.timeout,
+                  draft: false,
+                  compileGroup: 'standard',
+                  metricsMethod: 'standard',
+                  stopOnFirstError: false,
+                  syncType: undefined,
+                },
+                rootResourcePath: 'main.tex',
+                resources: _makeResources(ctx.project, ctx.docs, ctx.files),
+              },
+            }),
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+              Cookie: `${ctx.clsiCookieKey}=${ctx.clsiServerId}`,
+            },
+            signal: sinon.match.instanceOf(AbortSignal),
+          }
+        )
+        delete process.env.TYPST_DOCKER_IMAGE
       })
 
       it('should get the project with the required fields', function (ctx) {
@@ -510,7 +553,7 @@ describe('ClsiManager', function () {
             url =>
               url.hostname === CLSI_HOST &&
               url.pathname ===
-                `/project/${ctx.project._id}/user/${ctx.user_id}/compile` &&
+              `/project/${ctx.project._id}/user/${ctx.user_id}/compile` &&
               url.searchParams.get('compileBackendClass') === 'c3d' &&
               url.searchParams.get('compileGroup') === 'priority'
           ),
@@ -879,7 +922,7 @@ describe('ClsiManager', function () {
             url =>
               url.host === CLSI_HOST &&
               url.pathname ===
-                `/project/${ctx.project._id}/user/${ctx.user_id}/compile` &&
+              `/project/${ctx.project._id}/user/${ctx.user_id}/compile` &&
               url.searchParams.get('compileBackendClass') === 'c4d' &&
               url.searchParams.get('compileGroup') === 'priority'
           )
@@ -1028,7 +1071,7 @@ describe('ClsiManager', function () {
             url =>
               url.host === CLSI_HOST &&
               url.pathname ===
-                `/project/${ctx.project._id}/user/${ctx.user_id}` &&
+              `/project/${ctx.project._id}/user/${ctx.user_id}` &&
               url.searchParams.get('compileBackendClass') === 'c3d' &&
               url.searchParams.get('compileGroup') === 'standard' &&
               url.searchParams.get('clsiserverid') === 'node-1'
@@ -1089,7 +1132,7 @@ describe('ClsiManager', function () {
             url =>
               url.host === CLSI_HOST &&
               url.pathname ===
-                `/project/${ctx.project._id}/user/${ctx.user_id}` &&
+              `/project/${ctx.project._id}/user/${ctx.user_id}` &&
               url.searchParams.get('compileBackendClass') === 'c4d' &&
               url.searchParams.get('compileGroup') === 'priority' &&
               url.searchParams.get('clsiserverid') === 'node-1'
@@ -1101,7 +1144,7 @@ describe('ClsiManager', function () {
             url =>
               url.host === 'compiles.somewhere.test' &&
               url.pathname ===
-                `/project/${ctx.project._id}/user/${ctx.user_id}` &&
+              `/project/${ctx.project._id}/user/${ctx.user_id}` &&
               url.searchParams.get('compileBackendClass') === 'n4' &&
               url.searchParams.get('compileGroup') === 'priority' &&
               !url.searchParams.has('clsiserverid')
@@ -1157,7 +1200,7 @@ describe('ClsiManager', function () {
             url =>
               url.host === CLSI_HOST &&
               url.pathname ===
-                `/project/${ctx.project._id}/user/${ctx.user_id}/wordcount` &&
+              `/project/${ctx.project._id}/user/${ctx.user_id}/wordcount` &&
               url.searchParams.get('compileBackendClass') === 'c3d' &&
               url.searchParams.get('compileGroup') === 'standard' &&
               url.searchParams.get('clsiserverid') === 'node-2' &&

@@ -25,6 +25,8 @@ import { sendSearchEvent } from '@/features/event-tracking/search-events'
 
 export const toggleBold = toggleRanges('\\textbf')
 export const toggleItalic = toggleRanges('\\textit')
+export const typstToggleBold = wrapRanges('*', '*')
+export const typstToggleItalic = wrapRanges('_', '_')
 
 // TODO: apply as a snippet?
 // TODO: read URL from clipboard?
@@ -82,10 +84,10 @@ export const insertTable = (view: EditorView, sizeX: number, sizeY: number) => {
 \t\\centering
 \t\\begin{tabular}{${'c'.repeat(sizeX)}}
 ${(
-  '\t\t' +
-  `${placeholder} & ${placeholder}`.repeat(sizeX - 1) +
-  '\\\\\n'
-).repeat(sizeY)}\t\\end{tabular}
+      '\t\t' +
+      `${placeholder} & ${placeholder}`.repeat(sizeX - 1) +
+      '\\\\\n'
+    ).repeat(sizeY)}\t\\end{tabular}
 \t\\caption{Caption}
 \t\\label{tab:placeholder}
 \\end{table}${suffix}`

@@ -9,7 +9,7 @@ import { isValidTeXFile } from '@/main/is-valid-tex-file'
 import { useSetCompilationSettingWithEvent } from '@/features/editor-left-menu/hooks/use-set-compilation-setting'
 
 export default function RootDocumentSetting() {
-  const { rootDocId, setRootDocId } = useProjectSettingsContext()
+  const { rootDocId, setRootDocId, compiler } = useProjectSettingsContext()
   const { t } = useTranslation()
   const { write } = usePermissionsContext()
   const { docs } = useFileTreeData()
@@ -20,10 +20,13 @@ export default function RootDocumentSetting() {
   )
 
   const validDocsOptions = useMemo(() => {
+    const isTypst = compiler === 'typst'
     const filteredDocs =
-      docs?.filter(
-        doc => isValidTeXFile(doc.doc.name) || rootDocId === doc.doc.id
-      ) ?? []
+      docs?.filter(doc => {
+        if (rootDocId === doc.doc.id) return true
+        const isTypFile = /\.typ$/i.test(doc.doc.name)
+        return isTypst ? isTypFile : (isValidTeXFile(doc.doc.name) && !isTypFile)
+      }) ?? []
 
     const mappedDocs: Array<Option> = filteredDocs.map(doc => ({
       value: doc.doc.id,
@@ -39,7 +42,7 @@ export default function RootDocumentSetting() {
     }
 
     return mappedDocs
-  }, [docs, rootDocId])
+  }, [docs, rootDocId, compiler])
 
   return (
     <DropdownSetting

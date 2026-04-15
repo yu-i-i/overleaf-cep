@@ -73,7 +73,6 @@
     "last 1 year",
     "safari > 14"
   ],
-
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.25",
     "@ai-sdk/openai": "^3.0.41",
@@ -306,6 +305,8 @@
     "chartjs-plugin-datalabels": "^2.2.0",
     "cheerio": "^1.0.0-rc.3",
     "classnames": "^2.2.6",
+    "@typstyle/typstyle-wasm-bundler": "^0.13.18",
+    "codemirror-lang-typst": "^0.4.0",
     "confusing-browser-globals": "^1.0.11",
     "cookie-signature": "^1.2.1",
     "copy-webpack-plugin": "^14.0.0",

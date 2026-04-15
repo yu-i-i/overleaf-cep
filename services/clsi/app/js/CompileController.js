@@ -256,14 +256,15 @@ function wordcount(req, res, next) {
   const file = req.query.file || 'main.tex'
   const projectId = req.params.project_id
   const userId = req.params.user_id
-  const { image } = req.query
-  logger.debug({ image, file, projectId }, 'word count request')
+  const { image, compiler } = req.query
+  logger.debug({ image, file, projectId, compiler }, 'word count request')
 
   CompileManager.wordcount(
     projectId,
     userId,
     file,
     image,
+    compiler,
     function (error, result) {
       if (error) {
         return next(error)

@@ -117,6 +117,33 @@ export const enterNode = (
   items: FlatOutlineItem[],
   nodeIntersectsChange: NodeIntersectsChangeFn
 ): any => {
+  // Typst heading support (= H1, == H2, etc.)
+  if (node.type.name === 'Heading') {
+    if (!nodeIntersectsChange(node)) {
+      // This should already be in `items`
+      return
+    }
+    const markerChild = node.node.firstChild
+    let level = 1
+    let titleFrom = node.from
+    if (markerChild && markerChild.type.name === 'HeadingMarker') {
+      const markerText = state.doc.sliceString(markerChild.from, markerChild.to)
+      level = markerText.match(/^=+/)?.[0]?.length ?? 1
+      titleFrom = markerChild.to
+    }
+    const title = state.doc.sliceString(titleFrom, node.to).trim()
+    items.push(
+      Object.assign(new FlatOutlineItem(), {
+        line: state.doc.lineAt(node.from).number,
+        title,
+        from: node.from,
+        to: node.to,
+        level,
+      })
+    )
+    return false // don't recurse into heading children
+  }
+
   if (node.type.is('SectioningCommand')) {
     const command = node.node
     const parent = command.parent

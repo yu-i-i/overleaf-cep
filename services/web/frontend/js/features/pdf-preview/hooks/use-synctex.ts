@@ -287,7 +287,8 @@ export default function useSynctex(): {
     hasSingleSelectedDoc &&
     cursorPosition &&
     openDocName &&
-    isValidTeXFile(openDocName)
+    isValidTeXFile(openDocName) &&
+    !/\.typ$/i.test(openDocName)
 
   return {
     syncToCode,

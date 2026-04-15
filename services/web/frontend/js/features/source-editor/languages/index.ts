@@ -72,4 +72,13 @@ export const languages = [
       return import('@codemirror/lang-python').then(m => m.python())
     },
   }),
+  LanguageDescription.of({
+    name: 'typst',
+    extensions: ['typ'],
+    load: () => {
+      return import(
+        '@modules/typst/frontend/js/languages/typst'
+      ).then(m => m.typst())
+    },
+  }),
 ]

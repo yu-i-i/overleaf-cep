@@ -35,7 +35,7 @@ const NewBackendCloudClsiCookieManager = ClsiCookieManagerFactory(
   Settings.apis.clsi_new?.backendGroupName
 )
 
-const VALID_COMPILERS = ['pdflatex', 'latex', 'xelatex', 'lualatex']
+const VALID_COMPILERS = ['pdflatex', 'latex', 'xelatex', 'lualatex', 'typst']
 const OUTPUT_FILE_TIMEOUT_MS = 60000
 const CLSI_COOKIES_ENABLED = (Settings.clsiCookie?.key ?? '') !== ''
 
@@ -417,7 +417,7 @@ async function _makeRequest(
 
   let response, body
   try {
-    ;({ body, response } = await fetchStringWithResponse(url, opts))
+    ; ({ body, response } = await fetchStringWithResponse(url, opts))
   } catch (err) {
     throw OError.tag(err, 'error making request to CLSI', {
       projectId,
@@ -579,7 +579,7 @@ async function _makeNewBackendRequest(
 
   let response, body
   try {
-    ;({ body, response } = await fetchStringWithResponse(url, opts))
+    ; ({ body, response } = await fetchStringWithResponse(url, opts))
   } catch (err) {
     throw OError.tag(err, 'error making request to new CLSI', {
       userId,
@@ -673,7 +673,7 @@ async function _postToClsi(
           if (body.compile?.status === 'missing-updates') {
             return { response: body }
           }
-        } catch {}
+        } catch { }
         return { response: { compile: { status: 'conflict' } } }
       } else if (err.response.status === 423) {
         return { response: { compile: { status: 'compile-in-progress' } } }
@@ -771,7 +771,7 @@ async function _buildRequest(projectId, userId, options) {
     const timer = new Metrics.Timer('editor.compile-getdocs-redis')
     let projectStateHash, docUpdaterDocs
     try {
-      ;({ projectStateHash, docs: docUpdaterDocs } =
+      ; ({ projectStateHash, docs: docUpdaterDocs } =
         await getContentFromDocUpdaterIfMatch(projectId, project, options))
     } catch (err) {
       logger.error({ err, projectId }, 'error checking project state')
@@ -931,10 +931,10 @@ async function _buildRequestFromHistoryIncremental(
   let size = 0
   while (hasMore) {
     let changes
-    ;({ changes, hasMore } =
-      await HistoryManager.promises.getChangesWithHistoryId(historyId, {
-        since,
-      }))
+      ; ({ changes, hasMore } =
+        await HistoryManager.promises.getChangesWithHistoryId(historyId, {
+          since,
+        }))
     since += changes.length
     const newRawChangeOperations = _rawChangeOperationsFromChanges(changes)
     size += Buffer.from(JSON.stringify(newRawChangeOperations)).byteLength
@@ -1091,6 +1091,11 @@ function _finaliseRequest(projectId, options, project, docs, files) {
     flags.push(...process.env.TEX_COMPILER_EXTRA_FLAGS.split(/\s+/).filter(Boolean))
   }
 
+  const typstDockerImage =
+    process.env.TYPST_DOCKER_IMAGE || 'pandoc/typst:latest'
+  const imageName =
+    project.compiler === 'typst' ? typstDockerImage : project.imageName
+
   return {
     compile: {
       options: {
@@ -1099,7 +1104,7 @@ function _finaliseRequest(projectId, options, project, docs, files) {
         editorId: options.editorId,
         compiler: project.compiler,
         timeout: options.timeout,
-        imageName: project.imageName,
+        imageName,
         draft: Boolean(options.draft),
         stopOnFirstError: Boolean(options.stopOnFirstError),
         check: options.check,
@@ -1144,6 +1149,9 @@ async function wordCount(projectId, userId, file, limits, clsiserverid) {
   )
   url.searchParams.set('file', filename)
   url.searchParams.set('image', req.compile.options.imageName)
+  if (req.compile.options.compiler) {
+    url.searchParams.set('compiler', req.compile.options.compiler)
+  }
 
   const opts = {
     method: 'GET',

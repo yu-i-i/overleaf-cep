@@ -4,8 +4,8 @@ import { isValidTeXFile } from '../../../main/is-valid-tex-file'
 const visualEditorProviders = importOverleafModules('visualEditorProviders')
 
 export function isVisualEditorAvailable(filename: string): boolean {
-  // Core LaTeX visual editor
-  if (isValidTeXFile(filename)) {
+  // Core LaTeX visual editor (Typst files use source mode only)
+  if (isValidTeXFile(filename) && !/\.typ$/i.test(filename)) {
     return true
   }
 

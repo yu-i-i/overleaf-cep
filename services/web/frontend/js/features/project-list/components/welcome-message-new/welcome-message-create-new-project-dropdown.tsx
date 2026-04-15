@@ -134,6 +134,21 @@ function WelcomeMessageCreateNewProjectDropdown({
             {t('upload_project')}
           </DropdownItem>
         </li>
+        <li role="none">
+          <DropdownItem
+            as="button"
+            onClick={e =>
+              handleDropdownItemClick(
+                e,
+                'blank_typst_project',
+                'blank-typst-project'
+              )
+            }
+            tabIndex={-1}
+          >
+            {t('blank_typst_project')}
+          </DropdownItem>
+        </li>
         {isOverleaf && (
           <li role="none">
             <DropdownItem

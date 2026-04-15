@@ -28,7 +28,6 @@ refresh-cache-latest:
 build-base:
 	cp .dockerignore $(MONOREPO_ROOT)
 	docker build \
-	  --build-arg BUILDKIT_INLINE_CACHE=1 \
 	  --progress=plain \
 	  --file Dockerfile-base \
 	  --pull \
@@ -43,7 +42,6 @@ build-base:
 build-community:
 	cp .dockerignore $(MONOREPO_ROOT)
 	docker build \
-	  --build-arg BUILDKIT_INLINE_CACHE=1 \
 	  --progress=plain \
 	  --build-arg OVERLEAF_BASE_TAG \
 	  --label "com.overleaf.ce.revision=$(MONOREPO_REVISION)" \

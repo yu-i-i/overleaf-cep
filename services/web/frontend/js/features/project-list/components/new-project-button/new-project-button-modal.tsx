@@ -13,6 +13,7 @@ export type NewProjectButtonModalVariant =
   | 'example_project'
   | 'upload_project'
   | 'import_from_github'
+  | 'blank_typst_project'
 
 type NewProjectButtonModalProps = {
   modal: Nullable<NewProjectButtonModalVariant>
@@ -26,6 +27,13 @@ function NewProjectButtonModal({ modal, onHide }: NewProjectButtonModalProps) {
   const ImportProjectFromGithubModalWrapper: JSXElementConstructor<{
     onHide: () => void
   }> = importProjectFromGithubModalWrapper?.import.default
+
+  const [typstNewProjectModalWrapperModule] = importOverleafModules(
+    'typstNewProjectModalWrapper'
+  )
+  const TypstNewProjectModalWrapper: JSXElementConstructor<{
+    onHide: () => void
+  }> = typstNewProjectModalWrapperModule?.import.default
 
   const location = useLocation()
 
@@ -49,6 +57,10 @@ function NewProjectButtonModal({ modal, onHide }: NewProjectButtonModalProps) {
       )
     case 'import_from_github':
       return <ImportProjectFromGithubModalWrapper onHide={onHide} />
+    case 'blank_typst_project':
+      return TypstNewProjectModalWrapper ? (
+        <TypstNewProjectModalWrapper onHide={onHide} />
+      ) : null
     default:
       return null
   }

@@ -155,6 +155,12 @@ function NewProjectButton({
     onClick: (e: React.MouseEvent) => void
   }> = importProjectFromGithubMenu?.import.default
 
+  const [typstNewProjectMenuModule] = importOverleafModules('typstNewProjectMenu')
+
+  const TypstNewProjectMenu: JSXElementConstructor<{
+    onClick: (e: React.MouseEvent) => void
+  }> = typstNewProjectMenuModule?.import.default
+
   return (
     <>
       <Dropdown
@@ -215,6 +221,18 @@ function NewProjectButton({
                   handleModalMenuClick(e, {
                     modalVariant: 'import_from_github',
                     dropdownMenuEvent: 'import-from-github',
+                  })
+                }
+              />
+            )}
+          </li>
+          <li role="none">
+            {TypstNewProjectMenu && (
+              <TypstNewProjectMenu
+                onClick={e =>
+                  handleModalMenuClick(e, {
+                    modalVariant: 'blank_typst_project',
+                    dropdownMenuEvent: 'blank-typst-project',
                   })
                 }
               />
