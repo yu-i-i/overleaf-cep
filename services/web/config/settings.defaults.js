@@ -69,6 +69,7 @@ const defaultTextExtensions = [
   'rnw',
   'ltx',
   'inc',
+  'typ',
 ]
 
 const parseTextExtensions = function (extensions) {
@@ -215,18 +216,16 @@ module.exports = {
   // options incase you want to run some services on remote hosts.
   apis: {
     web: {
-      url: `http://${
-        process.env.WEB_API_HOST || process.env.WEB_HOST || '127.0.0.1'
-      }:${process.env.WEB_API_PORT || process.env.WEB_PORT || 3000}`,
+      url: `http://${process.env.WEB_API_HOST || process.env.WEB_HOST || '127.0.0.1'
+        }:${process.env.WEB_API_PORT || process.env.WEB_PORT || 3000}`,
       user: httpAuthUser,
       pass: httpAuthPass,
     },
     documentupdater: {
-      url: `http://${
-        process.env.DOCUPDATER_HOST ||
+      url: `http://${process.env.DOCUPDATER_HOST ||
         process.env.DOCUMENT_UPDATER_HOST ||
         '127.0.0.1'
-      }:3003`,
+        }:3003`,
     },
     docstore: {
       url: `http://${process.env.DOCSTORE_HOST || '127.0.0.1'}:3016`,
@@ -292,8 +291,7 @@ module.exports = {
     v1_history: {
       url:
         process.env.V1_HISTORY_URL ||
-        `http://${process.env.V1_HISTORY_HOST || '127.0.0.1'}:${
-          process.env.V1_HISTORY_PORT || '3100'
+        `http://${process.env.V1_HISTORY_HOST || '127.0.0.1'}:${process.env.V1_HISTORY_PORT || '3100'
         }/api`,
       urlForGitBridge: process.env.V1_HISTORY_URL_FOR_GIT_BRIDGE,
       user: process.env.V1_HISTORY_USER || 'staging',
@@ -823,7 +821,7 @@ module.exports = {
       .filter(x => x !== ''),
     trustedUsersRegex: process.env.CAPTCHA_TRUSTED_USERS_REGEX
       ? // Enforce matching of the entire input.
-        new RegExp(`^${process.env.CAPTCHA_TRUSTED_USERS_REGEX}$`)
+      new RegExp(`^${process.env.CAPTCHA_TRUSTED_USERS_REGEX}$`)
       : null,
     disabled: {
       invite: true,
@@ -875,7 +873,7 @@ module.exports = {
     process.env.FILE_IGNORE_PATTERN ||
     '**/{{__MACOSX,.git,.texpadtmp,.R}{,/**},.!(latexmkrc),*.{dvi,aux,log,toc,out,pdfsync,synctex,synctex(busy),fdb_latexmk,fls,nlo,ind,glo,gls,glg,bbl,blg,doc,docx,gz,swp}}',
 
-  validRootDocExtensions: ['tex', 'Rtex', 'ltx', 'Rnw'],
+  validRootDocExtensions: ['tex', 'Rtex', 'ltx', 'Rnw', 'typ'],
 
   emailConfirmationDisabled:
     process.env.EMAIL_CONFIRMATION_DISABLED === 'true' || false,
@@ -1062,6 +1060,18 @@ module.exports = {
     ],
     importProjectFromGithubModalWrapper: [],
     importProjectFromGithubMenu: [],
+    typstNewProjectMenu: [
+      Path.resolve(
+        __dirname,
+        '../modules/typst/frontend/js/components/typst-new-project-menu'
+      ),
+    ],
+    typstNewProjectModalWrapper: [
+      Path.resolve(
+        __dirname,
+        '../modules/typst/frontend/js/components/typst-new-project-modal-wrapper'
+      ),
+    ],
     editorLeftMenuSync: [
       Path.resolve(
         __dirname,
@@ -1160,6 +1170,7 @@ module.exports = {
     'template-gallery',
     'git-bridge',
     'zotero',
+    'typst',
   ],
   viewIncludes: {},
 

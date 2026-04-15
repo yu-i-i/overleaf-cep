@@ -4,6 +4,7 @@ import { useEditorContext } from '../../../../shared/context/editor-context'
 import { ToolbarButton } from './toolbar-button'
 import { redo, undo } from '@codemirror/commands'
 import * as commands from '../../extensions/toolbar/commands'
+import { typstFormatDocument } from '../../extensions/toolbar/typst-format'
 import { SectionHeadingDropdown } from './section-heading-dropdown'
 import getMeta from '../../../../utils/meta'
 import { InsertFigureDropdown } from './insert-figure-dropdown'
@@ -190,6 +191,38 @@ export const ToolbarItems: FC<{
                 icon="format_indent_increase"
                 shortcut={visual ? (isMac ? '⌘]' : 'Ctrl+]') : undefined}
                 disabled={listDepth < 1}
+              />
+            </div>
+          )}
+        </>
+      )}
+      {languageName === 'typst' && (
+        <>
+          {showGroup('group-format') && (
+            <div
+              className="ol-cm-toolbar-button-group"
+              aria-label={t('toolbar_text_style')}
+            >
+              <ToolbarButton
+                id="toolbar-typst-bold"
+                label={t('toolbar_bold')}
+                command={commands.typstToggleBold}
+                icon="format_bold"
+                shortcut={isMac ? '⌘B' : 'Ctrl+B'}
+              />
+              <ToolbarButton
+                id="toolbar-typst-italic"
+                label={t('toolbar_italic')}
+                command={commands.typstToggleItalic}
+                icon="format_italic"
+                shortcut={isMac ? '⌘I' : 'Ctrl+I'}
+              />
+              <ToolbarButton
+                id="toolbar-typst-format"
+                label={t('toolbar_format_code')}
+                command={typstFormatDocument}
+                icon="code"
+                shortcut={isMac ? '⇧⌘F' : 'Ctrl+Shift+F'}
               />
             </div>
           )}

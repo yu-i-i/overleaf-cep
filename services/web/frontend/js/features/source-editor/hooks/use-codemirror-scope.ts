@@ -276,7 +276,11 @@ function useCodeMirrorScope(view: EditorView) {
 
   const { previewByPath } = useFileTreePathContext()
 
-  const showVisual = visual && !!openDocName && isValidTeXFile(openDocName)
+  const showVisual =
+    visual &&
+    !!openDocName &&
+    isValidTeXFile(openDocName) &&
+    !/\.typ$/i.test(openDocName)
 
   const visualRef = useRef({
     previewByPath,

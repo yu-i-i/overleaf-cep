@@ -4,3 +4,5 @@
 # user defined files
 .env
 docker-compose.override.yml
+texlyre
+old_files

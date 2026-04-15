@@ -289,6 +289,13 @@ const DockerRunner = {
       options.Volumes['/home/tex'] = {}
     }
 
+    if (image.includes('typst')) {
+      // Some typst images (e.g. pandoc/typst:latest) do not include www-data.
+      // Use the numeric www-data UID/GID so the container can write mounted compile files.
+      options.User = '33:33'
+      options.Entrypoint = []
+    }
+
     // Allow per-compile group overriding of individual settings
     if (
       Settings.clsi.docker.compileGroupConfig &&

@@ -54,11 +54,15 @@ function runLatex(projectId, options, callback) {
 
   let command
   try {
-    command = _buildLatexCommand(mainFile, {
-      compiler,
-      stopOnFirstError,
-      flags,
-    })
+    if (compiler === 'typst') {
+      command = _buildTypstCommand(mainFile)
+    } else {
+      command = _buildLatexCommand(mainFile, {
+        compiler,
+        stopOnFirstError,
+        flags,
+      })
+    }
   } catch (err) {
     return callback(err)
   }
@@ -85,18 +89,25 @@ function runLatex(projectId, options, callback) {
           logger.error({ err, projectId }, 'error adding latexmk metrics')
         }
       }
-      // number of latex runs and whether there were errors
-      const runs =
-        output?.stdout?.match(/^Run number \d+ of .*latex/gm)?.length || // TeXLive 2022 and later
-        output?.stderr?.match(/^Run number \d+ of .*latex/gm)?.length || // TeXLive 2021 and earlier
-        0
-      const failed = output?.stdout?.match(/^Latexmk: Errors/m) != null ? 1 : 0
-      // counters from latexmk output
-      stats['latexmk-errors'] = failed
-      stats['latex-runs'] = runs
-      stats['latex-runs-with-errors'] = failed ? runs : 0
-      stats[`latex-runs-${runs}`] = 1
-      stats[`latex-runs-with-errors-${runs}`] = failed ? 1 : 0
+      if (compiler === 'typst') {
+        // Typst always does a single compilation run
+        stats['latex-runs'] = 1
+        stats['latexmk-errors'] = output?.stdout?.includes('error:') ? 1 : 0
+        stats['latex-runs-with-errors'] = stats['latexmk-errors'] ? 1 : 0
+      } else {
+        // number of latex runs and whether there were errors
+        const runs =
+          output?.stdout?.match(/^Run number \d+ of .*latex/gm)?.length || // TeXLive 2022 and later
+          output?.stderr?.match(/^Run number \d+ of .*latex/gm)?.length || // TeXLive 2021 and earlier
+          0
+        const failed = output?.stdout?.match(/^Latexmk: Errors/m) != null ? 1 : 0
+        // counters from latexmk output
+        stats['latexmk-errors'] = failed
+        stats['latex-runs'] = runs
+        stats['latex-runs-with-errors'] = failed ? runs : 0
+        stats[`latex-runs-${runs}`] = 1
+        stats[`latex-runs-with-errors-${runs}`] = failed ? 1 : 0
+      }
       // timing information from /usr/bin/time
       const stderr = (output && output.stderr) || ''
       if (stderr.includes('Command being timed:')) {
@@ -204,6 +215,20 @@ function _buildLatexCommand(mainFile, opts = {}) {
   mainFile = mainFile.replace(/\.(Rtex|md|Rmd|Rnw)$/, '.tex')
   command.push(Path.join('$COMPILE_DIR', mainFile))
 
+  return command
+}
+
+function _buildTypstCommand(mainFile) {
+  // Each argument gets $COMPILE_DIR replaced individually by CommandRunner
+  const command = [
+    'sh',
+    '-c',
+    'echo "typst $(typst --version 2>/dev/null || echo unknown)" > "$3"; typst compile "$1" "$2" >> "$3" 2>&1; exit 0',
+    '--',
+    Path.join('$COMPILE_DIR', mainFile),
+    Path.join('$COMPILE_DIR', 'output.pdf'),
+    Path.join('$COMPILE_DIR', 'output.log'),
+  ]
   return command
 }
 

@@ -160,7 +160,7 @@ module.exports = {
               configFile: path.join(__dirname, './babel.config.json'),
               plugins: [
                 process.env.REACT_REFRESH_ENABLED === 'true' &&
-                  'react-refresh/babel',
+                'react-refresh/babel',
               ].filter(Boolean),
             },
           },
@@ -168,7 +168,18 @@ module.exports = {
         type: 'javascript/auto',
       },
       {
+        // Typst syntax WASM needs to be loaded as async WebAssembly module
+        test: /typst_syntax_bg\.wasm$/,
+        type: 'webassembly/async',
+      },
+      {
+        // Typstyle formatter WASM needs to be loaded as async WebAssembly module
+        test: /typstyle_wasm_bg\.wasm$/,
+        type: 'webassembly/async',
+      },
+      {
         test: /\.wasm$/,
+        exclude: /typst_syntax_bg\.wasm$|typstyle_wasm_bg\.wasm$/,
         type: 'asset/resource',
         generator: {
           filename: 'js/[name]-[contenthash][ext]',

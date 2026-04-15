@@ -108,7 +108,7 @@ async function doCompile(request, stats, timings) {
   let resourceList, baseHistoryVersion
   try {
     if (request.rawChangeOperations) {
-      ;({ resourceList, baseHistoryVersion } =
+      ; ({ resourceList, baseHistoryVersion } =
         await HistoryResourceWriter.syncResourcesToDisk(
           projectId,
           userId,
@@ -633,10 +633,23 @@ async function _runSynctex(projectId, userId, command, opts) {
   )
 }
 
-async function wordcount(projectId, userId, filename, image) {
-  logger.debug({ projectId, userId, filename, image }, 'running wordcount')
+async function wordcount(projectId, userId, filename, image, compiler) {
+  logger.debug({ projectId, userId, filename, image, compiler }, 'running wordcount')
   const filePath = `$COMPILE_DIR/${filename}`
-  const command = ['texcount', '-nocol', '-inc', filePath]
+  const isTypst = compiler === 'typst'
+  const command = isTypst
+    ? [
+      'sh',
+      '-c',
+      `FILE="${filePath}"; ` +
+      'WORDS=$(sed "s/\\/\\/.*//g" "$FILE" | wc -w); ' +
+      'HEADS=$(grep -c "^[[:space:]]*=" "$FILE" || true); ' +
+      'echo "Words in text: $WORDS"; ' +
+      'echo "Number of headers: $HEADS"; ' +
+      'echo "Number of math inlines: 0"; ' +
+      'echo "Number of math displayed: 0"',
+    ]
+    : ['texcount', '-nocol', '-inc', filePath]
   const compileDir = getCompileDir(projectId, userId)
   const timeout = 60 * 1000
   const compileName = getCompileName(projectId, userId)

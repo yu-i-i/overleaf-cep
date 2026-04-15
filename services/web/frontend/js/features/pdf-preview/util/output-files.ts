@@ -2,6 +2,10 @@ import HumanReadableLogs from '../../../ide/human-readable-logs/HumanReadableLog
 import BibLogParser, {
   BibLogEntry,
 } from '../../../ide/log-parser/bib-log-parser'
+import {
+  parseTypstLog,
+  isTypstLog,
+} from '../../../ide/log-parser/typst-log-parser'
 import { enablePdfCaching } from './pdf-caching-flags'
 import { debugConsole } from '@/utils/debugging'
 import { dirname, findEntityByPath } from '@/features/file-tree/util/path'
@@ -106,12 +110,12 @@ export async function handleLogFiles(
         for (const entry of newEntries[key]) {
           if (type) {
             // Type casting as we are mutating LatexLogEntry | BibLogEntry into a LogEntry
-            ;(entry as LogEntry).type = type
+            ; (entry as LogEntry).type = type
           }
           if (entry.file) {
             entry.file = normalizeFilePath(entry.file)
           }
-          ;(entry as LogEntry).key = generateEntryKey()
+          ; (entry as LogEntry).key = generateEntryKey()
         }
         result.logEntries[key].push(...(newEntries[key] as LogEntry[]))
       }
@@ -127,19 +131,26 @@ export async function handleLogFiles(
       MAX_LOG_SIZE
     )
     try {
-      let { errors, warnings, typesetting } = HumanReadableLogs.parse(
-        result.log,
-        {
-          ignoreDuplicates: true,
+      if (isTypstLog(result.log)) {
+        // Parse Typst compiler output
+        const { errors, warnings, typesetting } = parseTypstLog(result.log)
+        accumulateResults({ errors, warnings, typesetting })
+      } else {
+        // Parse LaTeX compiler output
+        let { errors, warnings, typesetting } = HumanReadableLogs.parse(
+          result.log,
+          {
+            ignoreDuplicates: true,
+          }
+        )
+
+        if (data.status === 'stopped-on-first-error') {
+          // Hide warnings that could disappear after a second pass
+          warnings = warnings.filter(warning => !isTransientWarning(warning))
         }
-      )
 
-      if (data.status === 'stopped-on-first-error') {
-        // Hide warnings that could disappear after a second pass
-        warnings = warnings.filter(warning => !isTransientWarning(warning))
+        accumulateResults({ errors, warnings, typesetting })
       }
-
-      accumulateResults({ errors, warnings, typesetting })
     } catch (e) {
       debugConsole.warn(e) // ignore failure to parse the log file, but log a warning
     }

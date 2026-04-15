@@ -5,7 +5,7 @@ import { db, ObjectId } from '../../infrastructure/mongodb.mjs'
 import Errors from '../Errors/Errors.js'
 import mongodb from 'mongodb-legacy'
 import OError from '@overleaf/o-error'
-const safeCompilers = ['xelatex', 'pdflatex', 'latex', 'lualatex']
+const safeCompilers = ['xelatex', 'pdflatex', 'latex', 'lualatex', 'typst']
 
 const { ReturnDocument } = mongodb
 

@@ -79,6 +79,21 @@ RUN mkdir /install-tl-unx \
 &&  tlmgr path add \
 &&  rm -rf /install-tl-unx
 
+# Install Typst
+# -------------
+ARG TYPST_VERSION=0.13.1
+RUN set -e; \
+    ARCH=$(uname -m); \
+    case "$ARCH" in \
+      x86_64)  TYPST_ARCH="x86_64-unknown-linux-musl" ;; \
+      aarch64) TYPST_ARCH="aarch64-unknown-linux-musl" ;; \
+      armv7l)  TYPST_ARCH="armv7-unknown-linux-musleabihf" ;; \
+      *)       echo "Unsupported arch: $ARCH" && exit 1 ;; \
+    esac; \
+    wget -qO- "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${TYPST_ARCH}.tar.xz" \
+        | tar -xJ --strip-components=1 -C /usr/local/bin/ "typst-${TYPST_ARCH}/typst" \
+    &&  chmod +x /usr/local/bin/typst
+
 
 # Set up overleaf user and home directory
 # -----------------------------------------

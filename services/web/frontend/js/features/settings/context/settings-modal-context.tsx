@@ -91,6 +91,10 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
 
   const hasEmailNotifications = useFeatureFlag('email-notifications')
 
+  // Access the compiler to conditionally hide LaTeX-only settings for Typst
+  const { compiler } = useProjectSettingsContext()
+  const isTypst = compiler === 'typst'
+
   const allSettingsTabs: SettingsEntry[] = useMemo(
     () => [
       {
@@ -177,14 +181,17 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
               {
                 key: 'imageName',
                 component: <ImageNameSetting />,
+                hidden: isTypst,
               },
               {
                 key: 'draft',
                 component: <DraftSetting />,
+                hidden: isTypst,
               },
               {
                 key: 'stopOnFirstError',
                 component: <StopOnFirstErrorSetting />,
+                hidden: isTypst,
               },
               {
                 key: 'autoCompile',
@@ -264,7 +271,7 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
         hidden: !isOverleaf,
       },
     ],
-    [t, overallTheme, hasEmailNotifications, isOverleaf]
+    [t, overallTheme, hasEmailNotifications, isOverleaf, isTypst]
   )
 
   const settingsTabs = useMemo(
