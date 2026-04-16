@@ -63,6 +63,20 @@ server {
 		expires 1y;
 	}
 
+	# BusyTeX WASM assets for online compile
+	location /core/busytex {
+		expires 30d;
+		add_header Cache-Control "public, immutable";
+		types {
+			application/wasm wasm;
+			application/javascript js;
+			text/javascript mjs;
+			application/json json;
+			application/octet-stream data;
+			application/x-tar tar;
+		}
+	}
+
   # handle output files for specific users
   location ~ ^/project/([0-9a-f]+)/user/([0-9a-f]+)/build/([0-9a-f-]+)/output/output\.([a-z.]+)$ {
 		proxy_pass http://127.0.0.1:8080; # clsi-nginx.conf

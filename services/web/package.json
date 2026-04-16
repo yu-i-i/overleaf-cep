@@ -73,7 +73,6 @@
     "last 1 year",
     "safari > 14"
   ],
-
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.25",
     "@ai-sdk/openai": "^3.0.41",
@@ -372,6 +371,7 @@
     "postcss-loader": "^7.3.3",
     "prop-types": "^15.7.2",
     "pyodide": "^0.29.0",
+    "texlyre-busytex": "^0.1.4-alpha",
     "qrcode": "^1.4.4",
     "react": "^18.3.1",
     "react-bootstrap": "^2.10.10",

@@ -38,6 +38,7 @@ import { useUserSettingsContext } from '@/shared/context/user-settings-context'
 import { useFeatureFlag } from '@/shared/context/split-test-context'
 import { useEditorManagerContext } from '@/features/ide-react/context/editor-manager-context'
 import { useEditorOpenDocContext } from '@/features/ide-react/context/editor-open-doc-context'
+import { signalWithTimeout } from '@/utils/abort-signal'
 import { getJSON } from '@/infrastructure/fetch-json'
 import { CompileResponseData } from '../../../../types/compile'
 import {
@@ -59,6 +60,11 @@ import {
   ActiveOverallTheme,
   useActiveOverallTheme,
 } from '../hooks/use-active-overall-theme'
+import importOverleafModules from '../../../macros/import-overleaf-module.macro'
+
+const [onlineCompileHandlerModule] = importOverleafModules(
+  'onlineCompileHandler'
+)
 
 type PdfFile = Record<string, any>
 
@@ -129,6 +135,8 @@ export type CompileContext = {
   darkModePdf: boolean | undefined
   setDarkModePdf: (value: boolean) => void
   activeOverallTheme: ActiveOverallTheme
+  onlineCompile: boolean
+  setOnlineCompile: (value: boolean) => void
 }
 
 export const LocalCompileContext = createContext<CompileContext | undefined>(
@@ -143,7 +151,7 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
   const { currentDocument } = useEditorOpenDocContext()
   const { role } = useDetachContext()
 
-  const { projectId, joinedOnce, project } = useProjectContext()
+  const { projectId, joinedOnce, project, projectSnapshot } = useProjectContext()
   const { rootDocId, imageName, compiler: compilerName } = project || {}
 
   const { pdfPreviewOpen } = useLayoutContext()
@@ -200,7 +208,7 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
   const lastCompileRootDocId = data ? (data.rootDocId ?? rootDocId) : null
 
   // callback to be invoked for PdfJsMetrics
-  const [firstRenderDone, setFirstRenderDone] = useState(() => () => {})
+  const [firstRenderDone, setFirstRenderDone] = useState(() => () => { })
 
   // latencies of compile/pdf download/rendering
   const [deliveryLatencies, setDeliveryLatencies] = useState<DeliveryLatencies>(
@@ -212,8 +220,8 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
   // fetch initial compile response from cache
   const [initialCompileFromCache, setInitialCompileFromCache] = useState(
     getMeta('ol-canUseClsiCache') &&
-      // Avoid fetching the initial compile from cache in PDF detach tab
-      role !== 'detached'
+    // Avoid fetching the initial compile from cache in PDF detach tab
+    role !== 'detached'
   )
   // fetch of initial compile from cache is pending
   const [pendingInitialCompileFromCache, setPendingInitialCompileFromCache] =
@@ -268,6 +276,13 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
   const [draft, setDraft] = usePersistedState(`draft:${projectId}`, false, {
     listen: true,
   })
+
+  // whether to use online (browser-based WASM) compilation instead of server
+  const [onlineCompile, setOnlineCompile] = usePersistedState(
+    `online_compile:${projectId}`,
+    false,
+    { listen: true }
+  )
 
   // whether compiling should stop on first error
   const [stopOnFirstError, setStopOnFirstError] = usePersistedState(
@@ -437,25 +452,6 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
     draft,
   ])
 
-  // always compile the PDF once after opening the project, after the doc has loaded
-  useEffect(() => {
-    if (
-      !compiledOnce &&
-      currentDocument &&
-      !initialCompileFromCache &&
-      !pendingInitialCompileFromCache
-    ) {
-      setCompiledOnce(true)
-      compiler.compile({ isAutoCompileOnLoad: true })
-    }
-  }, [
-    compiledOnce,
-    currentDocument,
-    initialCompileFromCache,
-    pendingInitialCompileFromCache,
-    compiler,
-  ])
-
   useEffect(() => {
     setHasShortCompileTimeout(
       features?.compileTimeout !== undefined && features.compileTimeout <= 60
@@ -559,7 +555,7 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
 
                 const ruleDeltas =
                   previousRuleCounts &&
-                  previousRuleCounts.rootDocId === rootDocId
+                    previousRuleCounts.rootDocId === rootDocId
                     ? buildRuleDeltas(ruleCounts, previousRuleCounts.ruleCounts)
                     : {}
 
@@ -684,12 +680,16 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
   useEffect(() => {
     if (canAutoCompile) {
       if (changedAt > 0) {
-        compiler.debouncedAutoCompile()
+        // When online compile is active, skip debounced auto-compile
+        // since it bypasses the WASM handler. Users can still manually compile.
+        if (!onlineCompile) {
+          compiler.debouncedAutoCompile()
+        }
       }
     } else {
       compiler.debouncedAutoCompile.cancel()
     }
-  }, [compiler, canAutoCompile, changedAt])
+  }, [compiler, canAutoCompile, changedAt, onlineCompile])
 
   // cancel debounced recompile on unmount
   useEffect(() => {
@@ -700,11 +700,62 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
 
   // start a compile manually
   const startCompile = useCallback(
-    (options: any) => {
+    async (options: any) => {
       setCompiledOnce(true)
+
+      // Online compile: use WASM handler from module if available and enabled
+      if (onlineCompile && onlineCompileHandlerModule?.import?.handleOnlineCompile) {
+        setCompiling(true)
+        setChangedAt(0)
+        setError(undefined)
+        try {
+          await openDocs.awaitBufferedOps(
+            signalWithTimeout(signal, 10000)
+          )
+          const rootDocOverride = compiler.getRootDocOverrideId() || rootDocId
+          const rootResourcePath = rootDocOverride
+            ? pathInFolder(rootDocOverride)
+            : 'main.tex'
+
+          const data = await onlineCompileHandlerModule.import.handleOnlineCompile(
+            projectSnapshot,
+            rootResourcePath || 'main.tex',
+            projectId,
+            compilerName
+          )
+          data.options = options || {}
+          data.rootDocId = rootDocOverride
+          setData(data)
+        } catch (error: any) {
+          console.error('Online compile error:', error)
+          cleanupCompileResult()
+          setError('error')
+        } finally {
+          setCompiling(false)
+        }
+        return
+      }
+
+      // Server compile: use the standard DocumentCompiler
       return compiler.compile(options)
     },
-    [compiler, setCompiledOnce]
+    [
+      compiler,
+      setCompiledOnce,
+      onlineCompile,
+      openDocs,
+      signal,
+      rootDocId,
+      pathInFolder,
+      projectSnapshot,
+      projectId,
+      compilerName,
+      setCompiling,
+      setChangedAt,
+      setError,
+      setData,
+      cleanupCompileResult,
+    ]
   )
 
   // stop a compile manually
@@ -742,12 +793,30 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
     [findEntityByPath, openDocWithId]
   )
 
+  // always compile the PDF once after opening the project, after the doc has loaded
+  useEffect(() => {
+    if (
+      !compiledOnce &&
+      currentDocument &&
+      !initialCompileFromCache &&
+      !pendingInitialCompileFromCache
+    ) {
+      startCompile({ isAutoCompileOnLoad: true })
+    }
+  }, [
+    compiledOnce,
+    currentDocument,
+    initialCompileFromCache,
+    pendingInitialCompileFromCache,
+    startCompile,
+  ])
+
   // clear the cache then run a compile, triggered by a menu item
   const recompileFromScratch = useCallback(() => {
     clearCache().then(() => {
-      compiler.compile()
+      startCompile({})
     })
-  }, [clearCache, compiler])
+  }, [clearCache, startCompile])
 
   // After a compile, the compiler sets `data.options` to the options that were
   // used for that compile.
@@ -811,6 +880,8 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
       darkModePdf,
       setDarkModePdf,
       activeOverallTheme,
+      onlineCompile,
+      setOnlineCompile,
     }),
     [
       animateCompileDropdownArrow,
@@ -832,6 +903,7 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
       lastCompileOptions,
       logEntries,
       logEntryAnnotations,
+      onlineCompile,
       position,
       pdfFile,
       pdfViewer,
@@ -866,6 +938,8 @@ export const LocalCompileProvider: FC<React.PropsWithChildren> = ({
       darkModePdf,
       setDarkModePdf,
       activeOverallTheme,
+      onlineCompile,
+      setOnlineCompile,
     ]
   )
 

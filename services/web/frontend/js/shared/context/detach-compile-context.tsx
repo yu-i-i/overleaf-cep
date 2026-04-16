@@ -74,6 +74,8 @@ export const DetachCompileProvider: FC<React.PropsWithChildren> = ({
     darkModePdf: _darkModePdf,
     setDarkModePdf: _setDarkModePdf,
     activeOverallTheme: _activeOverallTheme,
+    onlineCompile: _onlineCompile,
+    setOnlineCompile: _setOnlineCompile,
   } = localCompileContext
 
   const [animateCompileDropdownArrow] = useDetachStateWatcher(
@@ -119,6 +121,12 @@ export const DetachCompileProvider: FC<React.PropsWithChildren> = ({
     'detached'
   )
   const [draft] = useDetachStateWatcher('draft', _draft, 'detacher', 'detached')
+  const [onlineCompile] = useDetachStateWatcher(
+    'onlineCompile',
+    _onlineCompile,
+    'detacher',
+    'detached'
+  )
   const [error] = useDetachStateWatcher('error', _error, 'detacher', 'detached')
   const [fileList] = useDetachStateWatcher(
     'fileList',
@@ -256,6 +264,12 @@ export const DetachCompileProvider: FC<React.PropsWithChildren> = ({
   const setDraft = useDetachAction(
     'setDraft',
     _setDraft,
+    'detached',
+    'detacher'
+  )
+  const setOnlineCompile = useDetachAction(
+    'setOnlineCompile',
+    _setOnlineCompile,
     'detached',
     'detacher'
   )
@@ -457,6 +471,8 @@ export const DetachCompileProvider: FC<React.PropsWithChildren> = ({
       darkModePdf,
       setDarkModePdf,
       activeOverallTheme,
+      onlineCompile,
+      setOnlineCompile,
     }),
     [
       animateCompileDropdownArrow,
@@ -478,6 +494,7 @@ export const DetachCompileProvider: FC<React.PropsWithChildren> = ({
       lastCompileOptions,
       logEntryAnnotations,
       logEntries,
+      onlineCompile,
       pdfFile,
       pdfViewer,
       position,
@@ -512,6 +529,7 @@ export const DetachCompileProvider: FC<React.PropsWithChildren> = ({
       recordAction,
       darkModePdf,
       setDarkModePdf,
+      setOnlineCompile,
       activeOverallTheme,
     ]
   )

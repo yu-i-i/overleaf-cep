@@ -16,7 +16,6 @@ import CompilerSetting from '@/features/settings/components/compiler-settings/co
 import ImageNameSetting from '@/features/settings/components/compiler-settings/image-name-setting'
 import DraftSetting from '@/features/settings/components/compiler-settings/draft-setting'
 import StopOnFirstErrorSetting from '@/features/settings/components/compiler-settings/stop-on-first-error-setting'
-import AutoCompileSetting from '@/features/settings/components/compiler-settings/auto-compile-setting'
 import OverallThemeSetting from '@/features/settings/components/appearance-settings/overall-theme-setting'
 import EditorThemeSetting from '@/features/settings/components/appearance-settings/editor-theme-setting'
 import FontSizeSetting from '@/features/settings/components/appearance-settings/font-size-setting'
@@ -185,10 +184,6 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
               {
                 key: 'stopOnFirstError',
                 component: <StopOnFirstErrorSetting />,
-              },
-              {
-                key: 'autoCompile',
-                component: <AutoCompileSetting />,
               },
             ],
           },

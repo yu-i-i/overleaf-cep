@@ -1143,6 +1143,18 @@ module.exports = {
     ],
     railEntries: [],
     railPopovers: [],
+    onlineCompileHandler: [
+      Path.resolve(
+        __dirname,
+        '../modules/online-compile/frontend/js/online-compile-handler.ts'
+      ),
+    ],
+    onlineCompileSetting: [
+      Path.resolve(
+        __dirname,
+        '../modules/online-compile/frontend/js/online-compile-setting.tsx'
+      ),
+    ],
   },
 
   moduleImportSequence: [
@@ -1160,6 +1172,7 @@ module.exports = {
     'template-gallery',
     'git-bridge',
     'zotero',
+    'online-compile',
   ],
   viewIncludes: {},
 
@@ -1170,7 +1183,10 @@ module.exports = {
     reportUri: process.env.CSP_REPORT_URI,
     exclude: [],
     viewDirectives: {
-      'app/views/project/ide-react': [`img-src 'self' data: blob:`],
+      'app/views/project/ide-react': [
+        `img-src 'self' data: blob:`,
+        `worker-src 'self' blob:`,
+      ],
     },
   },
   unsupportedBrowsers: {

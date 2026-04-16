@@ -299,6 +299,9 @@ export function generatePdfCachingTransportFactory() {
     abortController: AbortController
     handleFetchError: (error: any) => void
   }) {
+    if (url.startsWith('blob:')) {
+      return undefined
+    }
     if (metrics.failedOnce) {
       // Disable pdf caching once any fetch request failed.
       // Be trigger-happy here until we reached a stable state of the feature.
