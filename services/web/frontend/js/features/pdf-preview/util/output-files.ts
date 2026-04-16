@@ -45,10 +45,16 @@ export function handleOutputFiles(
     params.set('enable_pdf_caching', 'true')
   }
 
-  outputFile.pdfUrl = `${buildURL(outputFile, data.pdfDownloadDomain)}?${params}`
+  const basePdfUrl = buildURL(outputFile, data.pdfDownloadDomain)
+  outputFile.pdfUrl = outputFile.url?.startsWith('blob:')
+    ? basePdfUrl
+    : `${basePdfUrl}?${params}`
 
   if (data.fromCache) {
     outputFile.pdfDownloadUrl = outputFile.downloadURL
+  } else if (outputFile.url?.startsWith('blob:')) {
+    // Online compile: blob URL is already the download URL
+    outputFile.pdfDownloadUrl = outputFile.url
   } else {
     // build the URL for downloading the PDF
     params.set('popupDownload', 'true') // save PDF download as file
@@ -106,12 +112,12 @@ export async function handleLogFiles(
         for (const entry of newEntries[key]) {
           if (type) {
             // Type casting as we are mutating LatexLogEntry | BibLogEntry into a LogEntry
-            ;(entry as LogEntry).type = type
+            ; (entry as LogEntry).type = type
           }
           if (entry.file) {
             entry.file = normalizeFilePath(entry.file)
           }
-          ;(entry as LogEntry).key = generateEntryKey()
+          ; (entry as LogEntry).key = generateEntryKey()
         }
         result.logEntries[key].push(...(newEntries[key] as LogEntry[]))
       }
@@ -258,6 +264,10 @@ export const buildRuleDeltas = (
 }
 
 function buildURL(file: PDFFile, pdfDownloadDomain?: string): string {
+  // Online compile: blob URLs are already complete
+  if (file.url?.startsWith('blob:')) {
+    return file.url
+  }
   if (file.build && pdfDownloadDomain) {
     // Downloads from the compiles domain must include a build id.
     // The build id is used implicitly for access control.

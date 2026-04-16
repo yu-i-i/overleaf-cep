@@ -49,8 +49,8 @@ export function buildFileList(
       if (!ignoreFiles.includes(file.path)) {
         file.main = file.path.startsWith('output.')
 
-        if (queryString.length) {
-          file.url += `?${queryString}`
+        if (queryString.length && file.url && !file.url.startsWith('blob:')) {
+          file.url += file.url.includes('?') ? `&${queryString}` : `?${queryString}`
         }
 
         allFiles.push(file)

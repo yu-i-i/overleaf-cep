@@ -39,8 +39,10 @@ function PdfCompileButton() {
     compiling,
     draft,
     hasChanges,
+    onlineCompile,
     setAutoCompile,
     setDraft,
+    setOnlineCompile,
     setStopOnValidationError,
     stopOnFirstError,
     stopOnValidationError,
@@ -162,6 +164,30 @@ function PdfCompileButton() {
             trailingIcon={draft ? 'check' : null}
           >
             {t('fast')}&nbsp;<span className="subdued">[draft]</span>
+          </DropdownItem>
+        </li>
+        <DropdownDivider />
+        <DropdownHeader>Compile target</DropdownHeader>
+        <li role="none">
+          <DropdownItem
+            as="button"
+            onClick={() =>
+              sendEventAndSet(false, setOnlineCompile, 'compile-target')
+            }
+            trailingIcon={!onlineCompile ? 'check' : null}
+          >
+            Server
+          </DropdownItem>
+        </li>
+        <li role="none">
+          <DropdownItem
+            as="button"
+            onClick={() =>
+              sendEventAndSet(true, setOnlineCompile, 'compile-target')
+            }
+            trailingIcon={onlineCompile ? 'check' : null}
+          >
+            Online&nbsp;<span className="subdued">[browser]</span>
           </DropdownItem>
         </li>
         <DropdownDivider />

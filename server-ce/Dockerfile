@@ -28,6 +28,10 @@ RUN --mount=type=cache,target=/root/.cache \
     --mount=type=cache,target=/overleaf/services/web/node_modules/.cache,id=server-ce-webpack-cache \
     --mount=type=tmpfs,target=/tmp node genScript compile | bash
 
+# Download BusyTeX WASM assets for online compile
+# ------------------------------------------------
+RUN cd /overleaf/services/web && npx texlyre-busytex download-assets ./public/core
+
 # Copy runit service startup scripts to its location
 # --------------------------------------------------
 ADD server-ce/runit /etc/service
