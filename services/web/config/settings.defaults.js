@@ -1049,7 +1049,12 @@ module.exports = {
     sourceEditorToolbarComponents: [],
     sourceEditorToolbarEndButtons: [],
     rootContextProviders: [],
-    mainEditorLayoutModals: [],
+    mainEditorLayoutModals: [
+      Path.resolve(
+        __dirname,
+        '../modules/reference-picker/frontend/components/reference-picker-controller.tsx'
+      ),
+    ],
     mainEditorLayoutPanels: [],
     langFeedbackLinkingWidgets: [],
     labsExperiments: [],
@@ -1102,7 +1107,12 @@ module.exports = {
         '../modules/languagetool/frontend/js/components/languagetool-language-setting'
       ),
     ],
-    autoCompleteExtensions: [],
+    autoCompleteExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/reference-picker/frontend/extensions/reference-picker-keybinding.ts'
+      ),
+    ],
     sectionTitleGenerators: [],
     toastGenerators: [
       Path.resolve(
@@ -1136,7 +1146,12 @@ module.exports = {
     ],
     referenceSearchSetting: [],
     errorLogsComponents: [],
-    referenceIndices: [],
+    referenceIndices: [
+      Path.resolve(
+        __dirname,
+        '../modules/reference-picker/frontend/reference-index/advanced-reference-index.ts'
+      ),
+    ],
     railEntries: [],
     railPopovers: [],
   },
@@ -1147,6 +1162,7 @@ module.exports = {
     'server-ce-scripts',
     'sandboxed-compiles',
     'symbol-palette',
+    'reference-picker',
     'track-changes',
     'languagetool',
     'authentication/ldap',
