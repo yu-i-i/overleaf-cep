@@ -36,6 +36,11 @@ const [referenceSearchSettingModule] = importOverleafModules(
 )
 const ReferenceSearchSetting = referenceSearchSettingModule?.import.default
 
+const [languagetoolSettingsModule] = importOverleafModules(
+  'languagetoolSettings'
+)
+const LanguageToolSettings = languagetoolSettingsModule?.import.default
+
 type Setting = {
   key: string
   component: React.ReactNode
@@ -139,6 +144,13 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
               {
                 key: 'dictionary-settings',
                 component: <DictionarySetting />,
+              },
+              {
+                key: 'languagetool-settings',
+                component: LanguageToolSettings
+                  ? <LanguageToolSettings />
+                  : null,
+                hidden: !LanguageToolSettings,
               },
             ],
           },

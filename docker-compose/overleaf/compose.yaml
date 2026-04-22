@@ -1,0 +1,88 @@
+services:
+  overleaf:
+    image: docker.io/sharelatex/sharelatex:${IMAGE_TAG}
+    container_name: overleaf
+    hostname: overleaf
+    restart: always
+    volumes:
+      - ./data:/var/lib/overleaf
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 80
+    environment:
+
+      LANGUAGETOOL_ENABLED: true
+      LANGUAGETOOL_URL: http://languagetool:8010
+
+      GIT_BRIDGE_ENABLED: true
+      GIT_BRIDGE_HOST: git-bridge
+      GIT_BRIDGE_PORT: 8000
+      V1_HISTORY_URL: http://overleaf:3100/api
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OVERLEAF_REDIS_HOST: redis
+
+      OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex
+
+      OVERLEAF_APP_NAME: ${OVERLEAF_APP_NAME}
+
+      ENABLED_LINKED_FILE_TYPES: project_file,project_output_file,url,zotero
+
+      ENABLE_CONVERSIONS: true
+      EMAIL_CONFIRMATION_DISABLED: true
+
+      OVERLEAF_BEHIND_PROXY: true
+      OVERLEAF_SECURE_COOKIE: true
+      OVERLEAF_SITE_URL: ${OVERLEAF_SITE_URL}
+      OVERLEAF_NAV_TITLE: ${OVERLEAF_NAV_TITLE}
+
+      NAV_HIDE_POWERED_BY: true
+
+      ########################
+      ## Sandboxed Compiles ##
+      ########################
+
+      SERVER_PRO: true
+      DOCKER_RUNNER: true
+
+      SIBLING_CONTAINERS_ENABLED: true
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+
+      SANDBOXED_COMPILES: true
+      SANDBOXED_COMPILES_SIBLING_CONTAINERS: true
+
+      # WARNING: CHANGE DIR!!!!
+      SANDBOXED_COMPILES_HOST_DIR: ${SANDBOXED_COMPILES_HOST_DIR}
+      COMPILES_HOST_DIR: ${SANDBOXED_COMPILES_HOST_DIR}
+
+      ALL_TEX_LIVE_DOCKER_IMAGES: texlive/texlive:latest-full
+      ALL_TEX_LIVE_DOCKER_IMAGE_NAMES: TeXLive 2025
+      TEX_LIVE_DOCKER_IMAGE: texlive/texlive:latest-full
+      TEX_COMPILER_EXTRA_FLAGS: -shell-escape
+      TEXLIVE_IMAGE_USER: www-data
+
+      #################
+      #   TEMPLATES   #
+      #################
+      OVERLEAF_TEMPLATE_GALLERY: true
+      OVERLEAF_NON_ADMIN_CAN_PUBLISH_TEMPLATES: false
+      OVERLEAF_TEMPLATE_CATEGORIES: presentation thesis
+
+      TEMPLATE_PRESENTATION_NAME: Presentations
+      TEMPLATE_PRESENTATION_DESCRIPTION: Templates for Beamer and other presentation formats, tailored for academic talks and lectures.
+
+      TEMPLATE_THESIS_NAME: Theses
+      TEMPLATE_THESIS_DESCRIPTION: Templates for writing theses and dissertations, following institutional formatting and citation guidelines.
+
+      TEMPLATE_ALL_NAME: All templates
+      TEMPLATE_ALL_DESCRIPTION: Browse a collection of all available LaTeX templates, categorized by document type, style, and purpose.
+
+
+    healthcheck:
+      test: bash -c "curl  -fsI --connect-timeout 10 http://localhost || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 600s
+

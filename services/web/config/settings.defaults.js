@@ -1027,7 +1027,12 @@ module.exports = {
       ),
     ],
     contactUsModal: [],
-    sourceEditorExtensions: [],
+    sourceEditorExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/languagetool/frontend/js/languagetool-extension'
+      ),
+    ],
     sourceEditorComponents: [],
     pdfLogEntryHeaderActionComponents: [],
     pdfLogEntryComponents: [],
@@ -1096,6 +1101,12 @@ module.exports = {
     rollingBuildsUpdatedAlert: [],
     offlineModeToolbarButtons: [],
     settingsEntries: [],
+    languagetoolSettings: [
+      Path.resolve(
+        __dirname,
+        '../modules/languagetool/frontend/js/components/languagetool-language-setting'
+      ),
+    ],
     autoCompleteExtensions: [
       Path.resolve(
         __dirname,
@@ -1153,6 +1164,7 @@ module.exports = {
     'symbol-palette',
     'reference-picker',
     'track-changes',
+    'languagetool',
     'authentication/ldap',
     'authentication/saml',
     'authentication/oidc',
