@@ -178,6 +178,8 @@
     "fast-xml-builder": "1.1.7",
     "fast-xml-parser": "5.7.3",
     "ip-address": "10.1.1",
+    "ldapauth-fork@npm:^5.0.1": "patch:ldapauth-fork@npm%3A5.0.5#~/.yarn/patches/ldapauth-fork-npm-5.0.5-c8b86f5231.patch",
+    "@node-saml/node-saml@npm:^5.1.0": "patch:@node-saml/node-saml@npm%3A5.1.0#~/.yarn/patches/@node-saml-node-saml-npm-5.1.0-f4eb6913cc.patch",
     "systeminformation": "5.31.6"
   },
   "scripts": {
