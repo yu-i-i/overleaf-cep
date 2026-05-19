@@ -1,7 +1,7 @@
-diff --git a/node_modules/ldapauth-fork/lib/ldapauth.js b/node_modules/ldapauth-fork/lib/ldapauth.js
-index 88398ed..0334177 100644
---- a/node_modules/ldapauth-fork/lib/ldapauth.js
-+++ b/node_modules/ldapauth-fork/lib/ldapauth.js
+diff --git a/lib/ldapauth.js b/lib/ldapauth.js
+index 88398ed31afee34c8958ad5e7a53653e1b5f6f82..0334177af8a65c7c5f9de7570924ab0f359e3f38 100644
+--- a/lib/ldapauth.js
++++ b/lib/ldapauth.js
 @@ -87,6 +87,7 @@ function LdapAuth(opts) {
    this.opts.bindProperty || (this.opts.bindProperty = 'dn');
    this.opts.groupSearchScope || (this.opts.groupSearchScope = 'sub');
