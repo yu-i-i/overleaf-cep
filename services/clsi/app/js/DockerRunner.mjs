@@ -26,6 +26,7 @@ const DockerRunner = {
     timeout,
     environment,
     compileGroup,
+    cwd,
     callback
   ) {
     command = command.map(arg =>
@@ -82,7 +83,8 @@ const DockerRunner = {
       volumes,
       timeout,
       environment,
-      compileGroup
+      compileGroup,
+      cwd
     )
     const fingerprint = DockerRunner._fingerprintContainer(options)
     const name = `project-${projectId}-${fingerprint}`
@@ -217,7 +219,8 @@ const DockerRunner = {
     volumes,
     timeout,
     environment,
-    compileGroup
+    compileGroup,
+    cwd
   ) {
     const timeoutInSeconds = timeout / 1000
 
@@ -245,7 +248,9 @@ const DockerRunner = {
     const options = {
       Cmd: command,
       Image: image,
-      WorkingDir: '/compile',
+      WorkingDir: cwd
+        ? Path.posix.join('/compile', cwd)
+        : '/compile',
       NetworkDisabled: true,
       Memory: 1024 * 1024 * 1024 * 1024, // 1 Gb
       User: Settings.clsi.docker.user,
