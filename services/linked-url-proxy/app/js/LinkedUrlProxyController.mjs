@@ -3,25 +3,23 @@ import { sanitizeUrl } from 'strict-url-sanitise'
 import normalizeUrlPath from 'als-normalize-urlpath'
 import ipaddr from 'ipaddr.js'
 import { URL } from 'node:url'
-import { Transform } from 'node:stream'
 import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 import { fetchStreamWithResponse, RequestFailedError } from '@overleaf/fetch-utils'
 import { Agent } from 'undici'
 
-function isAllowedResource(targetUrl) {
+export function isAllowedResource(targetUrl) {
   if (!Settings.allowedResources) return false
   return Settings.allowedResources.test(targetUrl)
 }
 
-function isBlockedIp(ipStr, targetUrl) {
+export function isBlockedIp(ipStr, targetUrl) {
   const addr = ipaddr.parse(ipStr)
   if (addr.kind() === 'ipv6' && addr.isIPv4MappedAddress()) {
     return isBlockedIp(addr.toIPv4Address().toString(), targetUrl)
   }
 
-  const range = addr.range()
-  if (!['unicast'].includes(addr.range())) {
+  if (addr.range() !== 'unicast') {
     return true
   }
 
@@ -42,15 +40,15 @@ function isBlockedIp(ipStr, targetUrl) {
 async function checkUrlAccess(hostname, targetUrl) {
   const records = await dns.lookup(hostname, { all: true }).catch(() => [])
   if (!records.length) {
-    const err = new Error(`DNS lookup failed for ${hostname}`)
+    const err = new Error('DNS lookup failed')
     err.info = { status: 421 }
     throw err
   }
-// Permit explicitly allowed resources without checking blocked IPs
+  // Permit explicitly allowed resources without checking blocked IPs.
   if (isAllowedResource(targetUrl)) return records[0].address
   for (const { address } of records) {
     if (isBlockedIp(address, targetUrl)) {
-      const err = new Error(`Blocked IP address: ${address}`)
+      const err = new Error('Blocked network target')
       err.info = { status: 403 }
       throw err
     }
@@ -58,7 +56,7 @@ async function checkUrlAccess(hostname, targetUrl) {
   return records[0].address
 }
 
-async function validateAndFetch(rawUrl, redirectCount = 0) {
+export async function validateAndFetch(rawUrl, redirectCount = 0) {
   if (redirectCount > Settings.maxRedirects) {
     const err = new Error('Too many redirects')
     err.info = { status: 421 }
@@ -67,7 +65,7 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
 
   const sanitizedUrl = sanitizeUrl(rawUrl)
   if (!sanitizedUrl) {
-    const err = new Error(`Invalid or unsafe URL: ${rawUrl}`)
+    const err = new Error('Invalid or unsafe URL')
     err.info = { status: 400 }
     throw err
   }
@@ -83,10 +81,11 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
   const normalizedPath = normalizeUrlPath(url.pathname).pathname
 
   if (!normalizedPath) {
-    const err = new Error(`Invalid or unsafe URL path: ${url.pathname}`)
+    const err = new Error('Invalid or unsafe URL path')
     err.info = { status: 400 }
     throw err
   }
+  url.pathname = normalizedPath
 
   const normalizedUrl = url.toString()
 
@@ -97,9 +96,10 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
   const agent = new Agent({
     connect: {
       lookup(hostname, opts, cb) {
-        cb(null, validatedIp, 4)
-      }
-    }
+        const family = ipaddr.parse(validatedIp).kind() === 'ipv6' ? 6 : 4
+        cb(null, validatedIp, family)
+      },
+    },
   })
 
   const opts = {
@@ -109,15 +109,20 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
   }
 
   try {
-    const { stream, response } = await fetchStreamWithResponse(normalizedUrl, { ...opts, dispatcher: agent })
+    const { stream, response } = await fetchStreamWithResponse(normalizedUrl, {
+      ...opts,
+      dispatcher: agent,
+    })
 
     const contentLengthHeader = response.headers.get('content-length')
     if (contentLengthHeader) {
       const n = parseInt(contentLengthHeader, 10)
       if (!Number.isNaN(n) && n > Settings.maxUploadSize) {
         const err = new Error('file too large')
-	err.info = { status: 413 }
-        try { stream.destroy() } catch (_) {}
+        err.info = { status: 413 }
+        try {
+          stream.destroy()
+        } catch (_) {}
         throw err
       }
     }
@@ -139,14 +144,14 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
           return validateAndFetch(nextUrl, redirectCount + 1)
         } else {
           const e = new Error('Redirect response missing Location header')
-	  e.info = { status: 421 }
+          e.info = { status: 421 }
           throw e
         }
       }
       throw err
     }
     if (!err?.info?.status) {
-      if(err.type === "request-timeout") {
+      if (err.type === 'request-timeout') {
         err.info = { status: 408 }
       } else err.info = { status: 422 }
     }
@@ -155,6 +160,12 @@ async function validateAndFetch(rawUrl, redirectCount = 0) {
 }
 
 async function proxy(req, res) {
+  if (!Settings.externalUrlImportEnabled) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' })
+    res.end('External URL import is disabled')
+    return
+  }
+
   try {
     const u = new URL(req.url, `http://${req.headers.host}`)
     const targetUrl = u.searchParams.get('url')
@@ -164,36 +175,51 @@ async function proxy(req, res) {
       return
     }
 
-    const { stream: upstreamStream, response, headers } = await validateAndFetch(targetUrl)
+    const {
+      stream: upstreamStream,
+      response,
+      headers,
+    } = await validateAndFetch(targetUrl)
 
     res.statusCode = response.status || 200
-    res.setHeader('Content-Type', headers['content-type'] || 'application/octet-stream')
+    res.setHeader(
+      'Content-Type',
+      headers['content-type'] || 'application/octet-stream'
+    )
     res.setHeader('Cache-Control', 'no-store')
 
     function onError(err) {
       logger.info({ err, url: req.url }, 'linked-url-proxy request failed')
-      try { upstreamStream.destroy() } catch (_) {}
+      try {
+        upstreamStream.destroy()
+      } catch (_) {}
       if (!res.headersSent) {
-	let body = `Error: ${err?.message ?? String(err)}`
-        res.writeHead(err?.info?.status || 503, { 'Content-Type': 'text/plain' })
-        res.end(body)
+        res.writeHead(err?.info?.status || 503, {
+          'Content-Type': 'text/plain',
+        })
+        res.end('Error: linked URL import failed')
       } else {
-        try { res.destroy() } catch (_) {}
+        try {
+          res.destroy()
+        } catch (_) {}
       }
     }
 
     upstreamStream.on('error', onError)
     upstreamStream.pipe(res)
-
   } catch (err) {
     const status = err.info?.status || 500
-    logger.info({ linkedUrl: err.message, status, url: req.url }, 'linked-url-proxy request failed')
-    let body = `Error: ${err.message || String(err)}`
+    logger.info(
+      { linkedUrl: err.message, status, url: req.url },
+      'linked-url-proxy request failed'
+    )
     try {
       res.writeHead(status, { 'Content-Type': 'text/plain' })
-      res.end(body)
+      res.end('Error: linked URL import failed')
     } catch {
-      try { res.end() } catch {}
+      try {
+        res.end()
+      } catch {}
     }
   }
 }

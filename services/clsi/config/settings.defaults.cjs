@@ -5,6 +5,38 @@ const fs = require('node:fs')
 const isPreEmptible = process.env.PREEMPTIBLE === 'TRUE'
 const CLSI_SERVER_ID = os.hostname().replace('-ctr', '')
 
+function parseImageList(value) {
+  if (!value) return []
+  return value
+    .split(/[,\s]+/)
+    .map(image => image.trim())
+    .filter(Boolean)
+    .filter(image => {
+      if (/[\s\x00-\x1f\x7f]/.test(image)) {
+        console.error(`Rejecting unsafe TeX image name: ${JSON.stringify(image)}`)
+        return false
+      }
+      return true
+    })
+}
+
+function getAllowedImagesFromEnv(env = process.env) {
+  if (env.ALLOWED_IMAGES != null) {
+    return parseImageList(env.ALLOWED_IMAGES)
+  }
+  if (env.ALL_TEX_LIVE_DOCKER_IMAGES != null) {
+    console.warn(
+      'ALL_TEX_LIVE_DOCKER_IMAGES is being used as the sandbox image allow-list. Set explicit ALLOWED_IMAGES instead.'
+    )
+    return parseImageList(env.ALL_TEX_LIVE_DOCKER_IMAGES)
+  }
+  return []
+}
+
+function firstImageFromEnv(value) {
+  return parseImageList(value)[0]
+}
+
 module.exports = {
   compileSizeLimit: process.env.COMPILE_SIZE_LIMIT || '7mb',
 
@@ -114,20 +146,42 @@ if ((process.env.DOCKER_RUNNER || process.env.SANDBOXED_COMPILES) === 'true') {
     process.exit(1)
   }
 
+  const allowedImages = getAllowedImagesFromEnv()
+  if (allowedImages.length === 0) {
+    throw new Error(
+      'Sandboxed compiles require an explicit TeX image allow-list. Set ALLOWED_IMAGES to one or more pinned image names.'
+    )
+  }
+
+  const defaultDockerImage =
+    process.env.TEXLIVE_IMAGE ||
+    process.env.TEX_LIVE_DOCKER_IMAGE ||
+    firstImageFromEnv(process.env.ALL_TEX_LIVE_DOCKER_IMAGES)
+
+  if (!defaultDockerImage) {
+    throw new Error(
+      'Sandboxed compiles require TEX_LIVE_DOCKER_IMAGE or TEXLIVE_IMAGE to select a pinned default TeX image.'
+    )
+  }
+
+  if (!allowedImages.includes(defaultDockerImage)) {
+    throw new Error(
+      `Default TeX image ${defaultDockerImage} is not present in ALLOWED_IMAGES.`
+    )
+  }
+
   module.exports.clsi = {
     dockerRunner: true,
     docker: {
       runtime: process.env.DOCKER_RUNTIME,
-      image:
-        process.env.TEXLIVE_IMAGE ||
-        process.env.TEX_LIVE_DOCKER_IMAGE ||
-        process.env.ALL_TEX_LIVE_DOCKER_IMAGES.split(',')[0].trim(),
+      image: defaultDockerImage,
       env: {
         HOME: '/tmp',
         CLSI: 1,
       },
       socketPath: '/var/run/docker.sock',
       user: process.env.TEXLIVE_IMAGE_USER || 'www-data',
+      allowedImages,
     },
     optimiseInDocker: true,
     expireProjectAfterIdleMs: 24 * 60 * 60 * 1000,
@@ -183,16 +237,6 @@ if ((process.env.DOCKER_RUNNER || process.env.SANDBOXED_COMPILES) === 'true') {
     }
   }
 
-  if (process.env.ALLOWED_IMAGES) {
-    try {
-      module.exports.clsi.docker.allowedImages =
-        process.env.ALLOWED_IMAGES.split(' ')
-    } catch (error) {
-      console.error(error, 'could not apply allowed images setting')
-      process.exit(1)
-    }
-  }
-
   module.exports.path.synctexBaseDir = () => '/compile'
 
   module.exports.path.sandboxedCompilesHostDirCompiles =
@@ -214,4 +258,9 @@ if ((process.env.DOCKER_RUNNER || process.env.SANDBOXED_COMPILES) === 'true') {
     //   'SANDBOXED_COMPILES enabled, but SANDBOXED_COMPILES_HOST_DIR_OUTPUT not set'
     // )
   }
+}
+
+module.exports._openleafHardening = {
+  parseImageList,
+  getAllowedImagesFromEnv,
 }

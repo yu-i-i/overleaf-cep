@@ -73,7 +73,8 @@ describe('DockerRunner', () => {
       },
     }))
 
-    ctx.DockerRunner = (await import(modulePath)).default
+    ctx.DockerRunnerModule = await import(modulePath)
+    ctx.DockerRunner = ctx.DockerRunnerModule.default
     ctx.Docker = Docker
     ctx.getContainer = Docker.prototype.getContainer
     ctx.createContainer = Docker.prototype.createContainer
@@ -88,6 +89,7 @@ describe('DockerRunner', () => {
     ctx.project_id = 'project-id-123'
     ctx.volumes = { '/some/host/dir/compiles/directory': '/compile' }
     ctx.Settings.clsi.docker.image = ctx.defaultImage = 'default-image'
+    ctx.Settings.clsi.docker.allowedImages = [ctx.image, ctx.defaultImage]
     ctx.Settings.path.sandboxedCompilesHostDirCompiles =
       '/some/host/dir/compiles'
     ctx.Settings.path.sandboxedCompilesHostDirOutput = '/some/host/dir/output'
@@ -504,6 +506,105 @@ describe('DockerRunner', () => {
 
       it('should call the callback', ctx => {
         ctx.callback.calledWith(null, ctx.output).should.equal(true)
+      })
+    })
+
+    describe('container hardening defaults', () => {
+      beforeEach(ctx => {
+        ctx.DockerRunner._runAndWaitForContainer = sinon
+          .stub()
+          .callsArgWith(3, null, (ctx.output = 'mock-output'))
+        ctx.DockerRunner.run(
+          ctx.project_id,
+          ctx.command,
+          ctx.directory,
+          ctx.image,
+          ctx.timeout,
+          ctx.env,
+          ctx.compileGroup,
+          ctx.callback
+        )
+        ctx.options = ctx.DockerRunner._runAndWaitForContainer.lastCall.args[0]
+      })
+
+      it('should set resource limits in HostConfig', ctx => {
+        expect(ctx.options).to.not.have.property('Memory')
+        expect(ctx.options.HostConfig).to.deep.include({
+          NetworkMode: 'none',
+          Memory: 1073741824,
+          MemorySwap: 1073741824,
+          PidsLimit: 256,
+          CpuPeriod: 100000,
+          CpuQuota: 100000,
+          Privileged: false,
+        })
+      })
+
+      it('should preserve no network and dropped capabilities', ctx => {
+        expect(ctx.options.NetworkDisabled).to.equal(true)
+        expect(ctx.options.HostConfig.CapDrop).to.deep.equal(['ALL'])
+        expect(ctx.options.HostConfig.SecurityOpt).to.include(
+          'no-new-privileges'
+        )
+      })
+
+      it('should include bounded ulimits', ctx => {
+        expect(ctx.options.HostConfig.Ulimits).to.deep.include({
+          Name: 'nofile',
+          Soft: 1024,
+          Hard: 2048,
+        })
+        expect(ctx.options.HostConfig.Ulimits).to.deep.include({
+          Name: 'nproc',
+          Soft: 256,
+          Hard: 512,
+        })
+      })
+    })
+
+    describe('positive integer environment parsing', () => {
+      it('should parse positive integers', ctx => {
+        expect(
+          ctx.DockerRunnerModule.parsePositiveIntegerEnv(
+            'EXAMPLE_LIMIT',
+            10,
+            { EXAMPLE_LIMIT: '42' }
+          )
+        ).to.equal(42)
+      })
+
+      it('should use the safe default for invalid values', ctx => {
+        expect(
+          ctx.DockerRunnerModule.parsePositiveIntegerEnv(
+            'EXAMPLE_LIMIT',
+            10,
+            { EXAMPLE_LIMIT: '-1' }
+          )
+        ).to.equal(10)
+      })
+    })
+
+    describe('with no configured image restriction', () => {
+      beforeEach(ctx => {
+        delete ctx.Settings.clsi.docker.allowedImages
+        ctx.DockerRunner._runAndWaitForContainer = sinon.stub()
+        ctx.DockerRunner.run(
+          ctx.project_id,
+          ctx.command,
+          ctx.directory,
+          ctx.image,
+          ctx.timeout,
+          ctx.env,
+          ctx.compileGroup,
+          ctx.callback
+        )
+      })
+
+      it('should fail closed', ctx => {
+        ctx.callback.args[0][0].message.should.equal(
+          'no allowed TeX images configured'
+        )
+        ctx.DockerRunner._runAndWaitForContainer.called.should.equal(false)
       })
     })
   })

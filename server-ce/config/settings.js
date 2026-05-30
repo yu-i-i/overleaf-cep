@@ -46,6 +46,16 @@ const parseIntOrFail = function (value) {
 
 const DATA_DIR = '/var/lib/overleaf/data'
 const TMP_DIR = '/var/lib/overleaf/tmp'
+const allowAnonymousReadAndWriteSharing =
+  process.env.OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING === 'true'
+const anonymousWriteSharingAcknowledged =
+  process.env.OPENLEAF_ALLOW_ANONYMOUS_WRITE_SHARING_ACKNOWLEDGED === 'true'
+
+if (allowAnonymousReadAndWriteSharing && !anonymousWriteSharingAcknowledged) {
+  throw new Error(
+    'OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING requires OPENLEAF_ALLOW_ANONYMOUS_WRITE_SHARING_ACKNOWLEDGED=true for OpenLeaf deployments.'
+  )
+}
 
 const settings = {
   clsi: {
@@ -54,8 +64,7 @@ const settings = {
 
   brandPrefix: '',
 
-  allowAnonymousReadAndWriteSharing:
-    process.env.OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING === 'true',
+  allowAnonymousReadAndWriteSharing,
 
   // Databases
   // ---------

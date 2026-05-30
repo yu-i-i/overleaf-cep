@@ -5,7 +5,8 @@
   "main": "app.mjs",
   "scripts": {
     "start": "node app.mjs",
-    "nodemon": "node --watch app.mjs"
+    "nodemon": "node --watch app.mjs",
+    "test:unit": "vitest --config ./vitest.config.unit.cjs"
   },
   "version": "0.1.1",
   "dependencies": {

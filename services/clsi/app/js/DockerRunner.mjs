@@ -14,8 +14,94 @@ const dockerode = new Docker()
 const ONE_HOUR_IN_MS = 60 * 60 * 1000
 logger.debug('using docker runner')
 
+const DEFAULT_RESOURCE_LIMITS = {
+  memoryBytes: 1073741824,
+  memorySwapBytes: 1073741824,
+  pidsLimit: 256,
+  cpuPeriod: 100000,
+  cpuQuota: 100000,
+  nofileSoft: 1024,
+  nofileHard: 2048,
+  nprocSoft: 256,
+  nprocHard: 512,
+}
+
 let containerMonitorTimeout
 let containerMonitorInterval
+
+export function parsePositiveIntegerEnv(name, defaultValue, env = process.env) {
+  const raw = env[name]
+  if (raw == null || raw === '') {
+    return defaultValue
+  }
+  if (!/^[1-9][0-9]*$/.test(raw)) {
+    logger.warn(
+      { name, value: raw, defaultValue },
+      'invalid positive integer setting, using safe default'
+    )
+    return defaultValue
+  }
+  const parsed = Number(raw)
+  if (!Number.isSafeInteger(parsed)) {
+    logger.warn(
+      { name, value: raw, defaultValue },
+      'positive integer setting is too large, using safe default'
+    )
+    return defaultValue
+  }
+  return parsed
+}
+
+export function getCompileContainerResourceLimits(env = process.env) {
+  const memoryBytes = parsePositiveIntegerEnv(
+    'COMPILE_CONTAINER_MEMORY_BYTES',
+    DEFAULT_RESOURCE_LIMITS.memoryBytes,
+    env
+  )
+  return {
+    memoryBytes,
+    memorySwapBytes: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_MEMORY_SWAP_BYTES',
+      memoryBytes,
+      env
+    ),
+    pidsLimit: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_PIDS_LIMIT',
+      DEFAULT_RESOURCE_LIMITS.pidsLimit,
+      env
+    ),
+    cpuPeriod: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_CPU_PERIOD',
+      DEFAULT_RESOURCE_LIMITS.cpuPeriod,
+      env
+    ),
+    cpuQuota: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_CPU_QUOTA',
+      DEFAULT_RESOURCE_LIMITS.cpuQuota,
+      env
+    ),
+    nofileSoft: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_NOFILE_SOFT',
+      DEFAULT_RESOURCE_LIMITS.nofileSoft,
+      env
+    ),
+    nofileHard: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_NOFILE_HARD',
+      DEFAULT_RESOURCE_LIMITS.nofileHard,
+      env
+    ),
+    nprocSoft: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_NPROC_SOFT',
+      DEFAULT_RESOURCE_LIMITS.nprocSoft,
+      env
+    ),
+    nprocHard: parsePositiveIntegerEnv(
+      'COMPILE_CONTAINER_NPROC_HARD',
+      DEFAULT_RESOURCE_LIMITS.nprocHard,
+      env
+    ),
+  }
+}
 
 const DockerRunner = {
   run(
@@ -36,9 +122,13 @@ const DockerRunner = {
     }
 
     if (
-      Settings.clsi.docker.allowedImages &&
-      !Settings.clsi.docker.allowedImages.includes(image)
+      !Array.isArray(Settings.clsi.docker.allowedImages) ||
+      Settings.clsi.docker.allowedImages.length === 0
     ) {
+      return callback(new Error('no allowed TeX images configured'))
+    }
+
+    if (!Settings.clsi.docker.allowedImages.includes(image)) {
       return callback(new Error('image not allowed'))
     }
 
@@ -220,6 +310,7 @@ const DockerRunner = {
     compileGroup
   ) {
     const timeoutInSeconds = timeout / 1000
+    const resourceLimits = getCompileContainerResourceLimits()
 
     for (const hostVol in volumes) {
       const dockerVol = volumes[hostVol]
@@ -247,7 +338,6 @@ const DockerRunner = {
       Image: image,
       WorkingDir: '/compile',
       NetworkDisabled: true,
-      Memory: 1024 * 1024 * 1024 * 1024, // 1 Gb
       User: Settings.clsi.docker.user,
       Env: Object.entries(env).map(([key, value]) => `${key}=${value}`),
       HostConfig: {
@@ -255,11 +345,32 @@ const DockerRunner = {
           ([hostVol, dockerVol]) => `${hostVol}:${dockerVol}`
         ),
         LogConfig: { Type: 'none', Config: {} },
+        NetworkMode: 'none',
+        Memory: resourceLimits.memoryBytes,
+        MemorySwap: resourceLimits.memorySwapBytes,
+        PidsLimit: resourceLimits.pidsLimit,
+        CpuPeriod: resourceLimits.cpuPeriod,
+        CpuQuota: resourceLimits.cpuQuota,
+        Privileged: false,
+        Tmpfs: {
+          '/tmp': 'rw,nosuid,nodev,size=65536k',
+          '/var/tmp': 'rw,nosuid,nodev,size=65536k',
+        },
         Ulimits: [
           {
             Name: 'cpu',
             Soft: timeoutInSeconds + 5,
             Hard: timeoutInSeconds + 10,
+          },
+          {
+            Name: 'nofile',
+            Soft: resourceLimits.nofileSoft,
+            Hard: resourceLimits.nofileHard,
+          },
+          {
+            Name: 'nproc',
+            Soft: resourceLimits.nprocSoft,
+            Hard: resourceLimits.nprocHard,
           },
         ],
         CapDrop: ['ALL'],
@@ -285,7 +396,11 @@ const DockerRunner = {
 
     if (Settings.clsi.docker.Readonly) {
       options.HostConfig.ReadonlyRootfs = true
-      options.HostConfig.Tmpfs = { '/tmp': 'rw,noexec,nosuid,size=65536k' }
+      options.HostConfig.Tmpfs = {
+        ...options.HostConfig.Tmpfs,
+        '/tmp': 'rw,nosuid,nodev,size=65536k',
+      }
+      options.Volumes ||= {}
       options.Volumes['/home/tex'] = {}
     }
 

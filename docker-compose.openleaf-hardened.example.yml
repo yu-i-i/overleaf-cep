@@ -1,0 +1,72 @@
+services:
+  sharelatex:
+    # Replace this reviewed placeholder with the exact OpenLeaf image tag you deploy.
+    image: sharelatex/sharelatex:5.5.0-openleaf-reviewed
+    container_name: openleaf-sharelatex
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5000:80"
+    stop_grace_period: 60s
+    volumes:
+      - openleaf_data:/var/lib/overleaf
+      # Mounting the Docker socket gives this container powerful host control.
+      # Use a dedicated VM for OpenLeaf and restrict host access accordingly.
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      OVERLEAF_APP_NAME: OpenLeaf
+      OVERLEAF_SITE_URL: https://openleaf.example.invalid
+      OVERLEAF_SECURE_COOKIE: "true"
+      OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex
+      OVERLEAF_REDIS_HOST: redis
+      REDIS_HOST: redis
+      OVERLEAF_RESTRICT_INVITES_TO_EXISTING_ACCOUNTS: "true"
+      OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING: "false"
+      OPENLEAF_ALLOW_ANONYMOUS_WRITE_SHARING_ACKNOWLEDGED: "false"
+      EXTERNAL_URL_IMPORT_ENABLED: "false"
+      SANDBOXED_COMPILES: "true"
+      DOCKER_RUNNER: "true"
+      SANDBOXED_COMPILES_SIBLING_CONTAINERS: "true"
+      SANDBOXED_COMPILES_HOST_DIR_COMPILES: /var/lib/docker/volumes/openleaf_data/_data/data/compiles
+      SANDBOXED_COMPILES_HOST_DIR_OUTPUT: /var/lib/docker/volumes/openleaf_data/_data/data/output
+      TEX_LIVE_DOCKER_IMAGE: ghcr.io/example/openleaf-texlive:2025.1
+      ALL_TEX_LIVE_DOCKER_IMAGES: ghcr.io/example/openleaf-texlive:2025.1
+      ALLOWED_IMAGES: ghcr.io/example/openleaf-texlive:2025.1
+      COMPILE_CONTAINER_MEMORY_BYTES: "1073741824"
+      COMPILE_CONTAINER_PIDS_LIMIT: "256"
+    # OpenLeaf is intended for trusted collaborators, not public SaaS.
+    # Do not use host network mode or privileged containers here.
+
+  mongo:
+    image: mongo:6.0
+    container_name: openleaf-mongo
+    restart: unless-stopped
+    command: "--replSet overleaf"
+    volumes:
+      - mongo_data:/data/db
+      - ./bin/shared/mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js:ro
+    environment:
+      MONGO_INITDB_DATABASE: sharelatex
+    extra_hosts:
+      - mongo:127.0.0.1
+    healthcheck:
+      test: echo 'db.stats().ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:6.2
+    container_name: openleaf-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+volumes:
+  openleaf_data:
+  mongo_data:
+  redis_data:

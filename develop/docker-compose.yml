@@ -199,7 +199,8 @@ services:
       - ./webpack.config.dev-env.js:/overleaf/services/web/webpack.config.dev-env.js
 
   git-bridge:
-    image: quay.io/sharelatex/git-bridge:latest
+    # Pin this to the exact git-bridge tag reviewed for your OpenLeaf build.
+    image: quay.io/sharelatex/git-bridge:5.5.0-openleaf-reviewed
     expose:
       - "8000"
     ports:
