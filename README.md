@@ -12,6 +12,14 @@
   <a href="#license">License</a>
 </p>
 
+## OpenLeaf Hardening Fork
+
+This fork is maintained by **Wissam Harib** as **OpenLeaf**, a private trusted-collaborator deployment of Overleaf Extended Community Edition for academic writing and review.
+
+The hardening work focuses on safer defaults for small private deployments: bounded sandboxed compile containers, explicit TeX image allow-lists, external URL import disabled by default, anonymous write-sharing safeguards, and deployment guidance for running OpenLeaf on an isolated server or dedicated VM.
+
+OpenLeaf does not claim public SaaS-grade isolation or absolute security. It is intended for known collaborators, manually managed accounts, and carefully backed up private deployments.
+
 <img src="doc/screenshot.png" alt="A screenshot of a project being edited in Overleaf Extended Community Edition">
 <p align="center">
   Figure 1: A screenshot of a project being edited in Overleaf Extended Community Edition.
@@ -74,6 +82,8 @@ manager to manage services, and init scripts from the `server-ce/runit`
 folder are added.
 
 ## Authors
+
+[Wissam Harib](https://github.com/WHarib/) - OpenLeaf hardening fork\
 
 [The Overleaf Team](https://www.overleaf.com/about)\
 [yu-i-i](https://github.com/yu-i-i/overleaf-cep) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md)
