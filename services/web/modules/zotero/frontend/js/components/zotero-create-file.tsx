@@ -35,10 +35,19 @@ export function CreateFileMode() {
 }
 
 export function CreateFilePane() {
+  const { newFileCreateMode } = useFileTreeActionable()
+
+  if (newFileCreateMode !== 'zotero') {
+    return null
+  }
+
+  return <ZoteroCreateFilePane />
+}
+
+function ZoteroCreateFilePane() {
   const { t } = useTranslation()
   const { setValid } = useFileTreeCreateForm()
-  const { newFileCreateMode, finishCreatingLinkedFile, error, inFlight } =
-    useFileTreeActionable()
+  const { finishCreatingLinkedFile, error, inFlight } = useFileTreeActionable()
 
   const [groups, setGroups] = useState<ZoteroGroup[]>([])
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
@@ -46,33 +55,45 @@ export function CreateFilePane() {
   const [loadingGroups, setLoadingGroups] = useState(true)
   const [groupsError, setGroupsError] = useState('')
 
-  // form validation
   useEffect(() => {
     setValid(!!name && !loadingGroups)
   }, [setValid, name, loadingGroups])
 
-  // load groups when the mode is active
   useEffect(() => {
-    if (newFileCreateMode !== 'zotero') return
+    let cancelled = false
 
     setLoadingGroups(true)
     setGroupsError('')
+
     getJSON('/zotero/groups')
       .then((data: { groups: ZoteroGroup[] }) => {
+        if (cancelled) return
+
         setGroups(data.groups || [])
         setLoadingGroups(false)
       })
       .catch(() => {
+        if (cancelled) return
+
         setGroupsError(t('zotero_groups_loading_error'))
         setLoadingGroups(false)
       })
-  }, [newFileCreateMode, t])
+
+    return () => {
+      cancelled = true
+    }
+  }, [t])
 
   const handleSubmit: FormEventHandler = useCallback(
     event => {
       event.preventDefault()
 
+      if (!name || loadingGroups || inFlight) {
+        return
+      }
+
       const data: Record<string, string> = {}
+
       if (selectedGroupId) {
         data.zoteroGroupId = selectedGroupId
       }
@@ -83,12 +104,14 @@ export function CreateFilePane() {
         data,
       })
     },
-    [name, selectedGroupId, finishCreatingLinkedFile]
+    [
+      name,
+      loadingGroups,
+      inFlight,
+      selectedGroupId,
+      finishCreatingLinkedFile,
+    ]
   )
-
-  if (newFileCreateMode !== 'zotero') {
-    return null
-  }
 
   return (
     <form
