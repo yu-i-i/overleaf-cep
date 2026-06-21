@@ -5,11 +5,17 @@
       @include navbar-dark;
     }
   }
+  .ide-redesign-main,
   .user-ds-nav-page {
     @include dark-dropdown-menu;
     .table,
     .table-container {
       @include dark-table;
+    }
+    @include form-check-dark;
+    .form-control,
+    .form-control-wrapper {
+      @include dark-input;
     }
   }
 }
