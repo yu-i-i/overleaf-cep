@@ -1092,15 +1092,30 @@ module.exports = {
     pythonRunner: [],
     langFeedbackLinkingWidgets: [],
     labsExperiments: [],
-    integrationLinkingWidgets: [],
+    integrationLinkingWidgets: [
+      Path.resolve(
+        __dirname,
+        '../modules/github-sync/frontend/js/components/github-sync-widget.tsx'
+      ),
+    ],
     referenceLinkingWidgets: [
       Path.resolve(
         __dirname,
         '../modules/zotero/frontend/js/components/zotero-widget'
       ),
     ],
-    importProjectFromGithubModalWrapper: [],
-    importProjectFromGithubMenu: [],
+    importProjectFromGithubModalWrapper: [
+      Path.resolve(
+        __dirname,
+        '../modules/github-sync/frontend/js/components/import-from-github-modal-wrapper.tsx'
+      ),
+    ],
+    importProjectFromGithubMenu: [
+      Path.resolve(
+        __dirname,
+        '../modules/github-sync/frontend/js/components/import-from-github-menu.tsx'
+      ),
+    ],
     editorLeftMenuSync: [
       Path.resolve(
         __dirname,
@@ -1170,6 +1185,10 @@ module.exports = {
     integrationPanelComponents: [
       Path.resolve(
         __dirname,
+        '../modules/github-sync/frontend/js/components/github-integration-card.tsx'
+      ),
+      Path.resolve(
+        __dirname,
         '../modules/git-bridge/frontend/js/card/components/git-integration-card.tsx'
       ),
     ],
@@ -1203,6 +1222,7 @@ module.exports = {
     'admin-tools', // import after authentication
     'template-gallery',
     'git-bridge',
+    'github-sync',
     'zotero',
   ],
   viewIncludes: {},
