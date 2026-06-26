@@ -23,15 +23,15 @@ const AdminController = {
     let url
     const openSockets = {}
     for (url in http.globalAgent.sockets) {
-      openSockets[`http://${url}`] = http.globalAgent.sockets[url].map(
-        socket => socket._httpMessage.path
-      )
+      openSockets[`http://${url}`] = http.globalAgent.sockets[url].map(socket => {
+        return socket._httpMessage?.path || '(unknown request)'
+      })
     }
 
     for (url in https.globalAgent.sockets) {
-      openSockets[`https://${url}`] = https.globalAgent.sockets[url].map(
-        socket => socket._httpMessage.path
-      )
+      openSockets[`https://${url}`] = https.globalAgent.sockets[url].map(socket => {
+        return socket._httpMessage?.path || '(unknown request)'
+      })
     }
 
     const systemMessages =

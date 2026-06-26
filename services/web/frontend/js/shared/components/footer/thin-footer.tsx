@@ -14,9 +14,14 @@ function FooterItemLi({
   label,
 }: FooterItem) {
   const textToDisplay = translatedText || text
+  const hasMarkup = /<[^>]+>/.test(textToDisplay)
 
   if (!href) {
-    return <li dangerouslySetInnerHTML={{ __html: textToDisplay }} />
+    return hasMarkup ? (
+      <li dangerouslySetInnerHTML={{ __html: textToDisplay }} />
+    ) : (
+      <li>{textToDisplay}</li>
+    )
   }
 
   const linkProps = {
@@ -27,7 +32,11 @@ function FooterItemLi({
 
   return (
     <li>
-      <a {...linkProps}>{textToDisplay}</a>
+      {hasMarkup ? (
+        <a {...linkProps} dangerouslySetInnerHTML={{ __html: textToDisplay }} />
+      ) : (
+        <a {...linkProps}>{textToDisplay}</a>
+      )}
     </li>
   )
 }
