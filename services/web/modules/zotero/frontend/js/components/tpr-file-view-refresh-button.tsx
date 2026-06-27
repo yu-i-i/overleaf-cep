@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import OLButton from '@/shared/components/ol/ol-button'
-import type { BinaryFile } from '@/features/file-view/types/binary-file'
-import getMeta from '@/utils/meta'
+import type { LinkedFile, LinkedFileData } from '@/features/file-view/types/binary-file'
+import { hasProvider } from '@/features/file-view/types/binary-file'
 
 type TPRFileViewRefreshButtonProps = {
-  file: BinaryFile
+  file: LinkedFile<keyof LinkedFileData>
   refreshFile: (isTPR: boolean | null) => void
   refreshing: boolean
 }
@@ -20,35 +20,17 @@ export function TPRFileViewRefreshButton({
   refreshing,
 }: TPRFileViewRefreshButtonProps) {
   const { t } = useTranslation()
-  const provider = (file.linkedFileData as Record<string, unknown>)?.provider
-  const currentUserId =
-    (getMeta('ol-user') as any)?._id || (getMeta('ol-user_id') as string)
   const importedByUserId = (file.linkedFileData as any)?.importedByUserId
-  const isOriginalImporter =
-    provider === 'zotero' &&
-    currentUserId &&
-    importedByUserId === currentUserId
+  const zoteroIsProvider = hasProvider(file, 'zotero')
+  const disabled = (zoteroIsProvider && !importedByUserId) ? true : false
 
-  if (provider !== 'zotero' || isOriginalImporter) {
-    // Zotero or default refresh for originator only
-    return (
-      <OLButton
-        variant="primary"
-        onClick={() => refreshFile(provider === 'zotero' ? true : null)}
-        disabled={refreshing}
-        isLoading={refreshing}
-        loadingLabel={t('refreshing')}
-      >
-        {t('refresh')}
-      </OLButton>
-    )
-  }
-
-  // collaborator of Zotero file should not refresh
   return (
     <OLButton
       variant="primary"
-      disabled
+      onClick={() => refreshFile(zoteroIsProvider ? true : null)}
+      disabled={refreshing || disabled}
+      isLoading={refreshing}
+      loadingLabel={t('refreshing')}
     >
       {t('refresh')}
     </OLButton>
