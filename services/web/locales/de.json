@@ -760,7 +760,8 @@
   "imported_from_external_provider_at_date": "Importiert aus <0>__shortenedUrlHTML__</0> am __formattedDate__ __relativeDate__",
   "imported_from_mendeley_at_date": "Importiert von Mendeley am __formattedDate__ __relativeDate__",
   "imported_from_the_output_of_another_project_at_date": "Importiert aus der Ausgabe von <0>einem anderen Projekt</0>: __sourceOutputFilePathHTML__, am __formattedDate__ __relativeDate__",
-  "imported_from_zotero_at_date": "Importiert von Zotero at __formattedDate__ __relativeDate__",
+  "imported_from_zotero_at_date": "Importiert aus Zotero am __formattedDate__ __relativeDate__",
+  "imported_from_zotero_at_date_by": "Importiert aus Zotero am __formattedDate__ __relativeDate__ von __importedByName__",
   "importing": "Importieren",
   "importing_and_merging_changes_in_github": "Änderungen werden in GitHub importiert und zusammengeführt.",
   "in_order_to_have_a_secure_account_make_sure_your_password": "Um dein Konto abzusichern, stelle sicher, dass dein Passwort",
@@ -1704,12 +1705,11 @@
   "zotero_account_linked_successfully": "Zotero-Konto erfolgreich verknüpft.",
   "zotero_groups_loading_error": "Beim Laden von Gruppen von Zotero ist ein Fehler aufgetreten",
   "zotero_groups_relink": "Beim Zugriff auf die Zotero-Daten ist ein Fehler aufgetreten. Dies wurde wahrscheinlich durch fehlende Berechtigungen verursacht. Bitte verknüpfe dein Konto neu und versuche es erneut.",
-  "zotero_imported_by_collaborator": "Diese Datei wurde aus Zotero von deinem Mitautor importiert. Du kannst sie nicht aktualisieren.",
-  "zotero_imported_by_unknown": "Diese Datei wurde aus Zotero von einem unbekannten Benutzer importiert. Du kannst sie nicht aktualisieren.",
   "zotero_integration": "Zotero-Integration",
   "zotero_is_premium": "Zotero-Integration ist eine Premiumfunktion",
   "zotero_reference_loading_error": "Fehler, Referenzen konnten nicht von Mendeley geladen werden",
   "zotero_reference_loading_error_expired": "Zotero-Token abgelaufen, bitte verknüpfe dein Konto neu",
   "zotero_reference_loading_error_forbidden": "Referenzen konnten nicht von Zotero geladen werden. Bitte verlinke dein Zotero-Konto erneut und versuche es nochmal",
+  "zotero_reference_loading_error_not_linked": "Aktualisierung fehlgeschlagen: Das zum Importieren der Datei verwendete Konto ist nicht mehr mit Zotero verknüpft oder wurde entfernt.",
   "zotero_sync_description": "Mit der Zotero-Integration kannst du deine Referenzen von Zotero in deine __appName__ Projekte importieren."
 }
