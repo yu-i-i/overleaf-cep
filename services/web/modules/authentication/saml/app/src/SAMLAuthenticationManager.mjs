@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import Settings from '@overleaf/settings'
 import UserCreator from '../../../../../app/src/Features/User/UserCreator.mjs'
 import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.mjs'
@@ -43,6 +44,7 @@ const SAMLAuthenticationManager = {
             isAdmin: isAdmin,
             holdingAccount: false,
             samlIdentifiers: [{ providerId: providerId }],
+            analyticsId: crypto.randomUUID(),
           }
         )
       }
