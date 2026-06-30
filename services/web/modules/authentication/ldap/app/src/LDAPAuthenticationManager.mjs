@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import Settings from '@overleaf/settings'
 import UserCreator from '../../../../../app/src/Features/User/UserCreator.mjs'
 import { ParallelLoginError } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.mjs'
@@ -42,6 +43,7 @@ const LDAPAuthenticationManager = {
           last_name: lastName,
           isAdmin: isAdmin,
           holdingAccount: false,
+          analyticsId: crypto.randomUUID(),
         }
       )
       await User.updateOne(

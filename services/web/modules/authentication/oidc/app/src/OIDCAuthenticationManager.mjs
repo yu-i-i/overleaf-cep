@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import Settings from '@overleaf/settings'
 import UserCreator from '../../../../../app/src/Features/User/UserCreator.mjs'
 import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.mjs'
@@ -58,6 +59,7 @@ const OIDCAuthenticationManager = {
             last_name: lastName,
             isAdmin: isAdmin,
             holdingAccount: false,
+            analyticsId: crypto.randomUUID(),
           }
         )
       }
