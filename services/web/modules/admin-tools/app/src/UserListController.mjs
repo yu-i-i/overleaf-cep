@@ -116,6 +116,7 @@ async function registerNewUser(req, res, next) {
   }
   delete req.body.isExternal
   req.body.password = crypto.randomBytes(32).toString('hex')
+  req.body.analyticsId = crypto.randomUUID()
 
  let user
   try {
