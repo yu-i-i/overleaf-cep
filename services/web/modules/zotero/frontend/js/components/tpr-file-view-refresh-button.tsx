@@ -20,17 +20,13 @@ export function TPRFileViewRefreshButton({
   refreshing,
 }: TPRFileViewRefreshButtonProps) {
   const { t } = useTranslation()
-  const importedByUserId = (file.linkedFileData as any)?.importedByUserId
   const zoteroIsProvider = hasProvider(file, 'zotero')
-  const disabled = (zoteroIsProvider && !importedByUserId) ? true : false
 
   return (
     <OLButton
       variant="primary"
-      onClick={() => refreshFile(zoteroIsProvider ? true : null)}
-      disabled={refreshing || disabled}
+      onClick={() => refreshFile(zoteroIsProvider)}
       isLoading={refreshing}
-      loadingLabel={t('refreshing')}
     >
       {t('refresh')}
     </OLButton>

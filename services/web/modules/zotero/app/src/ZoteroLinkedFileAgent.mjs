@@ -1,15 +1,17 @@
 import logger from '@overleaf/logger'
 import { callbackify } from '@overleaf/promise-utils'
+import { Project } from '../../../../app/src/models/Project.mjs'
+import ProjectLocator from '../../../../app/src/Features/Project/ProjectLocator.mjs'
 import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
+import {
+   NotFoundError,
+   TooManyRequestsError,
+   ServiceNotConfiguredError,
+   ForbiddenError
+} from '../../../../app/src/Features/Errors/Errors.js'
 import LinkedFilesHandler from '../../../../app/src/Features/LinkedFiles/LinkedFilesHandler.mjs'
 import LinkedFilesErrors from '../../../../app/src/Features/LinkedFiles/LinkedFilesErrors.mjs'
 import ZoteroApiClient from './ZoteroApiClient.mjs'
-import { ZoteroForbiddenError, ZoteroAccountNotLinkedError } from './ZoteroApiClient.mjs'
-
-const {
-  AccessDeniedError,
-  RemoteServiceError,
-} = LinkedFilesErrors
 
 /**
  * Create a linked .bib file from Zotero (either My Library or a Group Library).
@@ -19,8 +21,9 @@ const {
  *     provider: 'zotero'
  *     zoteroGroupId?: string
  *     importedAt: Date | string
- *     importedByUserId?: string
- *     importedByName?: string
+ *     importedByUserId: string
+ *     importedByName: string
+ *     bibFormat: 'bibtex' || 'biblatex'
  *   }
  *
  *  - If zoteroGroupId is present, export that group's library.
@@ -33,13 +36,14 @@ async function createLinkedFile(
   parentFolderId,
   userId
 ) {
-  logger.debug(
-    { projectId, userId, groupId: linkedFileData.zoteroGroupId },
-    'creating Zotero linked file'
-  )
 
   linkedFileData.importedByUserId = userId
-  linkedFileData.importedByName = await _getUserName(userId)
+  linkedFileData.importedByName = await _getUserName(userId) || 'Unknown'
+
+  logger.debug(
+    { projectId, userId, linkedFileData },
+    'creating Zotero linked file'
+  )
 
   const bibtex = await _getBibtex(linkedFileData)
 
@@ -65,9 +69,25 @@ async function refreshLinkedFile(
   userId
 ) {
   logger.debug(
-    { projectId, userId, groupId: linkedFileData.zoteroGroupId },
+    { projectId, userId, linkedFileData },
     'refreshing Zotero linked file'
   )
+
+// refresh importer's displayed name
+// if the importer is the owner, name is not displayed, refresh is not needed
+// if the importer is not available, the old name is preserved
+  const userName = await _getUserName(linkedFileData.importedByUserId)
+  if (userName && linkedFileData.importedByUserId != userId) {
+    linkedFileData.importedByName = userName
+    const { element, path } = await ProjectLocator.promises.findElement({
+      project_id: projectId,
+      element_id: parentFolderId,
+      type: 'folders'
+    })
+    const fileIndex = element.fileRefs.findIndex(file => file.name === name)
+    const updatePath = `${path.mongo}.fileRefs.${fileIndex}.linkedFileData.importedByName`
+    await Project.updateOne({ _id: projectId }, { $set: { [updatePath]: userName } })
+  }
 
   const bibtex = await _getBibtex(linkedFileData)
 
@@ -85,22 +105,27 @@ async function refreshLinkedFile(
 async function _getBibtex(linkedFileData) {
   const userId = linkedFileData.importedByUserId
   try {
-    if (linkedFileData.zoteroGroupId) {
-      return await ZoteroApiClient.getGroupLibraryBibtex(
-        userId,
-        linkedFileData.zoteroGroupId
-      )
-    } else {
-      return await ZoteroApiClient.getUserLibraryBibtex(userId)
-    }
+    return await ZoteroApiClient.getLibraryBibtex(
+      userId,
+      linkedFileData.zoteroGroupId,  // == null for main library
+      linkedFileData.bibFormat || 'bibtex'
+    )
   } catch (err) {
-    if (err instanceof ZoteroForbiddenError) {
-      throw new AccessDeniedError('Zotero access denied').withCause(err)
+
+    if (err instanceof ForbiddenError) {
+      logger.debug({ linkedFileData, err }, 'Zotero access denied')
+      throw new LinkedFilesErrors.AccessDeniedError('Zotero access denied').withCause(err)
     }
-    if (err instanceof ZoteroAccountNotLinkedError) {
-      throw new AccessDeniedError('Zotero account not linked').withCause(err)
+    if (err instanceof ServiceNotConfiguredError) {
+      logger.debug({ userId: linkedFileData.importedByUserId, err }, 'Zotero account not linked')
+      throw new LinkedFilesErrors.AccessDeniedError('Zotero account not linked').withCause(err)
     }
-    throw new RemoteServiceError('Zotero API error').withCause(err)
+    if (err instanceof NotFoundError) {
+      logger.debug({ group: linkedFileData.zoteroGroupId, err }, 'Zotero group is not found')
+      throw new LinkedFilesErrors.SourceFileNotFoundError('Zotero group is not found').withCause(err)
+    }
+    logger.error({ linkedFileData, err }, 'failed to retrieve bib file from Zotero')
+    throw new LinkedFilesErrors.RemoteServiceError('Error retrieving bib file from Zotero').withCause(err)
   }
 }
 
@@ -115,6 +140,7 @@ function _sanitizeData(data) {
       importedByUserId: data.importedByUserId,
     }),
     importedByName: data.importedByName || 'Unknown',
+    bibFormat: (data.bibFormat === 'biblatex') ? 'biblatex' : 'bibtex'
   }
 }
 
@@ -126,12 +152,12 @@ async function _getUserName(userId) {
   catch (err) {
     logger.error({ userId, err }, 'failed to get user info')
   }
-  if (!user) return 'Unknown'
+  if (!user) return null
 
   const { email, first_name, last_name } = user
   const name = (first_name || last_name) ?
     [first_name, last_name].filter(n => n != null).join(' ') : email
-  return name || 'Unknown'
+  return name
 }
 
 export default {

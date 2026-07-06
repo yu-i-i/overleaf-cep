@@ -1163,6 +1163,10 @@ module.exports = {
         __dirname,
         '../modules/git-bridge/frontend/js/card/components/git-integration-card.tsx'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/zotero/frontend/js/components/zotero-integration-card.tsx'
+      ),
     ],
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],

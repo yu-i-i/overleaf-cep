@@ -1,167 +1,119 @@
 import { useTranslation } from 'react-i18next'
-import { FormEventHandler, useEffect, useState, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
+import useAsync from '@/shared/hooks/use-async'
 import { getJSON } from '@/infrastructure/fetch-json'
-import { useFileTreeActionable } from '@/features/file-tree/contexts/file-tree-actionable'
-import { useFileTreeCreateForm } from '@/features/file-tree/contexts/file-tree-create-form'
-import { useFileTreeMainContext } from '@/features/file-tree/contexts/file-tree-main'
-import FileTreeModalCreateFileMode from '@/features/file-tree/components/file-tree-create/file-tree-modal-create-file-mode'
-import ErrorMessage from '@/features/file-tree/components/file-tree-create/error-message'
-import OLFormGroup from '@/shared/components/ol/ol-form-group'
-import OLFormLabel from '@/shared/components/ol/ol-form-label'
-import OLFormControl from '@/shared/components/ol/ol-form-control'
-import OLFormSelect from '@/shared/components/ol/ol-form-select'
+import { debugConsole } from '@/utils/debugging'
+import OLButton from '@/shared/components/ol/ol-button'
 import OLNotification from '@/shared/components/ol/ol-notification'
-
-type ZoteroGroup = {
-  id: string
-  name: string
-}
+import { useFileTreeActionable } from '@/features/file-tree/contexts/file-tree-actionable'
+import FileTreeModalCreateFileMode from '@/features/file-tree/components/file-tree-create/file-tree-modal-create-file-mode'
+import FileTreeCreateNameProvider from '@/features/file-tree/contexts/file-tree-create-name'
+import FileTreeImportFromZotero from './file-tree-import-from-zotero'
 
 export function CreateFileMode() {
-  const { refProviders } = useFileTreeMainContext()
-  const isLinked = (refProviders as Record<string, boolean>)?.zotero
-
-  if (!isLinked) {
-    return null
-  }
+  const { t } = useTranslation()
 
   return (
     <FileTreeModalCreateFileMode
       mode="zotero"
       icon="library_books"
-      label="From Zotero"
+      label={t('from_provider', { provider: 'Zotero' })}
     />
   )
 }
 
 export function CreateFilePane() {
   const { newFileCreateMode } = useFileTreeActionable()
-
-  if (newFileCreateMode !== 'zotero') {
-    return null
-  }
-
-  return <ZoteroCreateFilePane />
-}
-
-function ZoteroCreateFilePane() {
   const { t } = useTranslation()
-  const { setValid } = useFileTreeCreateForm()
-  const { finishCreatingLinkedFile, error, inFlight } = useFileTreeActionable()
+  const isZoteroMode = newFileCreateMode === 'zotero'
 
-  const [groups, setGroups] = useState<ZoteroGroup[]>([])
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
-  const [name, setName] = useState('zotero.bib')
-  const [loadingGroups, setLoadingGroups] = useState(true)
-  const [groupsError, setGroupsError] = useState('')
+  const {
+    runAsync,
+    data: groups,
+    isSuccess: isGroupsLoaded,
+    isError: isGroupsError,
+    isLoading: isGroupsLoading,
+  } = useAsync<ZoteroGroup[]>()
+
+  const loadGroups = useCallback(() => {
+    return runAsync(getJSON('/user/zotero/groups'))
+      .catch(err => {
+        debugConsole.error(err?.data?.message || err?.message || err)
+      })
+  }, [runAsync])
 
   useEffect(() => {
-    setValid(!!name && !loadingGroups)
-  }, [setValid, name, loadingGroups])
+    if (!isZoteroMode) return
+
+    loadGroups()
+  }, [loadGroups, isZoteroMode])
 
   useEffect(() => {
-    let cancelled = false
+    if (!isZoteroMode || !isGroupsLoaded || groups) return
 
-    setLoadingGroups(true)
-    setGroupsError('')
-
-    getJSON('/zotero/groups')
-      .then((data: { groups: ZoteroGroup[] }) => {
-        if (cancelled) return
-
-        setGroups(data.groups || [])
-        setLoadingGroups(false)
-      })
-      .catch(() => {
-        if (cancelled) return
-
-        setGroupsError(t('zotero_groups_loading_error'))
-        setLoadingGroups(false)
-      })
-
-    return () => {
-      cancelled = true
+    const channel = new BroadcastChannel('zotero')
+    channel.onmessage = event => {
+      if (event.data?.type === 'zotero-linked') {
+        loadGroups()
+      }
     }
-  }, [t])
 
-  const handleSubmit: FormEventHandler = useCallback(
-    event => {
-      event.preventDefault()
+    return () => channel.close()
+  }, [isZoteroMode, isGroupsLoaded, groups, loadGroups])
 
-      if (!name || loadingGroups || inFlight) {
-        return
-      }
+  if (!isZoteroMode) return null
 
-      const data: Record<string, string> = {}
-
-      if (selectedGroupId) {
-        data.zoteroGroupId = selectedGroupId
-      }
-
-      finishCreatingLinkedFile({
-        name,
-        provider: 'zotero',
-        data,
-      })
-    },
-    [
-      name,
-      loadingGroups,
-      inFlight,
-      selectedGroupId,
-      finishCreatingLinkedFile,
-    ]
-  )
-
-  return (
-    <form
-      className="form-controls"
-      id="create-file"
-      noValidate
-      onSubmit={handleSubmit}
-    >
-      {groupsError && (
-        <OLNotification type="error" content={groupsError} className="mb-3" />
-      )}
-
-      <OLFormGroup controlId="zotero-file-name">
-        <OLFormLabel>{t('file_name')}</OLFormLabel>
-        <OLFormControl
-          type="text"
-          placeholder="zotero.bib"
-          required
-          value={name}
-          disabled={inFlight}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setName(e.target.value)
-          }
-        />
-      </OLFormGroup>
-
-      <OLFormGroup controlId="zotero-library-select">
-        <OLFormLabel>Library</OLFormLabel>
-        {loadingGroups ? (
-          <p className="text-muted">{t('loading')}...</p>
-        ) : (
-          <OLFormSelect
-            id="zotero-library-select"
-            value={selectedGroupId}
-            disabled={inFlight}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              setSelectedGroupId(e.target.value)
-            }
-          >
-            <option value="">My Library</option>
-            {groups.map(g => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </OLFormSelect>
-        )}
-      </OLFormGroup>
-
-      {error && <ErrorMessage error={error} />}
-    </form>
-  )
+  if (isGroupsLoading) {
+    return (
+      <>
+        <br/>
+        <div role="status" className="loading d-flex justify-content-center align-items-center fs-5">
+          <div
+            aria-hidden="true"
+            className="spinner-border spinner-border-sm"
+          ></div>
+          {t('loading') + '…'}
+        </div>
+      </>
+    )
+  } else if (isGroupsLoaded) {
+    if (groups) {
+      return (
+        <FileTreeCreateNameProvider initialName="zotero.bib">
+          <FileTreeImportFromZotero
+            groups={groups}
+          />
+        </FileTreeCreateNameProvider>
+      )
+    } else {
+      return (
+        <div className = "referencesImportModal">
+          <p>{t('zotero_sync_description')}</p>
+          <p>
+            <OLButton
+              variant="primary"
+              onClick={() => {
+                window.open(
+                  '/user/zotero/oauth?popup=1',
+                  '_blank',
+                  'width=600,height=700'
+                )
+              }}
+            >
+              {t('link_to_zotero')}
+            </OLButton>
+          </p>
+        </div>
+      )
+    }
+  } else if (isGroupsError) {
+    return (
+      <OLNotification
+        type="error"
+        content={t('zotero_groups_loading_error', {
+          provider: t('zotero'),
+        })}
+      />
+    )
+  }
 }

@@ -1,208 +1,197 @@
 import logger from '@overleaf/logger'
-import Settings from '@overleaf/settings'
 import OError from '@overleaf/o-error'
-import { fetchJson, fetchString } from '@overleaf/fetch-utils'
+import AbortError from 'node-fetch'
+import {
+  fetchNothing,
+  fetchJson,
+  fetchString,
+  fetchStringWithResponse,
+  RequestFailedError,
+} from '@overleaf/fetch-utils'
 import { User } from '../../../../app/src/models/User.mjs'
-import { AccessTokenEncryptor } from './AccessTokenEncryptorHelper.mjs'
+import {
+   NotFoundError,
+   TooManyRequestsError,
+   ServiceNotConfiguredError,
+   ForbiddenError,
+} from '../../../../app/src/Features/Errors/Errors.js'
+import TokenManager from './TokenManager.mjs'
 
 const ZOTERO_API_URL = 'https://api.zotero.org'
+const REQUEST_TIMEOUT_MS = 60 * 1000
+// TODO: implement conditional requests 
 
 /**
- * Decrypt stored Zotero credentials from user record.
- * Returns { apiKey, zoteroUserId } or null if not linked.
+ * Build a header for Zotero API request.
  */
-async function _getCredentials(userId) {
-  const user = await User.findById(userId, 'refProviders.zotero').exec()
-  if (!user?.refProviders?.zotero?.apiKeyEncrypted) {
-    return null
-  }
-  try {
-    const decrypted = await AccessTokenEncryptor.promises.decryptToJson(
-      user.refProviders.zotero.apiKeyEncrypted
-    )
-    return decrypted
-  } catch (err) {
-    throw OError.tag(err, 'failed to decrypt Zotero credentials', { userId })
-  }
-}
-
-/**
- * Make a request to the Zotero API with the user's API key.
- */
-async function _zoteroApiRequest(apiKey, path, opts = {}) {
-  const url = `${ZOTERO_API_URL}${path}`
+function buildHeaders(apiKey, opts = {}) {
   const headers = {
     'Zotero-API-Version': '3',
     'Zotero-API-Key': apiKey,
-    ...(opts.headers || {}),
+    'User-Agent': 'Overleaf-CEP-Zotero',
+    ...opts,
   }
-  return { url, headers }
+  return headers
+}
+
+/**
+ * Checks connection to Zotero by calling /keys/{key}.
+ */
+async function getConnectionStatus(userId) {
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) return false
+
+  const { apiKey } = credentials
+  try {
+    await fetchJson(`${ZOTERO_API_URL}/keys/${apiKey}`, {
+      headers: buildHeaders(apiKey),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+    return true
+  } catch (err) {
+    normalizeApiError(err, 'getConnectionStatus')
+  }
 }
 
 /**
  * Get the list of groups for a user.
  */
 async function getGroupsForUser(userId) {
-  const credentials = await _getCredentials(userId)
-  if (!credentials) {
-    throw new ZoteroAccountNotLinkedError()
-  }
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) return null
+
   const { apiKey, zoteroUserId } = credentials
-  const { url, headers } = await _zoteroApiRequest(
-    apiKey,
-    `/users/${zoteroUserId}/groups`
-  )
   try {
-    const groups = await fetchJson(url, { headers })
+    const groups = await fetchJson(`${ZOTERO_API_URL}/users/${zoteroUserId}/groups`, {
+      headers: buildHeaders(apiKey),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    })
     return groups.map(g => ({
       id: String(g.id),
       name: g.data?.name || `Group ${g.id}`,
     }))
   } catch (err) {
-    logger.err({ err, userId }, 'error fetching Zotero groups')
-    if (err.response?.status === 403) {
-      throw new ZoteroForbiddenError('forbidden')
-    }
-    throw OError.tag(err, 'error fetching Zotero groups')
+    normalizeApiError(err, 'getGroupsForUser')
   }
 }
 
 /**
- * Export the user's entire library as BibTeX.
+ * Export a library as BibTeX / BibLaTeX.
  */
-async function getUserLibraryBibtex(userId) {
-  const credentials = await _getCredentials(userId)
+async function getLibraryBibtex(userId, groupId, format) {
+  const credentials = await TokenManager.getCredentials(userId)
   if (!credentials) {
-    throw new ZoteroAccountNotLinkedError()
+    throw new ServiceNotConfiguredError({
+      message: 'RefProvider credentials missed',
+      info: { userId, status: 400 }
+    })
   }
-  return _fetchBibtex(
-    credentials.apiKey,
-    `/users/${credentials.zoteroUserId}/items`
-  )
-}
 
-/**
- * Export a group library as BibTeX.
- */
-async function getGroupLibraryBibtex(userId, groupId) {
-  const credentials = await _getCredentials(userId)
-  if (!credentials) {
-    throw new ZoteroAccountNotLinkedError()
-  }
-  return _fetchBibtex(credentials.apiKey, `/groups/${groupId}/items`)
+  // Main library or group?
+  let basePath
+  if (groupId) basePath = `/groups/${groupId}/items`
+  else basePath = `/users/${credentials.zoteroUserId}/items`
+
+  return _fetchBibtex(credentials.apiKey, basePath, format)
 }
 
 /**
  * Fetch all items from a Zotero library endpoint as BibTeX.
  * Handles pagination (Zotero API limits to 100 items per request).
  */
-async function _fetchBibtex(apiKey, basePath) {
-  let allBibtex = ''
-  let start = 0
+async function _fetchBibtex(apiKey, basePath, format) {
   const limit = 100
+  let allBibtex = ''
 
-  while (true) {
-    const { url, headers } = await _zoteroApiRequest(apiKey, basePath, {
-      headers: {},
-    })
-    const fullUrl = `${url}?format=bibtex&limit=${limit}&start=${start}`
-    try {
-      const response = await fetch(fullUrl, { headers })
-      if (!response.ok) {
-        if (response.status === 403) {
-          throw new ZoteroForbiddenError('Zotero API returned 403')
-        }
-        throw new Error(`Zotero API returned ${response.status}`)
-      }
-      const bibtex = await response.text()
-      if (bibtex.trim()) {
-        allBibtex += bibtex + '\n'
-      }
-      const totalResults = parseInt(
-        response.headers.get('Total-Results') || '0',
-        10
-      )
+  try {
+    let start = 0
+    const headers = buildHeaders(apiKey)
+    while (true) {
+      const url = `${ZOTERO_API_URL}${basePath}?format=${format}&limit=${limit}&start=${start}`
+      const { body: bibtex, response } = await fetchStringWithResponse(url, {
+        headers,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      })
+
+      if (bibtex.trim()) allBibtex += bibtex
+
+      const totalResults = parseInt(response.headers.get('Total-Results') || '0', 10)
       start += limit
       if (start >= totalResults) {
         break
       }
-    } catch (err) {
-      if (err instanceof ZoteroForbiddenError) {
-        throw err
-      }
-      throw OError.tag(err, 'error fetching BibTeX from Zotero', { basePath })
     }
+  } catch (err) {
+    normalizeApiError(err, '_fetchBibtex')
   }
   return allBibtex
-}
-
-/**
- * Validate a Zotero API key by calling /keys/{key}.
- * Returns { zoteroUserId } on success, throws on failure.
- */
-async function validateApiKey(apiKey) {
-  const url = `${ZOTERO_API_URL}/keys/${encodeURIComponent(apiKey)}`
-  try {
-    const data = await fetchJson(url, {
-      headers: { 'Zotero-API-Version': '3' },
-    })
-    if (!data.userID) {
-      throw new Error('Zotero API key response missing userID')
-    }
-    return { zoteroUserId: String(data.userID) }
-  } catch (err) {
-    if (err.response?.status === 404 || err.response?.status === 403) {
-      throw new ZoteroForbiddenError('Invalid Zotero API key')
-    }
-    throw OError.tag(err, 'error validating Zotero API key')
-  }
-}
-
-/**
- * Link a Zotero account (store encrypted credentials).
- */
-async function storeCredentials(userId, apiKey, zoteroUserId) {
-  const apiKeyEncrypted = await AccessTokenEncryptor.promises.encryptJson({
-    apiKey,
-    zoteroUserId: String(zoteroUserId),
-  })
-  await User.updateOne(
-    { _id: userId },
-    { $set: { 'refProviders.zotero': { apiKeyEncrypted } } }
-  ).exec()
 }
 
 /**
  * Unlink a Zotero account.
  */
 async function unlinkAccount(userId) {
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) return
+
   await User.updateOne(
     { _id: userId },
     { $unset: { 'refProviders.zotero': 1 } }
   ).exec()
+
+  try {
+    const { apiKey } = credentials
+    await fetchNothing(`${ZOTERO_API_URL}/keys/${apiKey}`, {
+      method: 'DELETE',
+      headers: buildHeaders(apiKey),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+  } catch (err) {
+     logger.error({ err }, 'failed to detete key from Zotero account')
+  }
+
 }
 
-export class ZoteroForbiddenError extends Error {
-  constructor(message) {
-    super(message)
-    this.name = 'ZoteroForbiddenError'
-  }
-}
+function normalizeApiError(err, operation) {
+  logger.error({ operation }, 'Zotero API request failed')
 
-export class ZoteroAccountNotLinkedError extends Error {
-  constructor(message = 'Zotero account not linked') {
-    super(message)
-    this.name = 'ZoteroAccountNotLinkedError'
+  if (err.name === 'AbortError') {
+    throw new OError('RefProvider request timed out', { operation, status: 504 }).withCause(err)
   }
+
+  if (!(err instanceof RequestFailedError)) {
+    throw new OError('Something wrong with RefProvider request', { operation, status: 500 }).withCause(err)
+  }
+
+  const status = err.response?.status || 500
+
+  if (status === 403) {
+    throw new ForbiddenError({
+       message: 'Access denied',
+       info: { operation, status }
+    }).withCause(err)
+  }
+
+  if (status === 404) {
+    throw new NotFoundError({
+       message: 'Not found',
+       info: { operation, status }
+    }).withCause(err)
+  }
+
+  if (status === 429) {
+    throw new TooManyRequestsError({
+      message: 'Rate limit exeeded',
+      info: { operation, status }
+    }).withCause(err)
+  }
+
+  throw new OError('RefProvider request error', { operation, status }).withCause(err)
 }
 
 export default {
+  getConnectionStatus,
   getGroupsForUser,
-  getUserLibraryBibtex,
-  getGroupLibraryBibtex,
-  validateApiKey,
-  storeCredentials,
+  getLibraryBibtex,
   unlinkAccount,
-  ZoteroForbiddenError,
-  ZoteroAccountNotLinkedError,
 }

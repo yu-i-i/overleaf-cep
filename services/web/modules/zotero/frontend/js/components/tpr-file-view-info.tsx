@@ -5,15 +5,17 @@ import { LinkedFileIcon } from '@/features/file-view/components/file-view-icons'
 import { hasProvider } from '@/features/file-view/types/binary-file'
 import type { LinkedFile, LinkedFileData } from '@/features/file-view/types/binary-file'
 
+/**
+ * Shows "Imported from Zotero at <date>" in the owner's file view header or
+ * "Imported from Zotero at <date> by <owner>" in the collaborator's file view header
+ * when viewing a Zotero-linked .bib file.
+ * Registered via overleafModuleImports.tprFileViewInfo.
+ */
+
 type TPRFileViewInfoProps = {
   file: LinkedFile<keyof LinkedFileData>
 }
 
-/**
- * Shows "Imported from Zotero at <date>" in the file view header
- * when viewing a Zotero-linked .bib file.
- * Registered via overleafModuleImports.tprFileViewInfo.
- */
 export function TPRFileViewInfo({ file }: TPRFileViewInfoProps) {
   const { t } = useTranslation()
 

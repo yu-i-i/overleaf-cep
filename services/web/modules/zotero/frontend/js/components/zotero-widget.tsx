@@ -1,10 +1,18 @@
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCallback, useState } from 'react'
-import { postJSON } from '@/infrastructure/fetch-json'
 import getMeta from '@/utils/meta'
+import { getJSON, deleteJSON } from '@/infrastructure/fetch-json'
+import useAsync from '@/shared/hooks/use-async'
+import { debugConsole } from '@/utils/debugging'
 import OLButton from '@/shared/components/ol/ol-button'
+import {
+  OLModal,
+  OLModalBody,
+  OLModalFooter,
+  OLModalHeader,
+  OLModalTitle,
+} from '@/shared/components/ol/ol-modal'
 import OLNotification from '@/shared/components/ol/ol-notification'
-import OLFormControl from '@/shared/components/ol/ol-form-control'
 import ZoteroLogo from '@/shared/svgs/zotero-logo'
 
 /**
@@ -16,120 +24,159 @@ import ZoteroLogo from '@/shared/svgs/zotero-logo'
  *
  * Registered via overleafModuleImports.referenceLinkingWidgets.
  */
-export default function ZoteroWidget() {
+export const ZoteroWidget = function ZoteroWidget() {
   const { t } = useTranslation()
-  const user = getMeta('ol-user')
-  const refProviders = user?.refProviders || {}
-  const [isLinked, setIsLinked] = useState(Boolean(refProviders.zotero))
-  const [apiKey, setApiKey] = useState('')
-  const [processing, setProcessing] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const { appName } = getMeta('ol-ExposedSettings')
 
-  const handleLink = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!apiKey) return
-      setProcessing(true)
-      setError('')
-      setSuccess('')
-      try {
-        await postJSON('/zotero/link', { body: { apiKey } })
-        setSuccess(t('zotero_account_linked_successfully'))
-        setApiKey('')
-        setProcessing(false)
-        setIsLinked(true)
-      } catch (err: any) {
-        const msg =
-          err?.data?.error === 'invalid_api_key'
-            ? 'Invalid API key. Please check your key and try again.'
-            : t('generic_something_went_wrong')
-        setError(msg)
-        setProcessing(false)
-      }
-    },
-    [apiKey, t]
-  )
+  const {
+    isLoading: isCheckingConn,
+    isError: isErrorConnCheck,
+    runAsync: runAsyncConnCheck,
+    data: isConnected,
+    setData: setConnState,
+  } = useAsync<boolean>()
 
-  const handleUnlink = useCallback(async () => {
-    setProcessing(true)
-    setError('')
-    setSuccess('')
-    try {
-      await postJSON('/zotero/unlink')
-      setProcessing(false)
-      setIsLinked(false)
-    } catch (err) {
-      setError(t('generic_something_went_wrong'))
-      setProcessing(false)
-    }
-  }, [t])
+  const {
+    isLoading: isUnlinking,
+    isError: isErrorUnlink,
+    runAsync: runAsyncUnlink,
+  } = useAsync<void>()
+
+  const [showUnlinkModal, setShowUnlinkModal] = useState(false)
+
+  const handleConnCheck = useCallback(() => {
+    runAsyncConnCheck(getJSON('/user/zotero/status'))
+      .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
+  }, [runAsyncConnCheck])
+
+  useEffect(() => {
+    handleConnCheck()
+  }, [handleConnCheck])
+
+  const handleUnlink = useCallback(() => {
+    runAsyncUnlink(deleteJSON('/user/zotero'))
+      .then(() => setConnState(false))
+      .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
+      .finally(() => setShowUnlinkModal(false))
+  }, [runAsyncUnlink])
+
+  if (isCheckingConn) {
+    return (
+      <div className="settings-widget-container">
+        <div>
+          <ZoteroLogo />
+        </div>
+
+        <div className="description-container">
+          <div className="title-row">
+            <h4>GitHub</h4>
+          </div>
+
+          <p className="small">
+            <span>{t('loading')}…</span>
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="settings-widget-container">
-      <div>
-        <ZoteroLogo />
-      </div>
-      <div className="description-container">
-        <div className="title-row">
-          <h4>{t('zotero')}</h4>
+    <>
+      <div className="settings-widget-container">
+        <div>
+          <ZoteroLogo size={40} />
         </div>
-        <p className="small">
-          {t('zotero_sync_description', {
-            appName:
-              getMeta('ol-ExposedSettings')?.appName || 'Overleaf',
-          })}
-        </p>
-        {error && <OLNotification type="error" content={error} />}
-        {success && <OLNotification type="success" content={success} />}
-        {!isLinked && (
-          <form onSubmit={handleLink}>
-            <p className="small text-muted">
-              Create an API key at{' '}
-              <a
-                href="https://www.zotero.org/settings/keys/new"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                zotero.org/settings/keys
-              </a>{' '}
-              with <strong>Allow library access</strong> and{' '}
-              <strong>Allow read access to all groups</strong> enabled.
-            </p>
-            <div className="form-group">
-              <OLFormControl
-                type="text"
-                placeholder="Paste your Zotero API key"
-                value={apiKey}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setApiKey(e.target.value.trim())
-                }
-                disabled={processing}
-                autoComplete="off"
-              />
-            </div>
+
+        <div className="description-container">
+          <div className="title-row">
+            <h4 id="zotero-link">{t('zotero')}</h4>
+          </div>
+
+          <p className="small">
+            {t('zotero_sync_description', { appName })}
+          </p>
+
+          {isErrorConnCheck && (
+            <OLNotification
+              type="error"
+              content={t('problem_checking_connection_with_provider', { provider: t('zotero') })}
+            />
+          )}
+
+          {isErrorUnlink && (
+            <OLNotification
+              type="error"
+              content={t('generic_something_went_wrong')}
+            />
+          )}
+        </div>
+
+        <div>
+          {isConnected ? (
             <OLButton
-              variant="primary"
-              type="submit"
-              disabled={!apiKey}
-              isLoading={processing}
+              variant="danger-ghost"
+              onClick={() => setShowUnlinkModal(true)}
+              disabled={isUnlinking}
             >
-              {t('link_to_zotero')}
+              {isUnlinking ? t('unlinking') : t('unlink')}
             </OLButton>
-          </form>
-        )}
+          ) : isErrorConnCheck ? (
+            <OLButton
+              variant="secondary"
+              onClick={handleConnCheck}
+            >
+              {t('reconnect')}
+            </OLButton>
+          ) : (
+            <OLButton
+              variant="secondary"
+              href="/user/zotero/oauth?popup=0"
+            >
+              {t('link')}
+            </OLButton>
+          )}
+        </div>
       </div>
-      <div>
-        {isLinked && (
+
+      <OLModal
+        id="zotero-unlink-modal"
+        show={showUnlinkModal}
+        onHide={() => setShowUnlinkModal(false)}
+        backdrop="static"
+      >
+        <OLModalHeader>
+          <OLModalTitle>
+            {t('unlink_reference', {
+              provider: 'Zotero',
+            })}
+          </OLModalTitle>
+        </OLModalHeader>
+
+        <OLModalBody>
+          <p>
+            {t('unlink_warning_reference', {
+              provider: 'Zotero',
+            })}
+          </p>
+        </OLModalBody>
+
+        <OLModalFooter>
+          <OLButton
+            variant="secondary"
+            onClick={() => setShowUnlinkModal(false)}
+          >
+            {t('cancel')}
+          </OLButton>
+
           <OLButton
             variant="danger-ghost"
             onClick={handleUnlink}
-            isLoading={processing}
+            disabled={isUnlinking}
           >
-            {t('unlink')}
+            {isUnlinking ? t('unlinking') : t('unlink')}
           </OLButton>
-        )}
-      </div>
-    </div>
+        </OLModalFooter>
+      </OLModal>
+    </>
   )
 }
