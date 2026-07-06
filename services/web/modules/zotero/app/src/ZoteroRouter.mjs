@@ -5,23 +5,36 @@ export default {
   apply(webRouter) {
     // Get Zotero groups for the create-file modal
     webRouter.get(
-      '/zotero/groups',
+      '/user/zotero/groups',
       AuthenticationController.requireLogin(),
       ZoteroController.getGroups
     )
 
-    // Link Zotero account (a user submits an API key)
-    webRouter.post(
-      '/zotero/link',
-      AuthenticationController.requireLogin(),
-      ZoteroController.link
-    )
-
     // Unlink Zotero account
-    webRouter.post(
-      '/zotero/unlink',
+    webRouter.delete(
+      '/user/zotero',
       AuthenticationController.requireLogin(),
       ZoteroController.unlink
+   )
+    webRouter.get(
+      '/user/zotero/status',
+      AuthenticationController.requireLogin(),
+      ZoteroController.getConnectionStatus
     )
+
+    webRouter.get(
+      '/user/zotero/oauth',
+      AuthenticationController.requireLogin(),
+      ZoteroController.oauth
+    )
+    // callback for Zotero OAuth flow
+    webRouter.get(
+      '/user/zotero/oauth/callback',
+      AuthenticationController.requireLogin(),
+      ZoteroController.oauthCallback
+    )
+
+
+
   },
 }

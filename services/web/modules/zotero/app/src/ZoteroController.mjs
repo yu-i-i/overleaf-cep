@@ -1,71 +1,134 @@
 import logger from '@overleaf/logger'
+import OError from '@overleaf/o-error'
+import crypto from 'crypto'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
+import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandler.mjs'
 import ZoteroApiClient from './ZoteroApiClient.mjs'
-import { ZoteroForbiddenError } from './ZoteroApiClient.mjs'
+import ZoteroOAuth from './ZoteroOAuth.mjs'
+import TokenManager from './TokenManager.mjs'
+
+async function oauth(req, res) {
+  try {
+    const requestToken = await ZoteroOAuth.getRequestToken()
+    const isPopup = req.query.popup === '1'
+
+    req.session.zoteroOAuth = {
+      token: requestToken.oauth_token,
+      tokenSecret: requestToken.oauth_token_secret,
+      isPopup
+    }
+
+    const authUrl = ZoteroOAuth.getAuthorizationUrl(requestToken.oauth_token)
+    res.redirect(authUrl)
+
+  } catch (err) {
+    logger.error(OError.getFullStack(err))
+    const info = OError.getFullInfo(err)
+    logger.error({ info }, "Failed to start Zotero authorization")
+
+    HttpErrorHandler.badRequest(req, res, 'Failed to start Zotero authorization')
+    return
+  }
+}
+
+async function oauthCallback(req, res) {
+  const userId = SessionManager.getLoggedInUserId(req.session)
+
+  const {
+    oauth_token: oauthToken,
+    oauth_verifier: oauthVerifier,
+  } = req.query
+
+  const saved = req.session.zoteroOAuth
+  delete req.session.zoteroOAuth
+
+  if (!saved || saved.token !== oauthToken) {
+    HttpErrorHandler.forbidden(req, res, 'Invalid OAuth token')
+    return
+  }
+
+  try {
+    const { accessToken, zoteroUserId } = await ZoteroOAuth.exchangeRequestTokenForAccessToken(
+      oauthToken,
+      saved.tokenSecret,
+      oauthVerifier,
+    )
+    await TokenManager.storeCredentials(userId, accessToken, zoteroUserId)
+
+  } catch (err) {
+    logger.error(OError.getFullStack(err))
+    const info = OError.getFullInfo(err)
+    logger.error({ info }, "Failed to obtain Zotero access token'")
+
+    HttpErrorHandler.badRequest(req, res, 'Failed to obtain Zotero access token')
+    return
+  }
+
+  const nonce = crypto.randomBytes(16).toString('base64')
+  const csp = res.getHeader('Content-Security-Policy')
+
+  res.setHeader(
+    'Content-Security-Policy',
+    `${csp}; script-src 'nonce-${nonce}'`
+  )
+
+  res.send(`
+    <!doctype html>
+    <html>
+      <body>
+        <script nonce="${nonce}">
+          const channel = new BroadcastChannel('zotero')
+          channel.postMessage({ type: 'zotero-linked' })
+          ${saved.isPopup
+            ? 'window.close()'
+            : "location.href = '/user/settings#references'"
+          }
+        </script>
+      </body>
+    </html>
+  `)
+}
 
 /**
- * GET /zotero/groups
- * Returns the user's Zotero groups (for the create-file modal).
+ * GET /user/zotero/status
+ * Returns the user's Zotero connection status, true or false
+ */
+async function getConnectionStatus(req, res) {
+  const userId = SessionManager.getLoggedInUserId(req.session)
+
+  try {
+    const isConnected = await ZoteroApiClient.getConnectionStatus(userId)
+    res.json(isConnected)
+
+  } catch (err) {
+    const info = OError.getFullInfo(err)
+    const errStatus = info?.status || 500
+    logger.error(OError.getFullStack(err))
+    logger.error({ info }, "failed to check user connection")
+    return res.status(errStatus).json({ message: err.message })
+  }
+}
+
+/**
+ * GET /user/zotero/groups
+ * Returns the user's Zotero groups or null, if account is not linked
  */
 async function getGroups(req, res) {
   const userId = SessionManager.getLoggedInUserId(req.session)
   try {
     const groups = await ZoteroApiClient.getGroupsForUser(userId)
-    res.json({ groups })
+    res.json(groups)
   } catch (err) {
-    if (err instanceof ZoteroForbiddenError) {
-      return res.status(403).json({
-        error: 'forbidden',
-        message: 'zotero_groups_relink',
-      })
-    }
-    logger.err({ err, userId }, 'error fetching Zotero groups')
-    res.status(500).json({
-      error: 'internal',
-      message: 'zotero_groups_loading_error',
-    })
+    const info = OError.getFullInfo(err)
+    const errStatus = info?.status || 500
+    logger.error(OError.getFullStack(err))
+    logger.error({ info }, "failed to get user groups")
+    return res.status(errStatus).json({ message: err.message })
   }
 }
 
 /**
- * POST /zotero/link
- * Links a Zotero account by validating the user-provided API key
- * and storing the encrypted credentials.
- *
- * Users create their API key at https://www.zotero.org/settings/keys
- * with "Allow library access" and "Allow read access to all groups".
- */
-async function link(req, res) {
-  const userId = SessionManager.getLoggedInUserId(req.session)
-  const { apiKey } = req.body
-
-  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
-    return res.status(400).json({ error: 'missing_api_key' })
-  }
-
-  try {
-    const { zoteroUserId } = await ZoteroApiClient.validateApiKey(
-      apiKey.trim()
-    )
-    await ZoteroApiClient.storeCredentials(userId, apiKey.trim(), zoteroUserId)
-    res.json({ success: true })
-  } catch (err) {
-    if (err instanceof ZoteroForbiddenError) {
-      return res.status(400).json({
-        error: 'invalid_api_key',
-        message: 'zotero_api_key_invalid',
-      })
-    }
-    logger.err({ err, userId }, 'error linking Zotero account')
-    res.status(500).json({
-      error: 'internal',
-      message: 'generic_something_went_wrong',
-    })
-  }
-}
-
-/**
- * POST /zotero/unlink
+ * DELETE /user/zotero/unlink
  * Unlinks the user's Zotero account.
  */
 async function unlink(req, res) {
@@ -74,13 +137,18 @@ async function unlink(req, res) {
     await ZoteroApiClient.unlinkAccount(userId)
     res.sendStatus(200)
   } catch (err) {
-    logger.err({ err, userId }, 'error unlinking Zotero')
-    res.sendStatus(500)
+    const info = OError.getFullInfo(err)
+    const errStatus = info?.status || 500
+    logger.error(OError.getFullStack(err))
+    logger.error({ info }, "error unlinking Zotero account")
+    return res.status(errStatus).json({ message: err.message })
   }
 }
 
 export default {
+  oauth,
+  oauthCallback,
+  getConnectionStatus,
   getGroups,
-  link,
-  unlink,
+  unlink
 }

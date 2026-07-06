@@ -194,7 +194,23 @@ export default LinkedFilesController = {
       error.message === 'Zotero account not linked'
     ) {
       res.status(400)
-      plainTextResponse(res, 'Your account is not linked with Zotero')
+      plainTextResponse(
+        res,
+        res.locals.translate(
+          'zotero_reference_loading_error_not_linked'
+        )
+      )
+    } else if (
+      error instanceof AccessDeniedError &&
+      error.message === 'Zotero access denied'
+    ) {
+      res.status(403)
+      plainTextResponse(
+        res,
+        res.locals.translate(
+          'zotero_reference_loading_error_forbidden'
+        )
+      )
     } else if (error instanceof AccessDeniedError) {
       res.status(403)
       plainTextResponse(

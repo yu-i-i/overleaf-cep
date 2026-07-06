@@ -3,15 +3,16 @@ import OLNotification from '@/shared/components/ol/ol-notification'
 import type { LinkedFile, LinkedFileData } from '@/features/file-view/types/binary-file'
 import { hasProvider } from '@/features/file-view/types/binary-file'
 
+/**
+ * Zotero-specific error messages when refreshing a linked file fails.
+ * Registered via overleafModuleImports.tprFileViewRefreshError.
+ */
+
 type TPRFileViewRefreshErrorProps = {
   file: LinkedFile<keyof LinkedFileData>
   refreshError: string
 }
 
-/**
- * Zotero-specific error messages when refreshing a linked file fails.
- * Registered via overleafModuleImports.tprFileViewRefreshError.
- */
 export function TPRFileViewRefreshError({
   file,
   refreshError,

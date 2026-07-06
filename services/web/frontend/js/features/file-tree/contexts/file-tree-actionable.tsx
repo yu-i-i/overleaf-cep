@@ -487,7 +487,13 @@ export const FileTreeActionableProvider: FC<React.PropsWithChildren> = ({
 
   const finishCreatingLinkedFile = useCallback(
     (entity: Omit<NewLinkedFileEntity, 'endpoint'>) => {
-      return finishCreatingDocOrFile({ ...entity, endpoint: 'linked_file' })
+      const shouldReindexReferences = /\.bib$/.test(entity.name)
+      return finishCreatingDocOrFile({ ...entity, endpoint: 'linked_file' }).
+        then(() => {
+          if (shouldReindexReferences) {
+            indexAllReferences(true)
+          }
+        })
     },
     [finishCreatingDocOrFile]
   )
