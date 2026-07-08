@@ -23,7 +23,6 @@ import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandl
 import ErrorController from '../../../../app/src/Features/Errors/ErrorController.mjs'
 import Errors, { OError } from '../../../../app/src/Features/Errors/Errors.js'
 import { db } from '../../../../app/src/infrastructure/mongodb.mjs'
-import SplitTestHandler from '../../../../app/src/Features/SplitTests/SplitTestHandler.mjs'
 
 const __dirname = Path.dirname(fileURLToPath(import.meta.url))
 
@@ -83,12 +82,6 @@ async function manageUsersPage(req, res, next) {
   Metrics.inc('user-list-prefetch-users', 1, {
     status: prefetchedUsersBlob ? 'success' : 'error',
   })
-
-  await SplitTestHandler.promises.getAssignment(
-    req,
-    res,
-    'themed-project-dashboard'
-  )
 
   const userId = SessionManager.getLoggedInUserId(req.session)
   const user = await User.findById(userId, 'ace')
@@ -429,7 +422,7 @@ async function purgeDeletedUser(req, res, next) {
 
   logger.debug({ deleterUserId, userId }, 'admin is trying to purge deleted user account')
   try {
-    UserDeleter.promises.expireDeletedUser(userId)
+    await UserDeleter.promises.expireDeletedUser(userId)
   } catch (err) {
     logger.warn({ restorerId, userId }, err.message)
     const message = 'Something went wrong. The user is already deleted?'

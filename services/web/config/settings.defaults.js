@@ -1268,9 +1268,6 @@ module.exports = {
   },
 
   splitTestOverrides: {
-    ...(process.env.OVERLEAF_THEMED_DASHBOARD?.toLowerCase() === 'true' ? {
-      'themed-project-dashboard': 'enabled',
-    } : {}),
     ...(process.env.OVERLEAF_HISTORY_RESTORE?.toLowerCase() === 'true' ? {
       'history-ranges-support': 'enabled',
       'revert-file': 'enabled',

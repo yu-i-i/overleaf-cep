@@ -16,7 +16,6 @@ import { Project } from '../../../../app/src/models/Project.mjs'
 import { DeletedProject } from '../../../../app/src/models/DeletedProject.mjs'
 import { OError } from '../../../../app/src/Features/Errors/Errors.js'
 import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandler.mjs'
-import SplitTestHandler from '../../../../app/src/Features/SplitTests/SplitTestHandler.mjs'
 
 const __dirname = Path.dirname(fileURLToPath(import.meta.url))
 
@@ -48,12 +47,6 @@ async function manageProjectsPage(req, res, next) {
     req,
     res,
     user
-  )
-
-  await SplitTestHandler.promises.getAssignment(
-    req,
-    res,
-    'themed-project-dashboard'
   )
 
   res.render(Path.resolve(__dirname, '../views/manage-projects-react'), {
