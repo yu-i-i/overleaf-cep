@@ -311,7 +311,7 @@ async function resolveConflictSyncState(
   }
 }
 
-// ----------- detached flow 
+// ----------- detached flow
 // GH repo was force pushed, lastSybc commit possibly anavailable
 async function resolveDetachedSyncState(
   token,
@@ -574,7 +574,7 @@ async function buildDetachedSyncPlan({
         buffer = await HistoryManager.getProjectFileBuffer(projectId, currentVersion, path)
       }
       const sha = await api.uploadBlob(token, repoFullName, buffer)
-      // assert sha !== localHash 
+      // assert sha !== localHash
     }
 
     // OL == GH, do nothing

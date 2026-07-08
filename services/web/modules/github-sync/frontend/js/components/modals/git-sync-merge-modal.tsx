@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { debugConsole } from '@/utils/debugging'
 import { postJSON } from '@/infrastructure/fetch-json'
 import useAsync from '@/shared/hooks/use-async'
+import clientId from '@/utils/client-id'
 import {
   OLModalBody,
   OLModalFooter,
@@ -10,6 +11,8 @@ import {
 import OLButton from '@/shared/components/ol/ol-button'
 import OLNotification from '@/shared/components/ol/ol-notification'
 import { GitSyncModalStatus, ProjectSyncState } from '../../types/git-sync-types'
+
+import { useReferencesContext } from '@/features/ide-react/context/references-context'
 
 type GitSyncMergeModalProps = {
   handleHide: () => void
@@ -29,10 +32,11 @@ const GitSyncMergeModal = ({
   commitMessage,
   setCommitMessage,
   projectId
-}: GitSynMergeModalProps) => {
+}: GitSyncMergeModalProps) => {
 
   const { t } = useTranslation()
   const { error, isError, isLoading, setError, runAsync } = useAsync<ProjectSyncState>()
+  const { indexAllReferences } = useReferencesContext()
 
   useEffect(() => {
     if (modalStatus !== 'run-merge' &&
@@ -46,11 +50,17 @@ const GitSyncMergeModal = ({
         body: { message: commitMessage, claimConflictIsResolved },
       })
     )
-      .then(data => {
+      .then(async data => {
         switch (data.mergeStatus) {
 
           case 'clean':
             setModalStatus('merge-overview')
+
+            await postJSON(`/project/${projectId}/flush`)
+              .catch(e => debugConsole.error(e))
+
+            indexAllReferences(true)
+
             break
 
           case 'conflict':
