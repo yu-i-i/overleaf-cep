@@ -41,7 +41,7 @@ export function ProjectListDsNav() {
     totalPages,
   } = useProjectListContext()
   const { getUserNameById } = useUserIdentityContext()
-  const activeOverallTheme = useActiveOverallTheme('themed-project-dashboard')
+  const activeOverallTheme = useActiveOverallTheme()
 
   const userName = projectsOwnerId ? getUserNameById(projectsOwnerId) : t('all_users')
   const tableTopArea = (
@@ -58,7 +58,7 @@ export function ProjectListDsNav() {
   )
 
   return (
-    <div className="project-ds-nav-page website-redesign">
+    <div className="project-ds-nav-page website-redesign red-nav-bar-for-admins">
       <div className="manage-projects-page">
         <DefaultNavbar
           {...navbarProps}

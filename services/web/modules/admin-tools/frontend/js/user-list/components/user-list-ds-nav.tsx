@@ -38,7 +38,7 @@ export function UserListDsNav() {
     setCurrentPage,
     totalPages,
   } = useUserListContext()
-  const activeOverallTheme = useActiveOverallTheme('themed-project-dashboard')
+  const activeOverallTheme = useActiveOverallTheme()
 
   const tableTopArea = (
     <div className="pt-2 pb-3 d-md-none d-flex gap-2">
@@ -54,7 +54,7 @@ export function UserListDsNav() {
   )
 
   return (
-    <div className="user-ds-nav-page website-redesign">
+    <div className="user-ds-nav-page website-redesign red-nav-bar-for-admins">
       <DefaultNavbar
         {...navbarProps}
         overleafLogo={
