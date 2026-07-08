@@ -1,14 +1,11 @@
 import Settings from '@overleaf/settings'
 import Modules from '../../app/src/infrastructure/Modules.mjs'
 import logger from '@overleaf/logger'
-import GitHubSyncRouter from './app/src/GitHubSyncRouter.mjs'
-import SyncStateManager from './app/src/SyncStateManager.mjs'
-import TokenManager from './app/src/TokenManager.mjs'
 
 let GitHubSyncModule = {}
 if (process.env.GITHUB_SYNC_ENABLED?.toLowerCase() === 'true') {
   logger.debug({}, 'Enabling GitHub Sync module')
-/*
+
   const [{ default: GitHubSyncRouter },
          { default: SyncStateManager },
          { default: TokenManager }
@@ -18,17 +15,15 @@ if (process.env.GITHUB_SYNC_ENABLED?.toLowerCase() === 'true') {
       import('./app/src/SyncStateManager.mjs'),
       import('./app/src/TokenManager.mjs'),
     ])
-*/
 
-  // Delete project sync state from mongo (hook 'projectExpired')
-
-  const siteUrl = process.env.OVERLEAF_SITE_URL?.replace(/\/+$/, '') || 'http://localhost'
+  const siteUrl = Settings.siteUrl.replace(/\/+$/, '') || 'http://localhost'
   Settings.githubSync = {
     clientID: process.env.GITHUB_SYNC_CLIENT_ID,
     clientSecret: process.env.GITHUB_SYNC_CLIENT_SECRET,
     callbackURL: `${siteUrl}/user/github-sync/oauth2/callback`,
   },
 
+  // Delete project sync state from mongo (hook 'projectExpired')
   Modules.hooks.attach('projectExpired', async projectId => {
     try {
       await SyncStateManager.removeProjectState(projectId)
