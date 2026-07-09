@@ -50,7 +50,7 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
 
   const { refreshUsers, addUserToView } = useUserListContext()
   const [redirecting, setRedirecting] = useState(false)
-  const { isLoading, isError, error, runAsync } = useAsync<CreateUserResult>()
+  const { data, isLoading, error, runAsync } = useAsync<CreateUserResult>()
 
   const createAccount = () => {
     runAsync(
@@ -66,7 +66,9 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
     )
       .then(data => {
         addUserToView(data.user)
-        handleCloseModal()
+        if (!data.emailIsNotSent) {
+          handleCloseModal()
+        }
       })
       .catch(debugConsole.error)
   }
@@ -93,11 +95,19 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
       </OLModalHeader>
 
       <OLModalBody>
-        {isError && (
+        {error && (
           <div className="notification-list">
             <Notification
               type="error"
               content={t(getUserFacingMessage(error)) as string}
+            />
+          </div>
+        )}
+        {data?.emailIsNotSent && (
+          <div className="notification-list">
+            <Notification
+              type="warning"
+              content={'The account has been created, but the notification email was not sent to the user. Please check your SMTP configuration.'}
             />
           </div>
         )}
@@ -181,7 +191,9 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
           disabled={userData.email.trim() === '' ||
                     userData.lastName.trim() === '' ||
                     userData.firstName.trim() === '' ||
-                    isLoading || redirecting}
+                    isLoading || redirecting ||
+                    data?.emailIsNotSent ||
+                    (error && error.info?.statusCode !== 409)}
           isLoading={isLoading}
           loadingLabel={t('creating')}
         >

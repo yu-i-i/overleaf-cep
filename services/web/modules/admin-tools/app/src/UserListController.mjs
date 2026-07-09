@@ -59,7 +59,7 @@ async function _sendActivationEmail(idString) {
     .catch(error => {
       throw new OError('Failed to send activation email', { error: error.message, email: user.email })
     })
-  return setNewPasswordUrl
+  return
 }
 
 function cleanupSession(req) {
@@ -112,6 +112,7 @@ async function registerNewUser(req, res, next) {
   req.body.analyticsId = crypto.randomUUID()
 
  let user
+ let emailIsNotSent = false
   try {
     user = await UserRegistrationHandler.promises.registerNewUser(req.body)
   } catch (err) {
@@ -141,10 +142,17 @@ async function registerNewUser(req, res, next) {
     }
     if (isExternal) {
       update.$unset = { hashedPassword: "" }
-    } else {
-      await _sendActivationEmail(user._id.toString())
     }
     await User.updateOne({ _id: user._id }, update).exec()
+
+    if (!isExternal) {
+      try {
+        await _sendActivationEmail(user._id.toString())
+      } catch (error) {
+        logger.warn({ error })
+        emailIsNotSent = true
+      }
+    }
   } catch (err) {
     OError.tag(err, 'error finishing user registration', {
       email: user.email,
@@ -155,7 +163,7 @@ async function registerNewUser(req, res, next) {
   const authMethods = isExternal ? [] : ['local']
   const { id, first_name, last_name, signUpDate } = user
   const newUser = { id, email, firstName: first_name, lastName: last_name, isAdmin, signUpDate, inactive: true, deleted: false, authMethods }
-  res.json({ user: newUser })
+  res.json({ user: newUser, emailIsNotSent })
 }
 
 async function sendActivationEmail(req, res, next) {
@@ -164,7 +172,7 @@ async function sendActivationEmail(req, res, next) {
     await _sendActivationEmail(userId)
   } catch (err) {
     logger.warn({ err })
-    return HttpErrorHandler.unprocessableEntity(req, res, 'Error sending activation email')
+    return HttpErrorHandler.unprocessableEntity(req, res, 'Error sending activation email. Please check your SMTP configuration.')
   }
   res.sendStatus(200)
 }

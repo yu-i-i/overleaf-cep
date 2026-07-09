@@ -76,6 +76,7 @@ function getClient() {
 }
 
 async function sendEmail(options, emailType) {
+console.log("EMAIL_SETTINGS  = ", EMAIL_SETTINGS)
   try {
     const canContinue = await checkCanSendEmail(options)
     metrics.inc('email_status', {
