@@ -1113,18 +1113,8 @@ module.exports = {
         '../modules/github-sync/frontend/js/components/import-from-github-menu.tsx'
       ),
     ],
-    editorLeftMenuSync: [
-      Path.resolve(
-        __dirname,
-        '../modules/git-bridge/frontend/js/card/components/git-modal.tsx'
-      ),
-    ],
-    editorLeftMenuManageTemplate: [
-      Path.resolve(
-        __dirname,
-        '../modules/template-gallery/frontend/js/features/template/components/actions-manage-template'
-      ),
-    ],
+    editorLeftMenuSync: [],
+    editorLeftMenuManageTemplate: [],
     menubarExtraComponents: [
       Path.resolve(
         __dirname,
