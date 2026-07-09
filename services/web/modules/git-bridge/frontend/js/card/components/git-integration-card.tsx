@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useProjectContext } from '@/shared/context/project-context'
+import { OLModal } from '@/shared/components/ol/ol-modal'
 import IntegrationCard from '@/features/integrations-panel/integration-card.tsx'
 import GitLogoOrange from '@/shared/svgs/git-logo-orange'
-
-import GitModalWrapper from './git-modal-wrapper'
+import GitModal from './git-modal'
 
 function GitSyncCard() {
   const { t } = useTranslation()
@@ -23,10 +23,10 @@ function GitSyncCard() {
         onClick={() => setShow(true)}
       />
 
-      <GitModalWrapper
+      <GitModal
         show={show}
-        handleHide={() => setShow(false)}
         projectId={projectId}
+        handleHide={() => setShow(false)}
       />
     </>
   )

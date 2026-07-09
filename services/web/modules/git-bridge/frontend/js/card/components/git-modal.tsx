@@ -1,39 +1,86 @@
-import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
-import getMeta from '@/utils/meta'
-import GitFork from '@/shared/svgs/git-fork'
-import { useProjectContext } from '@/shared/context/project-context'
-import LeftMenuButton from '@/features/editor-left-menu/components/left-menu-button'
-import GitModalWrapper from './git-modal-wrapper'
+import { Trans, useTranslation } from 'react-i18next'
+import { CopyToClipboard } from '@/shared/components/copy-to-clipboard'
 
-function GitSyncButton() {
-  const { t } = useTranslation()
-  const { project } = useProjectContext()
-  const [show, setShow] = useState(false)
+import {
+  OLModal,
+  OLModalBody,
+  OLModalFooter,
+  OLModalHeader,
+  OLModalTitle,
+} from '@/shared/components/ol/ol-modal'
+import OLButton from '@/shared/components/ol/ol-button'
 
-  const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
-  const projectId = project?._id
-
-  if (!gitBridgeEnabled || !projectId) return null
-
-  return (
-    <>
-      <LeftMenuButton
-        variant="link"
-        className="left-menu-button"
-        onClick={() => setShow(true)}
-        icon={<GitFork />}
-      >
-        {t('git')}
-      </LeftMenuButton>
-
-      <GitModalWrapper
-        show={show}
-        handleHide={() => setShow(false)}
-        projectId={projectId}
-      />
-    </>
-  )
+type Props = {
+  show: bool
+  handleHide: () => void
+  projectId: string
 }
 
-export default GitSyncButton
+export default function GitModal({
+  show,
+  handleHide,
+  projectId,
+}: Props) {
+  const { t } = useTranslation()
+
+  const gitCloneCommand = `git clone ${window.location.protocol}//git@${window.location.host}/git/${projectId}`
+
+  return (
+    <OLModal
+      show={show}
+      onHide={handleHide}
+      id="git-sync-modal"
+      backdrop="static"
+      size="lg"
+    >
+
+      <OLModalHeader closeButton>
+        <OLModalTitle>{t('clone_with_git')}</OLModalTitle>
+      </OLModalHeader>
+
+      <OLModalBody>
+        <p>{t('git_bridge_modal_git_clone_your_project')}</p>
+
+        <div className="git-bridge-copy">
+          <span aria-label={t('git_clone_project_command')}>
+            <code>
+              {gitCloneCommand}
+            </code>
+          </span>
+          <CopyToClipboard 
+            content={gitCloneCommand} 
+            tooltipId="git-copy-clone-project-command-tooltip"
+            kind={'button'}
+          />
+        </div>
+        <Trans
+          i18nKey="git_bridge_modal_use_previous_token"
+          components={[
+            <a
+              href="/learn/how-to/Git_integration_authentication_tokens"
+              target="_blank"
+              rel="noreferrer noopener"
+            />,
+          ]}
+        />
+      </OLModalBody>
+
+      <OLModalFooter>
+        <OLButton
+          variant="secondary"
+          onClick={handleHide}
+        >
+          {t('close')}
+        </OLButton>
+        <OLButton
+          variant="primary"
+          href="/user/settings#project-sync"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          {t('go_to_settings')}
+        </OLButton>
+      </OLModalFooter>
+    </OLModal>
+  )
+}
