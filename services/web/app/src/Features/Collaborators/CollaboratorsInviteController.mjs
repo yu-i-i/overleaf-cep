@@ -446,8 +446,6 @@ async function viewSharingLink(req, res) {
 
     if (!isPublicSharingLink) {
       AuthenticationController.setRedirectInSession(req)
-      return res.redirect('/register')
-      AuthenticationController.setRedirectInSession(req)
       if (Features.hasFeature('registration-page')) {
         return res.redirect('/register')
       } else {
