@@ -1,0 +1,98 @@
+extends ../../../../app/views/layout-website-redesign
+
+block vars
+	- isWebsiteRedesign = true
+
+block content
+	main#main-content.content
+		.container
+			.row
+				.registration-message
+					if sharedProjectData.user_first_name !== undefined
+						h1 #{translate("user_wants_you_to_see_project", {username:sharedProjectData.user_first_name, projectname:""})}
+							em #{sharedProjectData.project_name}
+						div
+							| #{translate("join_sl_to_view_project")}.
+						div
+							| #{translate("already_have_sl_account")}
+							|
+							a(href='/login') #{translate("login_here")}
+					else if newTemplateData.templateName !== undefined
+						h1 #{translate("register_to_edit_template", {templateName:newTemplateData.templateName})}
+
+						div #{translate("already_have_sl_account")}
+							|
+							a(href='/login') #{translate("login_here")}
+			.row
+				.col-lg-8.offset-lg-2.col-xl-6.offset-xl-3
+					.page-header
+						h1.login-register-header-heading-focus.h3 #{translate("register")}
+						if displayDomains.length
+							.alert.alert-info
+								div.small.fst-italic.mb-2 #{translate("registration_is_restricted_to_the_following_email_domains")}
+								ul.mb-0.small
+									each item in displayDomains
+										li
+											span.small.fst-italic
+												code #{item.domain}
+												if item.subdomains && item.exact
+													|  (#{translate("including_all_subdomains")})
+												else if item.subdomains
+													|  (#{translate("subdomains_of_this_domain_only")})
+					form(
+						data-ol-async-form
+						name="registrationForm"
+						action="/register",
+						method="POST",
+						aria-label=translate('create_account')
+					)
+						input(name='_csrf' type='hidden' value=csrfToken)
+						+formMessagesNewStyle()
+						+customFormMessageNewStyle('account_with_this_email_exists', 'warn')
+							| !{translate("account_with_this_email_exists")}
+							a.d-block.mt-1(href='/user/password/reset') #{translate("forgot_your_password")}?
+						.form-group
+							label(for='firstNameField') #{translate("first_name")}
+							input.form-control(
+								aria-label="first_name"
+								id='firstNameField'
+								type='text',
+								name='first_name',
+								placeholder=translate("first_name"),
+								required,
+								autocomplete="given-name",
+								maxlength="100"
+								autofocus
+							)
+						.form-group
+							label(for='lastNameField') #{translate("last_name")}
+							input.form-control(
+								aria-label="last_name"
+								id='lastNameField'
+								type='text',
+								name='last_name',
+								placeholder=translate("last_name"),
+								required,
+								autocomplete="family-name",
+								maxlength="100"
+							)
+						.form-group
+							label(for='emailField') #{translate("email")}
+							input.form-control(
+								aria-label="email"
+								id='emailField'
+								type='email',
+								name='email',
+								placeholder=translate("email"),
+								required,
+								autocomplete="username",
+								maxlength="100"
+							)
+						div(style="margin-top: 3rem")
+						.actions
+							button.btn.btn-primary.w-100(
+								type='submit',
+								data-ol-disabled-inflight
+							)
+								span(data-ol-inflight="idle") #{translate("create_account")}
+								span(hidden data-ol-inflight="pending") #{translate("registering")}…

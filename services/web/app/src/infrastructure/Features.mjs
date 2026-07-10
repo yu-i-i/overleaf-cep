@@ -34,6 +34,7 @@ const Features = {
     return (
       (Boolean(Settings.ldap) && Boolean(Settings.ldap.enable)) ||
       (Boolean(Settings.saml) && Boolean(Settings.saml.enable)) ||
+      (Boolean(Settings.oidc) && Boolean(Settings.oidc.enable)) ||
       Boolean(Settings.overleaf)
     )
   },
@@ -51,10 +52,7 @@ const Features = {
       case 'homepage':
         return Boolean(Settings.enableHomepage)
       case 'registration-page':
-        return (
-          !Features.externalAuthenticationSystemUsed() ||
-          Boolean(Settings.overleaf) || Settings.oidc?.allowedOIDCEmailDomains
-        )
+        return Boolean(Settings.enableRegistrationPage)
       case 'registration':
         return Boolean(Settings.overleaf)
       case 'chat':
