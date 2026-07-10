@@ -11,6 +11,7 @@ import EmailHelper from '../Helpers/EmailHelper.mjs'
 import EditorRealTimeController from '../Editor/EditorRealTimeController.mjs'
 import AnalyticsManager from '../Analytics/AnalyticsManager.mjs'
 import SessionManager from '../Authentication/SessionManager.mjs'
+import Features from '../../infrastructure/Features.mjs'
 import { RateLimiter } from '../../infrastructure/RateLimiter.mjs'
 import { z, zz, parseReq } from '../../infrastructure/Validation.mjs'
 import { expressify } from '@overleaf/promise-utils'
@@ -334,7 +335,11 @@ async function viewInvite(req, res) {
       user_first_name: owner.first_name,
     }
     AuthenticationController.setRedirectInSession(req)
-    return res.redirect('/register')
+    if (Features.hasFeature('registration-page')) {
+      return res.redirect('/register')
+    } else {
+      return res.redirect('/login')
+    }
   }
 
   // cleanup if set for register page
@@ -374,7 +379,11 @@ async function viewSharingLink(req, res) {
   const currentUser = SessionManager.getSessionUser(req.session)
   if (!currentUser) {
     AuthenticationController.setRedirectInSession(req)
-    return res.redirect('/register')
+    if (Features.hasFeature('registration-page')) {
+      return res.redirect('/register')
+    } else {
+      return res.redirect('/login')
+    }
   }
 
   // cleanup if set for register page
