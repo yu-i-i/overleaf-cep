@@ -200,6 +200,7 @@ const DockerRunner = {
               err.code = exitCode
               return callback(err)
             }
+            output.exitCode = exitCode
             containerReturned = true
             logger.debug(
               // The seccomp policy is very large. Avoid logging it. _.omit deep clones.
