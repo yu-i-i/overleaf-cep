@@ -861,19 +861,29 @@
             "args": []
         },
         {
-            "name": "openat2",
+            "name": "epoll_create",
             "action": "SCMP_ACT_ALLOW",
             "args": []
         },
         {
-            "name": "statx",
+            "name": "epoll_ctl",
             "action": "SCMP_ACT_ALLOW",
             "args": []
         },
         {
-            "name": "clone3",
+            "name": "timerfd_create",
             "action": "SCMP_ACT_ALLOW",
-             "args": []
+            "args": []
+        },
+        {
+            "name": "timerfd_settime",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
+            "name": "eventfd2",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
         }
     ]
 }

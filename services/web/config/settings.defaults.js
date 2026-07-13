@@ -1259,6 +1259,16 @@ module.exports = {
   },
 
   splitTestOverrides: {
+    ...(process.env.ENABLE_EDITOR_TABS?.toLowerCase() === 'true' ? {
+      'editor-tabs': 'enabled',
+    } : {}),
+    ...(process.env.ENABLE_PANDOC_CONVERSIONS === 'true' ? {
+      'import-docx': 'enabled',
+      'import-markdown': 'enabled',
+      'export-docx': 'enabled',
+      'export-html': 'enabled',
+      'export-markdown': 'enabled',
+    } : {}),
     ...(process.env.OVERLEAF_HISTORY_RESTORE?.toLowerCase() === 'true' ? {
       'history-ranges-support': 'enabled',
       'revert-file': 'enabled',
