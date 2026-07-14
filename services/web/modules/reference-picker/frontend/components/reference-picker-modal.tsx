@@ -74,6 +74,7 @@ export default function ReferencePickerModal({
   const [query, setQuery] = useState('')
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [results, setResults] = useState<{ _source: Bib2JsonEntry }[]>([])
+  const [knownKeys, setKnownKeys] = useState<Set<string>>(() => new Set())
 
   const pendingInitialKeysRef = useRef<string[]>([])
   const requestIdRef = useRef(0)
@@ -109,9 +110,9 @@ export default function ReferencePickerModal({
       setResults(r.hits)
 
       if (pendingInitialKeysRef.current.length > 0) {
-        const knownKeys = new Set(r.hits.map(h => h._source.EntryKey))
-        const matched = pendingInitialKeysRef.current.filter(k => knownKeys.has(k))
-        if (matched.length > 0) setSelectedKeys(matched)
+        const known = new Set(r.hits.map(h => h._source.EntryKey))
+        setKnownKeys(known)
+        setSelectedKeys([...pendingInitialKeysRef.current])
         pendingInitialKeysRef.current = []
       }
     }
@@ -142,6 +143,26 @@ export default function ReferencePickerModal({
   const searchRef = useRef<HTMLInputElement | null>(null)
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
   const insertButtonRef = useRef<HTMLButtonElement | null>(null)
+
+const scrollToReference = useCallback((key: string) => {
+  const index = results.findIndex(
+    r => r._source.EntryKey === key
+  )
+
+  if (index === -1) return
+
+  const el = document.getElementById(
+    `reference-picker-item-${index}`
+  )
+
+  el?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'nearest',
+  })
+
+  setFocusArea('list')
+  setFocusedIndex(index)
+}, [results])
 
   const removeOne = useCallback((key: string) => {
     setSelectedKeys(prev => {
@@ -300,14 +321,23 @@ export default function ReferencePickerModal({
             </OLRow>
 
             <OLRow>
-              <div className="selected-key-tag">
+              <div className="selected-key-tags">
                 {selectedKeys.map((key, idx) => (
-                  <OLTag
+                  <span
                     key={`${key}-${idx}`}
-                    closeBtnProps={{ onClick: () => removeOne(key) }}
+                    className={
+                      knownKeys.has(key)
+                        ? 'existing-key-tag'
+                        : 'nonexistent-key-tag'
+                    }
                   >
-                    {key}
-                  </OLTag>
+                    <OLTag
+                      contentProps={{ onClick: () => scrollToReference(key) }}
+                      closeBtnProps={{ onClick: () => removeOne(key) }}
+                    >
+                      {key}
+                    </OLTag>
+                  </span>
                 ))}
               </div>
             </OLRow>
