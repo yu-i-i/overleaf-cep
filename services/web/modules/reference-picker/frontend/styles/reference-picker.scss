@@ -1,5 +1,5 @@
 .references-search-modal {
-  .selected-key-tag {
+  .selected-key-tags {
     position: relative;
     display: flex;
     flex-wrap: wrap;
@@ -13,10 +13,22 @@
     margin-bottom: 8px;
     box-shadow: 0 1px 0 var(--ds-color-neutral-100);
     padding-bottom: 6px;
-
-    .badge-tag {
-      background-color:var(--ds-color-green-50) !important;
-    }
+  }
+  .selected-key-tags .existing-key-tag .badge-tag {
+    background-color: var(--ds-color-green-50) !important;
+  }
+  .selected-key-tags .nonexistent-key-tag .badge-tag {
+    background-color: var(--ds-color-red-50) !important;
+  }
+  .existing-key-tag .badge-tag-content-btn:hover {
+    background-color: var(--ds-color-green-100);
+  }
+  .nonexistent-key-tag .badge-tag-content-btn:hover {
+    background-color: transparent;
+  }
+  .badge-close:hover,
+  .badge-close:focus {
+    background-color: var(--ds-color-neutral-100);
   }
 
   .search-results {
