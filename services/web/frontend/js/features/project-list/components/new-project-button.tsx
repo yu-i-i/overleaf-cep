@@ -58,7 +58,7 @@ function NewProjectButton({
   align,
 }: NewProjectButtonProps) {
   const { t } = useTranslation()
-  const { templateLinks } = getMeta('ol-ExposedSettings')
+  const { templateLinks, githubSyncEnabled } = getMeta('ol-ExposedSettings')
   const [modal, setModal] =
     useState<Nullable<NewProjectButtonModalVariant>>(null)
   const portalTemplates = getMeta('ol-portalTemplates') || []
@@ -166,7 +166,7 @@ function NewProjectButton({
     [sendProjectListMB, sendTrackingEvent]
   )
 
-  const [importProjectFromGithubMenu] = importOverleafModules(
+  const [importProjectFromGithubMenu] = !githubSyncEnabled ? [] : importOverleafModules(
     'importProjectFromGithubMenu'
   )
 

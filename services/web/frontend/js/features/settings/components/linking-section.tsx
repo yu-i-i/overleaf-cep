@@ -7,7 +7,7 @@ import getMeta from '../../../utils/meta'
 import { useBroadcastUser } from '@/shared/hooks/user-channel/use-broadcast-user'
 import OLNotification from '@/shared/components/ol/ol-notification'
 
-const availableIntegrationLinkingWidgets = importOverleafModules(
+const allAvailableIntegrationLinkingWidgets = importOverleafModules(
   'integrationLinkingWidgets'
 ) as any[]
 const availableReferenceLinkingWidgets = importOverleafModules(
@@ -16,6 +16,15 @@ const availableReferenceLinkingWidgets = importOverleafModules(
 const availableLangFeedbackLinkingWidgets = importOverleafModules(
   'langFeedbackLinkingWidgets'
 ) as any[]
+
+const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
+const githubSyncEnabled = getMeta('ol-ExposedSettings').githubSyncEnabled
+const zoteroEnabled = getMeta('ol-ExposedSettings').zoteroEnabled
+
+const availableIntegrationLinkingWidgets = allAvailableIntegrationLinkingWidgets.filter(
+  ({ path }) =>
+    (githubSyncEnabled || !path.includes('github-sync'))
+)
 
 function LinkingSection() {
   useBroadcastUser()
@@ -29,20 +38,20 @@ function LinkingSection() {
   const integrationLinkingWidgets = getMeta('ol-hideLinkingWidgets')
     ? []
     : availableIntegrationLinkingWidgets
-  const referenceLinkingWidgets = getMeta('ol-hideLinkingWidgets')
+  const referenceLinkingWidgets = getMeta('ol-hideLinkingWidgets') || !zoteroEnabled
     ? []
     : availableReferenceLinkingWidgets
   const langFeedbackLinkingWidgets = getMeta('ol-hideLinkingWidgets')
     ? []
     : availableLangFeedbackLinkingWidgets
 
-  const oauth2ServerComponents = importOverleafModules('oauth2Server') as {
+  const oauth2ServerComponents = !gitBridgeEnabled ? [] : importOverleafModules('oauth2Server') as {
     import: { default: ElementType }
     path: string
   }[]
 
   const renderSyncSection =
-    getMeta('ol-isSaas') || getMeta('ol-gitBridgeEnabled')
+    getMeta('ol-isSaas') || gitBridgeEnabled || githubSyncEnabled
 
   const allIntegrationLinkingWidgets = integrationLinkingWidgets.concat(
     oauth2ServerComponents

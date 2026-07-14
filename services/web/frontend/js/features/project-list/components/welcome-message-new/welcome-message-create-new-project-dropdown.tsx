@@ -68,7 +68,7 @@ function WelcomeMessageCreateNewProjectDropdown({
     useFeatureFlag('import-markdown') &&
     getMeta('ol-ExposedSettings').enablePandocConversions
 
-  const { isOverleaf } = getMeta('ol-ExposedSettings')
+  const { isOverleaf, githubSyncEnabled } = getMeta('ol-ExposedSettings')
 
   const handleDropdownItemClick = useCallback(
     (
@@ -170,7 +170,7 @@ function WelcomeMessageCreateNewProjectDropdown({
             </DropdownItem>
           </li>
         )}
-        {isOverleaf && (
+        {(isOverleaf || githubSyncEnabled) && (
           <li role="none">
             <DropdownItem
               as="button"

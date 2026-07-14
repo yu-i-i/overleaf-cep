@@ -13,10 +13,15 @@ import { FullSizeLoadingSpinner } from '@/shared/components/loading-spinner'
 import getMeta from '@/utils/meta'
 import OLNotification from '@/shared/components/ol/ol-notification'
 
-const createFileModeModules = importOverleafModules('createFileModes') as {
+const allCreateFileModeModules = importOverleafModules('createFileModes') as {
   import: { CreateFilePane: ElementType; CreateFileMode: ElementType }
   path: string
 }[]
+
+const createFileModeModules = allCreateFileModeModules.filter(
+  ({ path }) =>
+    (getMeta('ol-ExposedSettings').zoteroEnabled || !path.includes('zotero-create-file'))
+)
 
 const FileTreeUploadDoc = lazy(() => import('./modes/file-tree-upload-doc'))
 
