@@ -54,5 +54,7 @@ export type ExposedSettings = {
   wikiEnabled?: boolean
   templatesEnabled?: boolean
   linkedInInsightsPartnerId?: string
+  githubSyncEnabled: boolean
+  zoteroEnabled: boolean
   enablePandocConversions: boolean
 }
