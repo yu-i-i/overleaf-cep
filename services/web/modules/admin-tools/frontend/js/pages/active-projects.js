@@ -55,28 +55,49 @@ function renderTable(data) {
     `
   }
 
-  const rows = data.map(project => {
-    const owner = project.owner || {}
+  const rows = data.map((project, projectIndex) => {
     const users = project.activeUsers || []
 
+    const mailto = users
+      .map(u => u.email)
+      .filter(Boolean)
+      .join(',')
+
+    const projectName = mailto
+      ? `<a href="mailto:${mailto}" style="text-decoration:none;">${project.name}</a>`
+      : project.name
+
+    const stripedStyle = projectIndex % 2 === 1
+      ? 'background-color: var(--bs-table-striped-bg);'
+      : ''
+
     const usersHtml = users.length
-      ? `<ul class="list-unstyled mb-0">${users.map(u =>
-          `<li><strong>${u.name}</strong>${u.email ? ` (${u.email})` : ''}</li>`
-        ).join('')}</ul>`
+      ? users.map(user => `
+          <div>
+            ${
+              user.email
+                ? `<a href="mailto:${user.email}" style="text-decoration:none;">${user.name}</a>`
+                : user.name
+            }
+          </div>
+        `).join('')
       : '<em>None detected</em>'
 
     return `
-      <tr>
-        <td><a href="/project/${project.id}" target="_blank">${project.name}</a></td>
-        <td>${owner.name || 'Unknown'}</td>
-        <td>${
-          owner.email
-            ? `<a href="mailto:${owner.email}">${owner.email}</a>`
-            : 'N/A'
-        }</td>
-        <td>${usersHtml}</td>
-        <td>${project.connectionCount}</td>
-      </tr>
+      <div style="
+        display:grid;
+        grid-template-columns:70% 30%;
+        column-gap:1rem;
+        ${stripedStyle}
+        padding:0.5rem 0;
+      ">
+        <div style="background:inherit;">
+          ${projectName}
+        </div>
+        <div style="background:inherit;">
+          ${usersHtml}
+        </div>
+      </div>
     `
   }).join('')
 
@@ -85,17 +106,18 @@ function renderTable(data) {
       <strong>${data.length}</strong> project(s) currently being edited
     </p>
 
-    <table class="table table-striped table-hover">
-      <thead>
-        <tr>
-          <th>Project Name</th>
-          <th>Owner</th>
-          <th>Owner Email</th>
-          <th>Active Users</th>
-          <th>Connections</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div style="
+      display:grid;
+      grid-template-columns:70% 30%;
+      column-gap:1rem;
+      font-weight:bold;
+      padding-bottom:0.5rem;
+      border-bottom:1px solid var(--bs-border-color);
+    ">
+      <div>Project Name</div>
+      <div>Active User</div>
+    </div>
+
+    ${rows}
   `
 }
