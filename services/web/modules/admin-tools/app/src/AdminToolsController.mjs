@@ -1,99 +1,90 @@
 import { expressify } from '@overleaf/promise-utils'
 import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
-import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
-import request from 'request'
+import { fetchJson } from '@overleaf/fetch-utils'
 import Settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
+import OError from '@overleaf/o-error'
+
+const REQUEST_TIMEOUT_MS = 10000
 
 // Helper function to get all active projects from real-time service
 async function getActiveProjectsFromRealTime() {
-  return new Promise((resolve, reject) => {
-    const realTimeUrl = Settings.apis.realTime?.url || 'http://127.0.0.1:3026'
-    const url = `${realTimeUrl}/clients`
-    const user = Settings.apis.realTime?.user || process.env.WEB_API_USER || 'overleaf'
-    const pass = Settings.apis.realTime?.pass || process.env.WEB_API_PASSWORD || ''
+  const realTimeUrl = Settings.apis.realTime?.url || 'http://127.0.0.1:3026'
+  const url = `${realTimeUrl}/clients`
+  const user = Settings.apis.realTime?.user || process.env.WEB_API_USER || 'overleaf'
+  const password = Settings.apis.realTime?.pass || process.env.WEB_API_PASSWORD || ''
 
-    logger.info({ url, user }, 'Fetching active clients from real-time service')
+  logger.debug({ url, user }, 'Fetching active clients from real-time service')
 
-    request.get({
-      url,
-      auth: { user, pass, sendImmediately: true },
-      json: true,
-      timeout: 10000
-    }, async (error, response, body) => {
-      if (error) {
-        logger.error({ err: error }, 'Error getting active clients from real-time')
-        return resolve([])
-      }
-      if (response.statusCode !== 200) {
-        logger.warn({ statusCode: response.statusCode }, 'Unexpected response from real-time service')
-        return resolve([])
-      }
-      if (!Array.isArray(body)) {
-        logger.warn({ body }, 'Unexpected response body from real-time service')
-        return resolve([])
-      }
+  let clients
+  try {
+    clients = await fetchJson(url, {
+      basicAuth: {
+        user,
+        password,
+      },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    })
+  } catch (err) {
+    throw new OError('Error getting active clients from real-time', {}, err)
+  }
+  if (!Array.isArray(clients)) {
+    throw new OError('Unexpected response body from real-time service', { body: clients })
+  }
 
-      // Group flat client list by project_id
-      const projectMap = new Map()
-      for (const client of body) {
-        if (!projectMap.has(client.project_id)) {
-          projectMap.set(client.project_id, [])
-        }
-        projectMap.get(client.project_id).push(client)
-      }
+  const projectMap = new Map()
 
-      logger.info({ projectCount: projectMap.size }, 'Got active projects from real-time')
+  for (const client of clients) {
+    let list = projectMap.get(client.project_id)
+    if (!list) {
+      list = []
+      projectMap.set(client.project_id, list)
+    }
+    list.push(client)
+  }
 
+  logger.debug({ projectCount: projectMap.size }, 'Got active projects from real-time')
+
+  const enrichedProjects = await Promise.all(
+    [...projectMap.entries()].map(async ([projectId, clients]) => {
       try {
-        const enrichedProjects = await Promise.all(
-          [...projectMap.entries()].map(async ([projectId, clients]) => {
-            try {
-              const project = await ProjectGetter.promises.getProject(projectId, {
-                name: 1,
-                _id: 1,
-                owner_ref: 1,
-              })
-              if (!project) {
-                logger.warn({ projectId }, 'Project not found in database')
-                return null
-              }
-              const owner = await UserGetter.promises.getUser(project.owner_ref, {
-                email: 1,
-                first_name: 1,
-                last_name: 1,
-              })
-              return {
-                id: project._id.toString(),
-                name: project.name,
-                owner: owner ? {
-                  email: owner.email,
-                  name: `${owner.first_name || ''} ${owner.last_name || ''}`.trim() || owner.email,
-                } : null,
-                activeUsers: clients.map(c => ({
-                  name: `${c.first_name} ${c.last_name}`.trim() || c.email || 'Unknown',
-                  email: c.email,
-                })),
-                connectionCount: clients.length,
-              }
-            } catch (err) {
-              logger.error({ err, projectId }, 'Error enriching project data')
-              return null
-            }
-          })
-        )
-        resolve(enrichedProjects.filter(p => p !== null))
+        const project = await ProjectGetter.promises.getProject(projectId, {
+          _id: 1,
+          name: 1,
+        })
+
+        if (!project) {
+          throw new OError('Project not found in database', { projectId })
+        }
+
+        return {
+          id: project._id.toString(),
+          name: project.name,
+          activeUsers: clients.map(client => ({
+            name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || client.email || 'Unknown',
+            email: client.email,
+          })),
+          connectionCount: clients.length,
+        }
       } catch (err) {
-        logger.error({ err }, 'Error processing active projects')
-        resolve([])
+        throw new OError('Error enriching project data', { projectId }, err)
       }
     })
-  })
+  )
+
+  return enrichedProjects.filter(Boolean)
 }
 
 async function activeProjects(req, res) {
-  const activeProjects = await getActiveProjectsFromRealTime()
-  res.json(activeProjects)
+  try {
+    const projects = await getActiveProjectsFromRealTime()
+    res.json(projects)
+  } catch (err) {
+    const info = OError.getFullInfo(err)
+    logger.error(OError.getFullStack(err))
+    logger.error({ info }, 'Error processing active projects')
+    throw err
+  }
 }
 
 export default {
