@@ -851,7 +851,17 @@
             "args": []
         },
         {
+            "name": "epoll_wait",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
             "name": "epoll_pwait",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
+            "name": "epoll_pwait2",
             "action": "SCMP_ACT_ALLOW",
             "args": []
         },
@@ -861,7 +871,17 @@
             "args": []
         },
         {
+            "name": "ppoll",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
             "name": "epoll_create",
+            "action": "SCMP_ACT_ALLOW",
+            "args": []
+        },
+        {
+            "name": "epoll_create1",
             "action": "SCMP_ACT_ALLOW",
             "args": []
         },
