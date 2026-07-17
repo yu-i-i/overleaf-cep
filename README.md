@@ -25,17 +25,22 @@
 
 The present "extended" version of Overleaf CE includes:
 
-- Template gallery
 - Sandboxed compiles with TeX Live image selection
+- Sign Up page
 - LDAP authentication
 - SAML authentication
 - OpenID Connect authentication
 - Real-time track changes and comments
-- Autocomplete of reference keys
 - Symbol palette
+- Template gallery
 - Import file from external URL
-- Advanced administrator tools for managing user accounts and projects
 - Git integration
+- GitHub synchronization
+- Zotero integration
+- Reference Search and Pick Tool
+- Document Import (`.docx`, `.md`) and Export (`.docx`, `.md`, `.html`) 
+- Advanced administrator tools for managing user accounts and projects
+- Logo tools
 
 > [!CAUTION]
 > Overleaf Community Edition is intended for use in environments where **all** users are trusted. Community Edition is **not** appropriate for scenarios where isolation of users is required due to Sandbox Compiles not being available. When not using Sandboxed Compiles, users have full read and write access to the `sharelatex` container resources (filesystem, network, environment variables) when running LaTeX compiles. 
@@ -76,13 +81,13 @@ folder are added.
 ## Authors
 
 [The Overleaf Team](https://www.overleaf.com/about)\
-[yu-i-i](https://github.com/yu-i-i/overleaf-cep) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md)
+[yu-i-i](https://github.com/yu-i-i), [davrot](https://github.com/davrot) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md)
 
 ## License
 
 The code in this repository is released under the GNU AFFERO GENERAL PUBLIC LICENSE, version 3. A copy can be found in the [`LICENSE`](LICENSE) file.
 
 Copyright (c) Overleaf, 2014-2026.\
-Copyright (c) yu-i-i, 2024-2026, for CE extensions.
+Copyright (c) @yu-i-i, 2024-2026, for CE extensions.
 
 Portions of the code are derived from other open-source projects; see [`CREDITS`](CREDITS.md).
