@@ -5,34 +5,21 @@ In most cases the original code has been modified, optimized, or extended.
 
 ## Symbol palette
 
-The symbol palette feature is based on the original Overleaf implementation:
-
-https://github.com/overleaf/web/tree/master/frontend/js/features/symbol-palette
+The symbol palette feature is based on the
+[original Overleaf implementation](https://github.com/overleaf/web/tree/master/frontend/js/features/symbol-palette)
 
 The original code was slightly improved, particularly in the parts related to keyboard input.
 
 ## LDAP authentication
 
-LDAP authentication was inspired by:
-
-https://github.com/smhaller/ldap-overleaf-sl
+LDAP authentication was inspired by [this project](https://github.com/smhaller/ldap-overleaf-sl).
 
 The project provided the idea and part of the implementation for adding LDAP users to the user's contacts.
-
-## Autocomplete of reference keys
-
-Autocomplete of reference keys is based on:
-
-https://github.com/lcpu-club/overleaf
-
-The implementation largely follows the referenced code, except that a different `.bib` file parser is used.
 
 ## Real-time track changes and comments
 
 The Track Changes and Comments feature exists largely in the original Overleaf codebase.\
-The missing parts were implemented based on:
-
-https://github.com/ertuil/overleaf
+The missing parts were implemented based on [this code](https://github.com/ertuil/overleaf).
 
 The referenced code was fixed, optimized, and extended.
 
@@ -48,23 +35,19 @@ The missing proxy component was implemented in this project.
 
 ## Git integration
 
-Git integration is based on:
+The Git integration feature includes parts of the frontend code
+from [here](https://github.com/ayaka-notes/overleaf-pro/tree/feat-git-bridge)
 
-https://github.com/ayaka-notes/overleaf-pro/tree/feat-git-bridge
+## GitHub synchronization
 
-The backend was completely rewritten.\
-The frontend uses the referenced code, which was optimized and improved.
+The GitHub synchronization feature includes parts of the frontend code and the OAuth2 backend implementation
+from [here](https://github.com/ayaka-notes/overleaf-pro/commit/06a30fe9a0ed75e5ab40b50a8a4e94f43161cf71).
 
-## Original Features
+## Sign Up page
 
-The following features are original work implemented in this project:
+The Sign Up page is based on [this code](https://github.com/ayaka-notes/overleaf-pro/tree/feat-public-registeration).
 
-- Template Gallery
-- Advanced administrator tools for managing user accounts and projects
-- SAML authentication
-- OpenID Connect authentication
-
-## Acknowledgments
+# Acknowledgments
 
 Thanks to the users of the project for valuable feedback, suggestions,
 and help in identifying and fixing bugs.
