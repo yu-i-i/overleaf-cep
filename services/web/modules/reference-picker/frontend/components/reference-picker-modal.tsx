@@ -109,9 +109,10 @@ export default function ReferencePickerModal({
 
       setResults(r.hits)
 
+      const known = new Set(r.hits.map(h => h._source.EntryKey))
+      setKnownKeys(known)
+
       if (pendingInitialKeysRef.current.length > 0) {
-        const known = new Set(r.hits.map(h => h._source.EntryKey))
-        setKnownKeys(known)
         setSelectedKeys([...pendingInitialKeysRef.current])
         pendingInitialKeysRef.current = []
       }
