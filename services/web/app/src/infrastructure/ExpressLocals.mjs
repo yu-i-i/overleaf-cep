@@ -418,6 +418,7 @@ export default async function (webRouter, privateApiRouter, publicApiRouter) {
       cioSiteId: Settings.analytics?.cio?.siteId,
       linkedInInsightsPartnerId: Settings.analytics?.linkedIn?.partnerId,
       githubSyncEnabled: !!Settings.githubSync?.clientID && !!Settings.githubSync?.clientSecret,
+      gitlabSyncEnabled: !!Settings.gitlabSync?.clientID && !!Settings.gitlabSync?.clientSecret,
       zoteroEnabled: !!Settings.zotero?.clientKey && !!Settings.zotero?.clientSecret,
       enablePandocConversions: Settings.enablePandocConversions,
       mixpanelLabsToken:
