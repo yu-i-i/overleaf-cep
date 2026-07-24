@@ -58,7 +58,7 @@ function NewProjectButton({
   align,
 }: NewProjectButtonProps) {
   const { t } = useTranslation()
-  const { templateLinks, githubSyncEnabled } = getMeta('ol-ExposedSettings')
+  const { templateLinks, githubSyncEnabled, gitlabSyncEnabled } = getMeta('ol-ExposedSettings')
   const [modal, setModal] =
     useState<Nullable<NewProjectButtonModalVariant>>(null)
   const portalTemplates = getMeta('ol-portalTemplates') || []
@@ -169,10 +169,18 @@ function NewProjectButton({
   const [importProjectFromGithubMenu] = !githubSyncEnabled ? [] : importOverleafModules(
     'importProjectFromGithubMenu'
   )
+  
+  const [importProjectFromGitLabMenu] = !gitlabSyncEnabled ? [] : importOverleafModules(
+    'importProjectFromGitLabMenu'
+  )
 
   const ImportProjectFromGithubMenu: JSXElementConstructor<{
     onClick: (e: React.MouseEvent) => void
   }> = importProjectFromGithubMenu?.import.default
+
+  const ImportProjectFromGitLabMenu: JSXElementConstructor<{
+	onClick: (e: React.MouseEvent) => void
+  }> = importProjectFromGitLabMenu?.import.default
 
   return (
     <>
@@ -258,8 +266,8 @@ function NewProjectButton({
               </DropdownItem>
             </li>
           )}
-          <li role="none">
-            {ImportProjectFromGithubMenu && (
+          {ImportProjectFromGithubMenu && (
+            <li role="none">
               <ImportProjectFromGithubMenu
                 onClick={e =>
                   handleModalMenuClick(e, {
@@ -268,8 +276,20 @@ function NewProjectButton({
                   })
                 }
               />
-            )}
-          </li>
+            </li>
+          )}
+          {ImportProjectFromGitLabMenu && (
+            <li role="none">
+              <ImportProjectFromGitLabMenu
+                onClick={e =>
+                  handleModalMenuClick(e, {
+                    modalVariant: 'import_from_gitlab',
+                    dropdownMenuEvent: 'import-from-gitlab',
+                  })
+                }
+              />
+            </li>
+          )}
           {portalTemplates.length > 0 ? (
             <>
               <DropdownDivider />

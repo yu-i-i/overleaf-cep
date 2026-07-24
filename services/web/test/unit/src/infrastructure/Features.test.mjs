@@ -55,6 +55,7 @@ describe('Features', function () {
         expect(ctx.Features.hasFeature('analytics')).to.be.false
         expect(ctx.Features.hasFeature('git-bridge')).to.be.false
         expect(ctx.Features.hasFeature('github-sync')).to.be.false
+        expect(ctx.Features.hasFeature('gitlab-sync')).to.be.false
         expect(ctx.Features.hasFeature('homepage')).to.be.false
         expect(ctx.Features.hasFeature('link-url')).to.be.false
         expect(ctx.Features.hasFeature('oauth')).to.be.false
@@ -78,6 +79,7 @@ describe('Features', function () {
           expect(ctx.Features.hasFeature('analytics')).to.be.false
           expect(ctx.Features.hasFeature('git-bridge')).to.be.false
           expect(ctx.Features.hasFeature('github-sync')).to.be.false
+          expect(ctx.Features.hasFeature('gitlab-sync')).to.be.false
           expect(ctx.Features.hasFeature('homepage')).to.be.false
           expect(ctx.Features.hasFeature('link-url')).to.be.false
           expect(ctx.Features.hasFeature('oauth')).to.be.false
@@ -108,6 +110,7 @@ describe('Features', function () {
             expect(ctx.Features.hasFeature('link-url')).to.be.false
             expect(ctx.Features.hasFeature('git-bridge')).to.be.false
             expect(ctx.Features.hasFeature('github-sync')).to.be.false
+            expect(ctx.Features.hasFeature('gitlab-sync')).to.be.false
             expect(ctx.Features.hasFeature('homepage')).to.be.false
             expect(ctx.Features.hasFeature('oauth')).to.be.false
             expect(ctx.Features.hasFeature('saml')).to.be.false
@@ -118,6 +121,7 @@ describe('Features', function () {
               ctx.settings.enableHomepage = true
               ctx.settings.enableGitBridge = true
               ctx.settings.enableGithubSync = true
+              ctx.settings.enableGitLabSync = true
               ctx.settings.enableSaml = true
               ctx.settings.oauth = true
               ctx.settings.enabledLinkedFileTypes = ['url', 'project_file']
@@ -127,6 +131,7 @@ describe('Features', function () {
               expect(ctx.Features.hasFeature('affiliations')).to.be.true
               expect(ctx.Features.hasFeature('analytics')).to.be.true
               expect(ctx.Features.hasFeature('github-sync')).to.be.true
+              expect(ctx.Features.hasFeature('gitlab-sync')).to.be.true
               expect(ctx.Features.hasFeature('git-bridge')).to.be.true
               expect(ctx.Features.hasFeature('homepage')).to.be.true
               expect(ctx.Features.hasFeature('link-url')).to.be.true
