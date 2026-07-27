@@ -123,64 +123,74 @@ async function resolveCleanSyncState(
     return null
   }
 
-  // Possible changes in OL
+  try
+  {
+      // Possible changes in OL
+      const olBranchHead =
+        await exportChangesToGit({
+          token,
+          projectId,
+          repoFullName,
+          lastSyncVersion: projectSyncState.lastSyncVersion,
+          currentVersion,
+          message,
+          baseCommit: projectSyncState.lastSyncCommit,
+        })
+
+		if (!olBranchHead) {
+        if ( defaultBranchHead === projectSyncState.lastSyncCommit) {
+          await SyncStateManager.updateProjectState(projectId, { lastSyncVersion: currentVersion })
+          return null
+        }
+
+		const lastSyncCommit = defaultBranchHead
+        const lastSyncVersion = await applyGitSnapshotToProject({
+          token,
+          userId,
+          projectId,
+          repoFullName,
+          lastSyncCommit,
+        })
+        await SyncStateManager.updateProjectState(projectId, { lastSyncVersion, lastSyncCommit })
+        return null
+      }
+
+	  if (defaultBranchHead === projectSyncState.lastSyncCommit) {
+          const lastSyncCommit = olBranchHead
+          const lastSyncVersion = await applyGitSnappshotToProject({
+            token,
+            userId,
+            projectId,
+            repoFullName,
+            lastSyncCommit,
+          })
+          await SyncStateManager.updateProjectState(projectId, { lastSyncVersion, lastSyncCommit })
+      }
+	}
+	catch (err) {
+		logger.error({ err, projectId }, 'Error during clean sync state resolution, fallback to merge')
+	}
+
+  // Normal commit failed, fallback to merge, first create a temporary branch with OL changes
+  const tempBranchName = generateBranchName()
   const olBranchHead =
-    await exportChangesToGit({
-      token,
-      projectId,
-      repoFullName,
-      lastSyncVersion: projectSyncState.lastSyncVersion,
-      currentVersion,
-      message,
-      baseCommit: projectSyncState.lastSyncCommit,
-    })
+        await exportChangesToGit({
+          token,
+          projectId,
+          repoFullName,
+          lastSyncVersion: projectSyncState.lastSyncVersion,
+          currentVersion,
+          message,
+          baseCommit: projectSyncState.lastSyncCommit,
+		  branch: tempBranchName,
+        })
 
-  if (!olBranchHead) {
-    if ( defaultBranchHead === projectSyncState.lastSyncCommit) {
-      await SyncStateManager.updateProjectState(projectId, { lastSyncVersion: currentVersion })
-      return null
-    }
-
-    const lastSyncCommit = defaultBranchHead
-    const lastSyncVersion = await applyGitSnapshotToProject({
-      token,
-      userId,
-      projectId,
-      repoFullName,
-      lastSyncCommit,
-    })
-    await SyncStateManager.updateProjectState(projectId, { lastSyncVersion, lastSyncCommit })
-    return null
-  }
-
-  // FF-based commits don't work for gitlab, either do a direct commit to main or always use the merge-based approach
-  if (defaultBranchHead === projectSyncState.lastSyncCommit) {
-    // Trying to FF
-    try {
-      await api.updateBranch(token, repoFullName, defaultBranchName, olBranchHead)
-
-      const lastSyncCommit = olBranchHead
-      const lastSyncVersion = await applyGitSnapshotToProject({
-        token,
-        userId,
-        projectId,
-        repoFullName,
-        lastSyncCommit,
-      })
-      await SyncStateManager.updateProjectState(projectId, { lastSyncVersion, lastSyncCommit })
-      return null
-
-    } catch (err) {
-      if (!(err instanceof GitConflictError)) { throw err }
-    }
-  }
-
-  // FF failed, fallback to merge
-  const { mergeCommit, tempBranchName, conflict } = await mergeWithTempBranch(
+  // Merge the temporary branch into the default branch
+  const { mergeCommit, conflict } = await mergeWithTempBranch(
     token,
     repoFullName,
     defaultBranchName,
-    olBranchHead
+    tempBranchName
   )
 
   if (conflict) {
@@ -241,6 +251,8 @@ async function resolveConflictSyncState(
   // OL was changed after manual conflict resolution: need to merge
   const prevOlBranchHead = projectSyncState.unmergedBranchHead
 
+  // Create a temporary branch with OL changes after manual conflict resolution
+  const tempBranchName = generateBranchName()
   const newOlBranchHead = await exportChangesToGit({
     token,
     projectId,
@@ -249,9 +261,10 @@ async function resolveConflictSyncState(
     currentVersion,
     message: '[Updates in Overleaf during conflict resolution]',
     baseCommit: prevOlBranchHead,
+    branch: tempBranchName,
   })
 
-  // Are there really were changes? (e.g.: file created, then removedi: no changes)
+  // Were there really any changes? (e.g.: file created, then removed: no changes)
   if (!newOlBranchHead) {
     // nothing to push to GH
     const lastSyncCommit = defaultBranchHead
@@ -275,11 +288,12 @@ async function resolveConflictSyncState(
   }
 
   // merge
-  const { mergeCommit, tempBranchName, conflict } = await mergeWithTempBranch(
+  const { mergeCommit, conflict } = await mergeWithTempBranch(
     token,
     repoFullName,
     defaultBranchName,
     newOlBranchHead,
+	tempBranchName,
   )
 
   if (conflict) {
@@ -382,7 +396,6 @@ async function resolveDetachedSyncState(
         entries: cleanLocalEntries,
         message,
       })
-      await api.updateBranch(token, repoFullName, defaultBranchName, lastSyncCommit)
     }
     const lastSyncVersion = await applyGitSnapshotToProject({
       token,
@@ -425,7 +438,7 @@ async function resolveDetachedSyncState(
     message: '[Overleaf GitSync conflict resolution: restore last sync]',
   })
 
-  // H --- B --- GH
+  // default branch: --- H --- B --- GH
   const remoteChangesCommit = await createCommitFromEntries({
     token,
     repoFullName,
@@ -434,8 +447,8 @@ async function resolveDetachedSyncState(
     message: '[Overleaf GitSync conflict resolution: replay repo changes]',
   })
 
-	const tempBranchName = generateBranchName()
-  // H --- B --- OL
+  const tempBranchName = generateBranchName()
+  // temp branch: --- H --- B --- OL
   const olChangesCommit = await createCommitFromEntries({
     token,
     repoFullName,
@@ -445,15 +458,6 @@ async function resolveDetachedSyncState(
 	branch: tempBranchName,
   })
 
-  // default branch: --- H --- B --- GH
-  await api.updateBranch(
-    token,
-    repoFullName,
-    defaultBranchName,
-    remoteChangesCommit
-  )
-
-  // temp branch: --- H --- B --- OL
   // merge: default <- temp (GH <- OL)
   const { mergeCommit, conflict } = await mergeWithTempBranch(
     token,
@@ -664,6 +668,7 @@ async function exportChangesToGit({
   currentVersion,
   message,
   baseCommit,
+  branch,
 }) {
   const diff = await HistoryManager.getProjectFileTreeDiff(
     projectId,
@@ -724,6 +729,7 @@ async function exportChangesToGit({
     parentCommit: baseCommit,
     entries,
     message,
+	branch,
   })
 
   return newCommit

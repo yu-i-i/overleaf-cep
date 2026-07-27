@@ -280,7 +280,6 @@ async function exportProject(userId, projectId, repoOptions) {
   })
 
   const force = true
-  await api.updateBranch(token, repoFullName, defaultBranchName, initialCommit, force)
 
   return SyncStateManager.createProjectState(projectId, {
     mergeStatus: 'clean',
