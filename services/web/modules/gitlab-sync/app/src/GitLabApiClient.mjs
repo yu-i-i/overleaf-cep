@@ -29,6 +29,40 @@ const MAX_PER_PAGE = 100
 const REQUEST_TIMEOUT_MS = 60 * 1000
 const REQUEST_LONG_TIMEOUT_MS = 600 * 1000
 
+const MERGE_REQUEST_POLL_INTERVAL_MS = process.env.GITLAB_MERGE_REQUEST_POLL_INTERVAL_MS || 1000
+const MERGE_REQUEST_TIMEOUT_MS = process.env.GITLAB_MERGE_REQUEST_TIMEOUT_MS || 60_000
+
+const mergeRequestPendingStates = new Set([
+  'unchecked',
+  'checking',
+  'preparing',
+  'approvals_syncing',
+])
+
+const mergeRequestBlockingStates = new Set([
+  'conflict',
+  'ci_must_pass',
+  'ci_still_running',
+  'commits_status',
+  'discussions_not_resolved',
+  'draft_status',
+  'jira_association_missing',
+  'merge_request_blocked',
+  'merge_time',
+  'need_rebase',
+  'not_approved',
+  'not_open',
+  'requested_changes',
+  'security_policy_pipeline_check',
+  'security_policy_violations',
+  'status_checks_must_pass',
+  'locked_paths',
+  'locked_lfs_files',
+  'title_regex',
+])
+
+
+
 const maxConcurrency = process.env.GITLAB_API_MAX_CONCURRENCY || 5
 
 function buildHeaders(token) {
@@ -500,33 +534,44 @@ async function createMergeRequest(token, repoFullName, sourceBranch, targetBranc
   }, 'createMergeRequest')
 }
 
-async function waitForMergeRquestToBeReady(token, repoFullName, mergeRequestIid) {
-  const maxRetries = 5
-  const retryDelayMs = 1000
+async function waitForMergeRequestToBeReady(token, repoFullName, mergeRequestIid) {
+  const startedAt = Date.now()
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-	try {
-	  const mergeRequest = await fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequestIid}`, {
-		headers: buildHeaders(token),
-		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-	  }, 'getMergeRequest')
+  while (Date.now() - startedAt < MERGE_REQUEST_TIMEOUT_MS) {
+    const mergeRequest = await fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequestIid}`, {
+        headers: buildHeaders(token),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      }, 'getMergeRequest')
 
-	  if (mergeRequest.merge_status === 'cannot_be_merged') {
-		return false
-	  }
+    const status = mergeRequest.detailed_merge_status
 
-      if (mergeRequest.merge_status !== 'can_be_merged') {
-        await new Promise(resolve => setTimeout(resolve, retryDelayMs))
+    if (status === 'mergeable') {
+      return {
+        canMerge: true,
+		reason: status,
       }
-	  else
-		return true;
-	} catch (err) {
-	  if (attempt === maxRetries) throw err
-	  await new Promise(resolve => setTimeout(resolve, retryDelayMs))
-	}
+    }
+
+    if (mergeRequestPendingStates.has(status)) {
+      await new Promise(resolve => setTimeout(resolve, MERGE_REQUEST_POLL_INTERVAL_MS))
+      continue
+    }
+
+    if (mergeRequestBlockingStates.has(status)) {
+      return {
+        canMerge: false,
+        reason: status,
+      }
+    }
+
+    // Unknown future GitLab status, treat as unmergeable to be safe
+    return {
+      canMerge: false,
+      reason: `unknown_status:${status}`,
+    }
   }
 
-  return false;
+  throw new Error(`Timed out waiting for merge request ${mergeRequestIid} readiness`)
 }
 
 async function mergeOpenMergeRequest(token, repoFullName, mergeRequestIid) {
@@ -540,8 +585,10 @@ async function mergeOpenMergeRequest(token, repoFullName, mergeRequestIid) {
 function mergeBranch(token, repoFullName, base, head) {
   return createMergeRequest(token, repoFullName, head, base, `Merge ${head} into ${base}`)
     .then(async mergeRequest => {
-	  if (! await waitForMergeRquestToBeReady(token, repoFullName, mergeRequest.iid))
-		  throw new GitConflictError("Merge request cannot be merged due to conflicts")
+	  const ret = await waitForMergeRequestToBeReady(token, repoFullName, mergeRequest.iid)
+	  if (!ret.canMerge) {
+        throw new GitConflictError("Merge request cannot be merged due to conflicts, reason: " + ret.reason)
+     }
 
 	  await mergeOpenMergeRequest(token, repoFullName, mergeRequest.iid)
       return getBranchHead(token, repoFullName, base)
