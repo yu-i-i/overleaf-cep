@@ -1096,7 +1096,7 @@
   "gitlab_is_no_longer_connected": "GitLab is no longer connected to this project.",
   "gitlab_is_premium": "GitLab Sync is a premium feature",
   "gitlab_large_files_error": "Merge failed: your GitLab repository contains files over the 50mb file size limit ",
-  "gitlab_manual_merge_user_prompt": "Please manually merge the <0>__sharelatex_branch__</0> branch into the default branch in git. Click below to continue, after you have manually merged.",
+  "gitlab_manual_merge_user_prompt": "Please manually resolve the merge request associated with the branch <0>__sharelatex_branch__</0>. Click below to continue, after you have manually merged.",
   "gitlab_merge_failed_error": "Your changes in __appName__ and GitLab could not be automatically merged.",
   "gitlab_no_master_branch_error": "This repository cannot be imported as it is missing a default branch. Please make sure the project has a default branch",
   "gitlab_private_description": "You choose who can see and commit to this repository.",
