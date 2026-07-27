@@ -267,8 +267,8 @@ async function exportProject(userId, projectId, repoOptions) {
     currentPaths.paths.map((path) =>
       limit(async () => {
         const buffer = await HistoryManager.getProjectFileBuffer(projectId, currentVersion, path)
-        const sha = await api.uploadBlob(token, repoFullName, buffer)
-        return { path, sha }
+        const sha = "DON_T_DELETE" // sha needs to be present so that the file is not detected as a deletion
+        return { path, sha, content: buffer }
       })
     )
   )

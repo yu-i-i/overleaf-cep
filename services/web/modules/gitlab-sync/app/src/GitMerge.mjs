@@ -434,6 +434,7 @@ async function resolveDetachedSyncState(
     message: '[Overleaf GitSync conflict resolution: replay repo changes]',
   })
 
+	const tempBranchName = generateBranchName()
   // H --- B --- OL
   const olChangesCommit = await createCommitFromEntries({
     token,
@@ -441,6 +442,7 @@ async function resolveDetachedSyncState(
     parentCommit: baseCommit,
     entries: [...cleanLocalEntries, ...conflictLocalEntries],
     message,
+	branch: tempBranchName,
   })
 
   // default branch: --- H --- B --- GH
@@ -453,11 +455,11 @@ async function resolveDetachedSyncState(
 
   // temp branch: --- H --- B --- OL
   // merge: default <- temp (GH <- OL)
-  const { mergeCommit, tempBranchName, conflict } = await mergeWithTempBranch(
+  const { mergeCommit, conflict } = await mergeWithTempBranch(
     token,
     repoFullName,
     defaultBranchName,
-    olChangesCommit
+    tempBranchName
   )
 
   // auto-merge succeeded, conflicts in editable files were resolved?
@@ -569,6 +571,7 @@ async function buildDetachedSyncPlan({
     const remoteHash = remoteBlobMap[path] || null
 
     // currentVesion of the file is not known to git server, uploading blob
+	/*
     if (localHash && localHash !== baseHash && localHash !== remoteHash) {
       let buffer
       if (localSnapshot[path].data?.content) {
@@ -579,10 +582,9 @@ async function buildDetachedSyncPlan({
 	  // There is no uploadBlob functionality in the GitLab API, so the content needs to be provided as the file content in the commit
 	  // Currently the sha value is used as the content
       const sha = await api.uploadBlob(token, repoFullName, buffer)
-	  logger.info({ path, sha, localHash, baseHash, remoteHash }, 'Uploaded blob for file not known to git server')
-	  localHash = sha
       // assert sha !== localHash
     }
+	*/
 
     // OL == GH, do nothing
     if (localHash === remoteHash) continue
@@ -590,7 +592,7 @@ async function buildDetachedSyncPlan({
     if (baseHash === remoteHash) {
       // changed in OL
       hasChanges = true
-      cleanLocalEntries.push({ path, sha: localHash })
+      cleanLocalEntries.push({ path, sha: localHash, content: Buffer.from(localSnapshot[path]?.data?.content || '', 'utf8').toString('base64') })
       continue
     }
 
@@ -603,9 +605,9 @@ async function buildDetachedSyncPlan({
     hasChanges = true
     hasConflicts = true
 
-    conflictRemoteEntries.push({ path, sha: remoteHash })
-    conflictLocalEntries.push({ path, sha: localHash})
-    conflictBaseEntries.push({ path, sha: baseHash })
+    conflictRemoteEntries.push({ path, sha: remoteHash, content: await api.getBlobContent(token, repoFullName, remoteHash) })
+    conflictLocalEntries.push({ path, sha: localHash, content: Buffer.from(localSnapshot[path]?.data?.content || '', 'utf8').toString('base64') })
+    conflictBaseEntries.push({ path, sha: baseHash, content: Buffer.from(baseSnapshot[path]?.data?.content || '', 'utf8').toString('base64') })
   }
   return {
     cleanLocalEntries,
@@ -623,13 +625,15 @@ async function createCommitFromEntries({
   parentCommit,
   entries,
   message,
+  branch,
 }) {
   const baseTree = await api.getCommitTree(token, repoFullName, parentCommit)
   const newTree = await api.createTree(token, repoFullName, entries, baseTree)
   return api.createCommit(token, repoFullName, {
     tree: newTree,
-    parents: [parentCommit],
+    start_sha: parentCommit,
     message,
+	branch,
   })
 }
 
@@ -637,33 +641,16 @@ async function mergeWithTempBranch(
   token,
   repoFullName,
   branchName,
-  updateCommit
+  tempBranchName
 ) {
-  const tempBranchName = generateBranchName()
-
-  await api.createBranch(
-    token,
-    repoFullName,
-    tempBranchName,
-    updateCommit
-  )
-
   try {
-    const mergeCommit =
-      await api.mergeBranch(token, repoFullName, branchName, tempBranchName)
-
-	// The branch is auto deleted during merging
-    // try {
-    //   await api.deleteBranch(token, repoFullName, tempBranchName)
-    // } catch (err) {
-    //   logger.warn({ err, repoFullName, tempBranchName }, 'Delete temp branch failed')
-    // }
+    const mergeCommit = await api.mergeBranch(token, repoFullName, branchName, tempBranchName)
 
     return { conflict: false, mergeCommit }
 
   } catch (err) {
     if (err instanceof GitConflictError) {
-      return { conflict: true, tempBranchName }
+      return { conflict: true }
     }
     throw err
   }
@@ -722,13 +709,13 @@ async function exportChangesToGit({
     [...upsertPaths].map(path =>
       limit(async () => {
         const buffer = await HistoryManager.getProjectFileBuffer(projectId, currentVersion, path)
-        const sha = await api.uploadBlob(token, repoFullName, buffer)
-        return { path, sha }
+        const sha = "DON_T_DELETE" // sha needs to be present so that the file is not detected as a deletion
+        return { path, sha, content: buffer }
       })
     )
   )
 
-  const deleteEntries = [...deletePaths].map(path => ({ path, sha: null }))
+  const deleteEntries = [...deletePaths].map(path => ({ path, sha: null, content: null }))
   const entries = [...deleteEntries, ...upsertEntries]
 
   const newCommit = await createCommitFromEntries({

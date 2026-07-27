@@ -277,7 +277,7 @@ async function createRepo(token, { name, description, isPublic, org }) {
     visibility: isPublic ? 'public' : 'private',
     initialize_with_readme: false,
     default_branch: GITLAB_DEFAULT_BRANCH,
-    merge_method: 'ff',
+    merge_method: 'merge', // Use merge here to allow for conflict resolution to work properly without the need for a rebase
   }
 
   if (namespaceId != null) {
@@ -356,7 +356,7 @@ function createTree(token, repoFullName, entries, baseTree) {
     actions.push({
       action: existingPaths.has(entry.path) ? 'update' : 'create',
       file_path: entry.path,
-      content: entry.sha,
+      content: entry.content,
       encoding: 'base64',
     })
   }
@@ -367,57 +367,27 @@ function createTree(token, repoFullName, entries, baseTree) {
   })
 }
 
-function createCommit(token, repoFullName, { tree, message, parents = [], branch, startSha, force = false }) {
-  logger.info({ repoFullName, message, parents, branch, startSha, force }, 'Creating commit in GitLab repository')
+function createCommit(token, repoFullName, { tree, message, branch, start_sha, force = false }) {
+  logger.info({ repoFullName, message, branch, start_sha, force }, 'Creating commit in GitLab repository')
   const actions = Array.isArray(tree?.entries) ? tree.entries : []
+
+  let payload = {
+	branch: branch || GITLAB_DEFAULT_BRANCH,
+	commit_message: message,
+	actions,
+  }
+
+  if (branch && branch != GITLAB_DEFAULT_BRANCH) {
+	payload.start_sha = start_sha
+  }
 
   return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/commits`, {
     method: 'POST',
     headers: buildHeaders(token),
-    json: {
-      branch: branch || GITLAB_DEFAULT_BRANCH,
-      commit_message: message,
-      actions,
-    },
+    json: payload,
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'createCommit').then(r => r.id) // For GitLab id refers to the SHA of the created commit
 }
-
-// TODO: Fix this to align with gitlab
-// function createCommit(token, repoFullName, { tree, message, parents = [], branch, startSha, force = false }) {
-//   logger.info({ repoFullName, message, parents, branch, startSha, force }, 'Creating commit in GitLab repository')
-//   const actions = Array.isArray(tree?.entries) ? tree.entries : []
-//   const parentSha = startSha || parents[0] || null
-//   const targetBranch = branch || (parentSha ? `overleaf-commit-${Date.now()}-${Math.random().toString(16).slice(2)}` : GITLAB_DEFAULT_BRANCH)
-//   const payload = {
-//     branch: targetBranch,
-//     commit_message: message,
-//     actions,
-//   }
-
-//   if (parentSha) {
-//     payload.start_sha = parentSha
-//   }
-//   if (force) {
-//     payload.force = true
-//   }
-
-//   return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/commits`, {
-//     method: 'POST',
-//     headers: buildHeaders(token),
-//     json: payload,
-//     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-//   }, 'createCommit').then(async r => {
-//     if (!branch && parentSha) {
-//       try {
-//         await deleteBranch(token, repoFullName, targetBranch)
-//       } catch (err) {
-//         logger.warn({ err, repoFullName, targetBranch }, 'Delete temporary commit branch failed')
-//       }
-//     }
-//     return r.id
-//   })
-// }
 
 function getCommitTree(token, repoFullName, commit) {
   return listBlobsAtCommit(token, repoFullName, commit)
@@ -442,6 +412,20 @@ async function listBlobsAtCommit(token, repoFullName, commit) {
       mode: entry.mode,
       type: 'blob',
     }))
+}
+
+async function getBlobContent(token, repoFullName, sha) {
+  const url = `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/blobs/${sha}`
+
+  try {
+	const json = await fetchGitLabJson(url, {
+	  headers: buildHeaders(token),
+	  signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS)
+	}, 'getBlobContent')
+	return json.content
+  } catch (err) {
+    throw OError.tag(err, 'Failed to fetch blob content from GitLab', { repoFullName, sha })
+  }
 }
 
 async function listNewCommitsWithStatus(token, fullName, branchName, fromCommit) {
@@ -527,6 +511,10 @@ async function waitForMergeRquestToBeReady(token, repoFullName, mergeRequestIid)
 		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
 	  }, 'getMergeRequest')
 
+	  if (mergeRequest.merge_status === 'cannot_be_merged') {
+		return false
+	  }
+
       if (mergeRequest.merge_status !== 'can_be_merged') {
         await new Promise(resolve => setTimeout(resolve, retryDelayMs))
       }
@@ -552,8 +540,10 @@ async function mergeOpenMergeRequest(token, repoFullName, mergeRequestIid) {
 function mergeBranch(token, repoFullName, base, head) {
   return createMergeRequest(token, repoFullName, head, base, `Merge ${head} into ${base}`)
     .then(async mergeRequest => {
-	  await waitForMergeRquestToBeReady(token, repoFullName, mergeRequest.iid)
-      await mergeOpenMergeRequest(token, repoFullName, mergeRequest.iid)
+	  if (! await waitForMergeRquestToBeReady(token, repoFullName, mergeRequest.iid))
+		  throw new GitConflictError("Merge request cannot be merged due to conflicts")
+
+	  await mergeOpenMergeRequest(token, repoFullName, mergeRequest.iid)
       return getBranchHead(token, repoFullName, base)
     })
 }
@@ -594,6 +584,7 @@ export default {
   createCommit,
   getCommitTree,
   listBlobsAtCommit,
+  getBlobContent,
   listNewCommitsWithStatus,
   getBranchHead,
   createBranch,
