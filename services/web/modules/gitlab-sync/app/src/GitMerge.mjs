@@ -574,22 +574,6 @@ async function buildDetachedSyncPlan({
     const localHash = getEntryHash(localSnapshot[path])
     const remoteHash = remoteBlobMap[path] || null
 
-    // currentVesion of the file is not known to git server, uploading blob
-	/*
-    if (localHash && localHash !== baseHash && localHash !== remoteHash) {
-      let buffer
-      if (localSnapshot[path].data?.content) {
-        buffer = Buffer.from(localSnapshot[path].data.content, 'utf8').toString('base64')
-      } else {
-        buffer = await HistoryManager.getProjectFileBuffer(projectId, currentVersion, path)
-      }
-	  // There is no uploadBlob functionality in the GitLab API, so the content needs to be provided as the file content in the commit
-	  // Currently the sha value is used as the content
-      const sha = await api.uploadBlob(token, repoFullName, buffer)
-      // assert sha !== localHash
-    }
-	*/
-
     // OL == GH, do nothing
     if (localHash === remoteHash) continue
 

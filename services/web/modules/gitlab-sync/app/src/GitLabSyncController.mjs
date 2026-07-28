@@ -126,8 +126,7 @@ async function oauth2Callback(req, res) {
     const info = OError.getFullInfo(err)
 	const err_body = err.body
     logger.error(OError.getFullStack(err))
-    logger.error({ info, userId }, 'Failed to obtain access token from Git server')
-	logger.error({err_body}, "Error body")
+    logger.error({ info, err_body, userId }, 'Failed to obtain access token from Git server')
     HttpErrorHandler.badRequest(req, res, err.message || 'Bad request')
     return
   }

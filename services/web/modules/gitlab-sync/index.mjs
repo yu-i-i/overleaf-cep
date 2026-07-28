@@ -6,9 +6,6 @@ let GitLabSyncModule = {}
 if (process.env.GITLAB_SYNC_ENABLED?.toLowerCase() === 'true') {
   logger.debug({}, 'Enabling GitLab Sync module')
 
-  logger.info({}, 'GitLab Sync module is enabled, checking for GITLAB_SYNC_URL variable')
-  logger.info({ GITLAB_SYNC_URL: process.env.GITLAB_SYNC_URL }, 'GitLab Sync module is enabled, GITLAB_SYNC_URL variable is set')
-
   // The GITLAB_URL variable has to be set for this module to work, otherwise the module will not be enabled
   if (process.env.GITLAB_SYNC_URL === undefined || process.env.GITLAB_SYNC_URL === '') {
     logger.warn({}, 'GitLab Sync module is enabled but GITLAB_SYNC_URL is not set, stopping module initialization')

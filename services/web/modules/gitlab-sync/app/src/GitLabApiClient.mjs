@@ -116,9 +116,7 @@ function normalizeGitLabError(err, operation) {
 
   if (status === 401) {
     const json_body = JSON.parse(err.body) || {}
-	logger.info({json_body}, "status=401")
     if (json_body && json_body.error && json_body.error.toLowerCase() === 'invalid_token') {
-		logger.info("Throwing token expired exception")
       throw new ExpiredTokenError('Token expired', { status }, err)
     }
 
@@ -149,14 +147,12 @@ function normalizeGitLabError(err, operation) {
 
 // wrappers
 function fetchGitLabJson(url, options, operation) {
-  logger.info({ url, options, operation }, 'fetchGitLabJson called')
   return fetchJson(url, options).catch(err => {
     normalizeGitLabError(err, operation)
   })
 }
 
 function fetchGitLabJsonWithResponse(url, options, operation) {
-	logger.info({ url, options, operation }, 'fetchGitLabJsonWithResponse called')
   return fetchJsonWithResponse(url, options).catch(err => {
     normalizeGitLabError(err, operation)
   })
@@ -402,7 +398,6 @@ function createTree(token, repoFullName, entries, baseTree) {
 }
 
 function createCommit(token, repoFullName, { tree, message, branch, start_sha, force = false }) {
-  logger.info({ repoFullName, message, branch, start_sha, force }, 'Creating commit in GitLab repository')
   const actions = Array.isArray(tree?.entries) ? tree.entries : []
 
   let payload = {
