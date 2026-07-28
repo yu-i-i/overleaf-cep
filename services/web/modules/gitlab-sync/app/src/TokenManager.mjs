@@ -43,7 +43,7 @@ async function saveUserToken(userId, accessToken) {
 async function removeUserToken(userId) {
   let token
   try {
-    const token = await getUserToken(userId)
+    token = await getUserToken(userId)
   } catch (err) {
     logger.warn({ err, userId }, 'failed to get user token')
   }
