@@ -198,7 +198,7 @@ function ImportFromGitLabModalContent({ handleHide }: { handleHide: () => void }
         {!isImporting && (
         <span className="me-auto">
           <a
-            href="https://help.github.com/en/articles/requesting-organization-approval-for-oauth-apps"
+            href="https://docs.gitlab.com/administration/settings/account_and_limit_settings/"
             target="_blank"
             rel="noopener noreferrer"
           >
