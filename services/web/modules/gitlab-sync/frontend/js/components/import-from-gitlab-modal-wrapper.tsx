@@ -61,20 +61,7 @@ function ImportFromGitLabModalContent({ handleHide }: { handleHide: () => void }
     }
   }, [handleHide, isImported])
 
-  type GitLabUrlResponse = {
-    gitLabUrl: string;
-  };
-
-  const gitLabUrlAsync = useAsync<GitLabUrlResponse>();
-  const { runAsync: runGitLabUrl } = gitLabUrlAsync;
-
-  useEffect(() => {
-	runGitLabUrl(getJSON('/user/gitlab-sync/url'))
-	  .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
-  }, [])
-
-  let gitlabUrl = gitLabUrlAsync.data?.gitLabUrl || ""
-  // Remove the trailing slash from the gitlabUrl if it exists
+  let gitlabUrl = getMeta('ol-ExposedSettings').gitlabUrl || ''
   gitlabUrl = gitlabUrl.endsWith('/') ? gitlabUrl.slice(0, -1) : gitlabUrl
 
   const showLinkToGitLab = !isImporting && isSuccess && !reposExist

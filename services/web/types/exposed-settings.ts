@@ -56,4 +56,5 @@ export type ExposedSettings = {
   gitlabSyncEnabled: boolean
   zoteroEnabled: boolean
   enablePandocConversions: boolean
+  gitlabUrl: string
 }

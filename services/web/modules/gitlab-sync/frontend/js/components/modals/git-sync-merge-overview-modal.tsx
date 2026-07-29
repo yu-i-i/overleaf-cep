@@ -13,6 +13,7 @@ import OLIconButton from '@/shared/components/ol/ol-icon-button'
 import OLNotification from '@/shared/components/ol/ol-notification'
 import { debugConsole } from '@/utils/debugging'
 import { ProjectSyncState, GitSyncModalStatus } from '../../types/git-sync-types'
+import getMeta from '@/utils/meta'
 
 type GitSyncMergeOverviewModalProps = {
   handleHide: () => void
@@ -78,21 +79,7 @@ const GitSyncMergeOverviewModal = ({
     loadUnmergedCommits()
   }, [projectId, runAsync])
 
-
-  type GitLabUrlResponse = {
-    gitLabUrl: string;
-  };
-
-  const gitLabUrlAsync = useAsync<GitLabUrlResponse>();
-  const { runAsync: runGitLabUrl } = gitLabUrlAsync;
-
-  useEffect(() => {
-	runGitLabUrl(getJSON('/user/gitlab-sync/url'))
-	  .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
-  }, [])
-
-  let gitlabUrl = gitLabUrlAsync.data?.gitLabUrl || ""
-  // Remove the trailing slash from the gitlabUrl if it exists
+  let gitlabUrl = getMeta('ol-ExposedSettings').gitlabUrl || ''
   gitlabUrl = gitlabUrl.endsWith('/') ? gitlabUrl.slice(0, -1) : gitlabUrl
 
   return (

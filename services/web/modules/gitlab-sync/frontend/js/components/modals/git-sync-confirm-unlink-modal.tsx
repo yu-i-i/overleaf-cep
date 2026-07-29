@@ -1,11 +1,12 @@
 import { useTranslation, Trans } from 'react-i18next'
 import useAsync from '@/shared/hooks/use-async'
-import { deleteJSON, getJSON } from '@/infrastructure/fetch-json'
+import { deleteJSON } from '@/infrastructure/fetch-json'
 import { OLModalBody, OLModalFooter } from '@/shared/components/ol/ol-modal'
 import OLButton from '@/shared/components/ol/ol-button'
 import OLNotification from '@/shared/components/ol/ol-notification'
 import { debugConsole } from '@/utils/debugging'
 import { ProjectSyncState, GitSyncModalStatus } from '../../types/git-sync-types'
+import getMeta from '@/utils/meta'
 
 type GitSyncUnlinkModalProps = {
   handleHide: () => void
@@ -34,23 +35,9 @@ const GitSyncUnlinkModal = ({
       .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
   }
 
-
-  type GitLabUrlResponse = {
-    gitLabUrl: string;
-  };
-
-  const gitLabUrlAsync = useAsync<GitLabUrlResponse>();
-  const { runAsync: runGitLabUrl } = gitLabUrlAsync;
-
-  useEffect(() => {
-	runGitLabUrl(getJSON('/user/gitlab-sync/url'))
-	  .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
-  }, [])
-
-  let gitlabUrl = gitLabUrlAsync.data?.gitLabUrl || ""
-  // Remove the trailing slash from the gitlabUrl if it exists
+  let gitlabUrl = getMeta('ol-ExposedSettings').gitlabUrl || ''
   gitlabUrl = gitlabUrl.endsWith('/') ? gitlabUrl.slice(0, -1) : gitlabUrl
-
+  
   return (
     <>
       <OLModalBody>
