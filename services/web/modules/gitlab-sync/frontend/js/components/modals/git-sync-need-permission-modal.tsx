@@ -1,4 +1,6 @@
 import { useTranslation, Trans } from 'react-i18next'
+import useAsync from '@/shared/hooks/use-async'
+import { getJSON } from '@/infrastructure/fetch-json'
 import OLNotification from '@/shared/components/ol/ol-notification'
 import {
   OLModalBody,
@@ -6,6 +8,7 @@ import {
 } from '@/shared/components/ol/ol-modal'
 import OLButton from '@/shared/components/ol/ol-button'
 import { ProjectSyncState } from '../../types/git-sync-types'
+import { debugConsole } from '@/utils/debugging'
 
 type GitSyncNeedPermissionModalProps = {
   projectSyncState: ProjectSyncState
@@ -14,6 +17,23 @@ type GitSyncNeedPermissionModalProps = {
 
 const GitSyncNeedPermissionModal = ({ projectSyncState, handleHide }: GitSyncConflictModalProps) => {
   const { t } = useTranslation()
+
+  type GitLabUrlResponse = {
+    gitLabUrl: string;
+  };
+
+  const gitLabUrlAsync = useAsync<GitLabUrlResponse>();
+  const { runAsync: runGitLabUrl } = gitLabUrlAsync;
+
+  useEffect(() => {
+	runGitLabUrl(getJSON('/user/gitlab-sync/url'))
+	  .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
+  }, [])
+
+  let gitlabUrl = gitLabUrlAsync.data?.gitLabUrl || ""
+  // Remove the trailing slash from the gitlabUrl if it exists
+  gitlabUrl = gitlabUrl.endsWith('/') ? gitlabUrl.slice(0, -1) : gitlabUrl
+
   return (
     <>
       <OLModalBody>
@@ -29,7 +49,7 @@ const GitSyncNeedPermissionModal = ({ projectSyncState, handleHide }: GitSyncCon
               components={[
                 projectSyncState.repoFullName ? (
                   <a
-                    href={`https://github.com/${projectSyncState.repoFullName}`}
+                    href={`${gitlabUrl}/${projectSyncState.repoFullName}`}
                     target="_blank"
                     rel="noreferrer noopener"
                   />

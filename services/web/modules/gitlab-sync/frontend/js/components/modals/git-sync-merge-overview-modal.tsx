@@ -78,13 +78,30 @@ const GitSyncMergeOverviewModal = ({
     loadUnmergedCommits()
   }, [projectId, runAsync])
 
+
+  type GitLabUrlResponse = {
+    gitLabUrl: string;
+  };
+
+  const gitLabUrlAsync = useAsync<GitLabUrlResponse>();
+  const { runAsync: runGitLabUrl } = gitLabUrlAsync;
+
+  useEffect(() => {
+	runGitLabUrl(getJSON('/user/gitlab-sync/url'))
+	  .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
+  }, [])
+
+  let gitlabUrl = gitLabUrlAsync.data?.gitLabUrl || ""
+  // Remove the trailing slash from the gitlabUrl if it exists
+  gitlabUrl = gitlabUrl.endsWith('/') ? gitlabUrl.slice(0, -1) : gitlabUrl
+
   return (
     <>
       <OLModalBody>
         <p>
           {t('project_linked_to')}:&nbsp;
           <a
-            href={`https://gitlab.com/${projectSyncState.repoFullName}`}
+            href={`${gitlabUrl}/${projectSyncState.repoFullName}`}
             target="_blank"
             rel="noreferrer noopener"
           >
@@ -140,7 +157,7 @@ const GitSyncMergeOverviewModal = ({
                   <div key={commit.sha}>
                     <span className="small float-end">
                       <a
-                        href={`https://gitlab.com/${projectSyncState.repoFullName}/commit/${commit.sha}`}
+                        href={`${gitlabUrl}/${projectSyncState.repoFullName}/-/commit/${commit.sha}`}
                         target="_blank"
                         rel="noreferrer noopener"
                       >
@@ -149,7 +166,7 @@ const GitSyncMergeOverviewModal = ({
                     </span>
 
                     <a
-                      href={`https://gitlab.com/${projectSyncState.repoFullName}/commit/${commit.sha}`}
+                      href={`${gitlabUrl}/${projectSyncState.repoFullName}/-/commit/${commit.sha}`}
                       target="_blank"
                       className="commit-message"
                       rel="noreferrer noopener"

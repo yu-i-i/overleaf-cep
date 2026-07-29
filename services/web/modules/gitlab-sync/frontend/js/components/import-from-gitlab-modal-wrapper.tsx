@@ -61,6 +61,22 @@ function ImportFromGitLabModalContent({ handleHide }: { handleHide: () => void }
     }
   }, [handleHide, isImported])
 
+  type GitLabUrlResponse = {
+    gitLabUrl: string;
+  };
+
+  const gitLabUrlAsync = useAsync<GitLabUrlResponse>();
+  const { runAsync: runGitLabUrl } = gitLabUrlAsync;
+
+  useEffect(() => {
+	runGitLabUrl(getJSON('/user/gitlab-sync/url'))
+	  .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
+  }, [])
+
+  let gitlabUrl = gitLabUrlAsync.data?.gitLabUrl || ""
+  // Remove the trailing slash from the gitlabUrl if it exists
+  gitlabUrl = gitlabUrl.endsWith('/') ? gitlabUrl.slice(0, -1) : gitlabUrl
+
   const showLinkToGitLab = !isImporting && isSuccess && !reposExist
   const showRepos = !isImporting && isSuccess && reposExist
 
@@ -141,7 +157,7 @@ function ImportFromGitLabModalContent({ handleHide }: { handleHide: () => void }
                             {repo.name}
                             <div className="small">
                               <a
-                                href={`https://github.com/${repo.fullName}`}
+                                href={`${gitlabUrl}/${repo.fullName}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
