@@ -65,19 +65,6 @@ async function listUserRepos(req, res) {
   }
 }
 
-async function getGitLabUrl(req, res) {
-  try {
-	const gitLabUrl = process.env.GITLAB_SYNC_URL
-	res.json({ gitLabUrl })
-  } catch (err) {
-	const info = OError.getFullInfo(err)
-	const errStatus  = info?.status || 500
-	logger.error(OError.getFullStack(err))
-	logger.error({ info }, 'Failed to get GitLab URL')
-	return res.status(errStatus).json({ message: err.message })
-  }
-}
-
 async function getMergeOverview(req, res) {
   const { project_id: projectId } = req.params
   const userId = SessionManager.getLoggedInUserId(req.session)
@@ -244,7 +231,6 @@ export default {
   oauth2: expressify(oauth2),
   unlink: expressify(unlink),
   getUserAndOrgs: expressify(getUserAndOrgs),
-  getGitLabUrl: expressify(getGitLabUrl),
   oauth2Callback: expressify(oauth2Callback),
   listUserRepos: expressify(listUserRepos),
   importRepo: expressify(importRepo),

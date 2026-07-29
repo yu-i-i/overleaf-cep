@@ -49,12 +49,6 @@ export default {
       GitLabSyncController.listUserRepos
     )
 
-    // get the URL of the gitlab server
-    webRouter.get(
-      '/user/gitlab-sync/url',
-	  AuthenticationController.requireLogin(),
-	  GitLabSyncController.getGitLabUrl
-    )
     // create a new project from git server repo
     webRouter.post(
       '/project/new/gitlab-sync',
