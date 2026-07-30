@@ -157,7 +157,7 @@ async function resolveCleanSyncState(
 
 	  if (defaultBranchHead === projectSyncState.lastSyncCommit) {
           const lastSyncCommit = olBranchHead
-          const lastSyncVersion = await applyGitSnappshotToProject({
+		  const lastSyncVersion = await applyGitSnapshotToProject({
             token,
             userId,
             projectId,
