@@ -16,6 +16,7 @@ const trackChangesModuleAvailable =
  * @property {Object | undefined}  apis.linkedUrlProxy
  * @property {string | undefined}  apis.linkedUrlProxy.url
  * @property {boolean | undefined} enableGithubSync
+ * @property {boolean | undefined} enableGitLabSync
  * @property {boolean | undefined} enableGitBridge
  * @property {boolean | undefined} enableHomepage
  * @property {boolean | undefined} enableSaml
@@ -61,6 +62,8 @@ const Features = {
         return Boolean(Settings.disableLinkSharing) === false
       case 'github-sync':
         return Boolean(Settings.enableGithubSync)
+      case 'gitlab-sync':
+        return Boolean(Settings.enableGitLabSync)
       case 'git-bridge':
         return Boolean(Settings.enableGitBridge)
       case 'oauth':

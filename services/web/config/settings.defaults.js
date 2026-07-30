@@ -1086,6 +1086,10 @@ module.exports = {
         __dirname,
         '../modules/github-sync/frontend/js/components/github-sync-widget.tsx'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/gitlab-sync/frontend/js/components/gitlab-sync-widget.tsx'
+      ),
     ],
     referenceLinkingWidgets: [
       Path.resolve(
@@ -1103,6 +1107,18 @@ module.exports = {
       Path.resolve(
         __dirname,
         '../modules/github-sync/frontend/js/components/import-from-github-menu.tsx'
+      ),
+    ],
+    importProjectFromGitLabModalWrapper: [
+      Path.resolve(
+        __dirname,
+        '../modules/gitlab-sync/frontend/js/components/import-from-gitlab-modal-wrapper.tsx'
+      ),
+    ],
+    importProjectFromGitLabMenu: [
+      Path.resolve(
+        __dirname,
+        '../modules/gitlab-sync/frontend/js/components/import-from-gitlab-menu.tsx'
       ),
     ],
     editorLeftMenuSync: [],
@@ -1179,6 +1195,10 @@ module.exports = {
       ),
       Path.resolve(
         __dirname,
+        '../modules/gitlab-sync/frontend/js/components/gitlab-integration-card.tsx'
+      ),
+      Path.resolve(
+        __dirname,
         '../modules/git-bridge/frontend/js/card/components/git-integration-card.tsx'
       ),
       Path.resolve(
@@ -1219,6 +1239,7 @@ module.exports = {
     'template-gallery',
     'git-bridge',
     'github-sync',
+    'gitlab-sync',
     'zotero',
     'bib-editor',
   ],

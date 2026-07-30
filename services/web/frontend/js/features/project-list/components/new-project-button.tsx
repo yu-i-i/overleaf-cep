@@ -58,7 +58,7 @@ function NewProjectButton({
   align = 'start',
 }: NewProjectButtonProps) {
   const { t } = useTranslation()
-  const { templateLinks, githubSyncEnabled } = getMeta('ol-ExposedSettings')
+  const { templateLinks, githubSyncEnabled, gitlabSyncEnabled } = getMeta('ol-ExposedSettings')
   const [modal, setModal] =
     useState<Nullable<NewProjectButtonModalVariant>>(null)
   const portalTemplates = getMeta('ol-portalTemplates') || []
@@ -167,10 +167,18 @@ function NewProjectButton({
   const [importProjectFromGithubMenu] = !githubSyncEnabled ? [] : importOverleafModules(
     'importProjectFromGithubMenu'
   )
+  
+  const [importProjectFromGitLabMenu] = !gitlabSyncEnabled ? [] : importOverleafModules(
+    'importProjectFromGitLabMenu'
+  )
 
   const ImportProjectFromGithubMenu: JSXElementConstructor<{
     onClick: (e: React.MouseEvent) => void
   }> = importProjectFromGithubMenu?.import.default
+
+  const ImportProjectFromGitLabMenu: JSXElementConstructor<{
+	onClick: (e: React.MouseEvent) => void
+  }> = importProjectFromGitLabMenu?.import.default
 
   return (
     <>
@@ -254,6 +262,18 @@ function NewProjectButton({
                     handleModalMenuClick(e, {
                       modalVariant: 'import_from_github',
                       dropdownMenuEvent: 'import-from-github',
+                    })
+                  }
+                />
+              </li>
+            )}
+            {ImportProjectFromGitLabMenu && (
+              <li role="none">
+                <ImportProjectFromGitLabMenu
+                  onClick={e =>
+                    handleModalMenuClick(e, {
+                      modalVariant: 'import_from_gitlab',
+                      dropdownMenuEvent: 'import-from-gitlab',
                     })
                   }
                 />
