@@ -14,51 +14,7 @@ import api from './GitLabApiClient.mjs'
 import SyncStateManager from './SyncStateManager.mjs'
 import HistoryManager from './HistoryManager.mjs'
 import TokenManager from './TokenManager.mjs'
-import { InvalidTokenError, ExpiredTokenError, NotFoundError } from './GitSyncErrors.mjs'
-
-async function refreshGitToken(userId) {
-	logger.info({ userId }, 'token expired, trying to refresh')
-
-	const tokens = await TokenManager.getUserToken(userId)
-	let { token, refresh_token } = tokens
-
-	if (!tokens) {
-		logger.error("tokens invalid")
-		return false;
-	}
-
-	if (!refresh_token) {
-		logger.error("refresh_token invalid")
-		return false
-	}
-
-	try {
-		[token, refresh_token] = await api.refreshToken(refresh_token)
-		if (!token || !refresh_token) {
-			HttpErrorHandler.badRequest(req, res, 'Failed to refresh access token')
-			return false
-		}
-	} catch (err) {
-		const info = OError.getFullInfo(err)
-		logger.error(OError.getFullStack(err))
-		logger.error({ info, userId }, 'Failed to refresh access token')
-		HttpErrorHandler.badRequest(req, res, err.message || 'Bad request')
-		return false
-	}
-
-	try {
-		await TokenManager.saveUserToken(userId, { token, refresh_token })
-	} catch (err) {
-		const info = OError.getFullInfo(err)
-		const errStatus = info?.status || 500
-		logger.error(OError.getFullStack(err))
-		logger.error({ info, userId }, 'Error saving user token')
-		HttpErrorHandler.handleErrorByStatusCode(req, res, err, errStatus)
-		return false
-	}
-
-	return true
-}
+import { InvalidTokenError, NotFoundError } from './GitSyncErrors.mjs'
 
 async function getGitConnState(userId) {
   try {
@@ -72,9 +28,6 @@ async function getGitConnState(userId) {
     if (err instanceof InvalidTokenError) {
       logger.debug( { err, userId }, 'token invalid, treating as not connected')
       return false
-	} else if (err instanceof ExpiredTokenError) {
-		logger.info("Token has expired")
-		return await refreshGitToken(userId)
 	}
     throw OError.tag(err, 'failed to validate token', { userId })
   }

@@ -189,6 +189,10 @@ async function fetchAllPages(url, options, operation) {
   return all
 }
 
+function getTokenRefreshTimestamp(token, safetyMarginInSec = 300) {
+	return token.created_at + token.expires_in - safetyMarginInSec;
+}
+
 // ---------------------- exports ------------------------------- //
 
 // OAuth
@@ -213,7 +217,7 @@ function exchangeCodeForToken(code) {
       redirect_uri: Settings.gitlabSync.callbackURL,
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-  }, 'exchangeCodeForToken').then(r => [r.access_token, r.refresh_token] )
+  }, 'exchangeCodeForToken').then(r => [r.access_token, r.refresh_token, getTokenRefreshTimestamp(r)] )
 }
 
 function refreshToken(refreshToken) {
@@ -228,7 +232,7 @@ function refreshToken(refreshToken) {
 			redirect_uri: Settings.gitlabSync.callbackURL,
 		},
 		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-	}, 'refreshToken').then(r => [r.access_token, r.refresh_token])
+	}, 'refreshToken').then(r => [r.access_token, r.refresh_token, getTokenRefreshTimestamp(r)])
 }
 
 function revokeToken(token) {
