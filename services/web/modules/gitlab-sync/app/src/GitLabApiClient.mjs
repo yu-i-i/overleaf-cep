@@ -21,16 +21,16 @@ import {
   AlreadyExistsError,
 } from './GitSyncErrors.mjs'
 
-const GITLAB_URL = process.env.GITLAB_SYNC_URL
+const GITLAB_URL = Settings.gitlabSync?.url
 const GITLAB_API_BASE = `${GITLAB_URL}/api/v4`
-const GITLAB_DEFAULT_BRANCH = process.env.GITLAB_DEFAULT_BRANCH || 'main'
+const GITLAB_DEFAULT_BRANCH = Settings.gitlabSync?.defaultBranch
 const MAX_PER_PAGE = 100
 
 const REQUEST_TIMEOUT_MS = 60 * 1000
 const REQUEST_LONG_TIMEOUT_MS = 600 * 1000
 
-const MERGE_REQUEST_POLL_INTERVAL_MS = process.env.GITLAB_MERGE_REQUEST_POLL_INTERVAL_MS || 1000
-const MERGE_REQUEST_TIMEOUT_MS = process.env.GITLAB_MERGE_REQUEST_TIMEOUT_MS || 60_000
+const MERGE_REQUEST_POLL_INTERVAL_MS = Settings.gitlabSync?.mergeRequestPollInterval
+const MERGE_REQUEST_TIMEOUT_MS = Settings.gitlabSync?.mergeRequestTimeout
 
 const mergeRequestPendingStates = new Set([
   'unchecked',
