@@ -4,6 +4,7 @@ import Mongo from '../../../../app/src/Features/Helpers/Mongo.mjs'
 import { GitLabSyncUserCredentials } from '../models/gitlabSyncUserCredentials.mjs'
 import { AccessTokenEncryptor } from './AccessTokenEncryptorHelper.mjs'
 import { InvalidTokenError } from './GitSyncErrors.mjs'
+import api from './GitLabApiClient.mjs'
 
 const { normalizeQuery } = Mongo
 
@@ -49,7 +50,7 @@ async function removeUserToken(userId) {
   }
   // fire-and-forget, but still handle errors
   if (token) {
-    GitLabApiClient.revokeToken(token).catch(err => {
+      api.revokeToken(token).catch(err => {
       logger.warn({ err, userId }, 'failed to revoke user token')
     })
   }
