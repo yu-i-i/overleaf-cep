@@ -9,6 +9,7 @@ function Origin({ origin }: Pick<LoadedUpdate['meta'], 'origin'>) {
   if (origin?.kind === 'upload') result = t('history_entry_origin_upload')
   if (origin?.kind === 'git-bridge') result = t('history_entry_origin_git')
   if (origin?.kind === 'github') result = t('history_entry_origin_github')
+  if (origin?.kind === 'gitlab') result = t('history_entry_origin_gitlab')
 
   if (result) {
     return <span className="history-version-origin">({result})</span>
