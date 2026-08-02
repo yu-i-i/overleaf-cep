@@ -123,9 +123,9 @@ async function resolveCleanSyncState(
     return null
   }
 
-  try
-  {
-      // Possible changes in OL
+  // Possible changes in OL
+  if (defaultBranchHead === projectSyncState.lastSyncCommit) {
+    try {
       const olBranchHead =
         await exportChangesToGit({
           token,
@@ -135,55 +135,41 @@ async function resolveCleanSyncState(
           currentVersion,
           message,
           baseCommit: projectSyncState.lastSyncCommit,
+          defaultBranchName,
         })
-
-		if (!olBranchHead) {
-        if ( defaultBranchHead === projectSyncState.lastSyncCommit) {
-          await SyncStateManager.updateProjectState(projectId, { lastSyncVersion: currentVersion })
-          return null
-        }
-
-		const lastSyncCommit = defaultBranchHead
-        const lastSyncVersion = await applyGitSnapshotToProject({
-          token,
-          userId,
-          projectId,
-          repoFullName,
-          lastSyncCommit,
-        })
-        await SyncStateManager.updateProjectState(projectId, { lastSyncVersion, lastSyncCommit })
+      if (!olBranchHead) { // no real canges in OL, but currentVersion is ahead
+        await SyncStateManager.updateProjectState(projectId, { lastSyncVersion: currentVersion })
         return null
       }
+      const lastSyncCommit = olBranchHead
+      const lastSyncVersion = await applyGitSnapshotToProject({
+        token,
+        userId,
+        projectId,
+        repoFullName,
+        lastSyncCommit,
+      })
 
-	  if (defaultBranchHead === projectSyncState.lastSyncCommit) {
-          const lastSyncCommit = olBranchHead
-		  const lastSyncVersion = await applyGitSnapshotToProject({
-            token,
-            userId,
-            projectId,
-            repoFullName,
-            lastSyncCommit,
-          })
-          await SyncStateManager.updateProjectState(projectId, { lastSyncVersion, lastSyncCommit })
-      }
-	}
-	catch (err) {
-		logger.error({ err, projectId }, 'Error during clean sync state resolution, fallback to merge')
-	}
+      await SyncStateManager.updateProjectState(projectId, { lastSyncVersion, lastSyncCommit })
+      return null
+    } catch (err) {
+      logger.error({ err, projectId }, 'Error during clean sync state resolution, fallback to merge')
+    }
+  }
 
-  // Normal commit failed, fallback to merge, first create a temporary branch with OL changes
+  // Git head is ahead of last known sync commit, create a temporary branch with OL changes and perform a merge with the default branch
   const tempBranchName = generateBranchName()
   const olBranchHead =
-        await exportChangesToGit({
-          token,
-          projectId,
-          repoFullName,
-          lastSyncVersion: projectSyncState.lastSyncVersion,
-          currentVersion,
-          message,
-          baseCommit: projectSyncState.lastSyncCommit,
-		  branch: tempBranchName,
-        })
+    await exportChangesToGit({
+      token,
+      projectId,
+      repoFullName,
+      lastSyncVersion: projectSyncState.lastSyncVersion,
+      currentVersion,
+      message,
+      baseCommit: projectSyncState.lastSyncCommit,
+      branch: tempBranchName,
+    })
 
   // Merge the temporary branch into the default branch
   const { mergeCommit, conflict } = await mergeWithTempBranch(
@@ -293,7 +279,7 @@ async function resolveConflictSyncState(
     repoFullName,
     defaultBranchName,
     newOlBranchHead,
-	tempBranchName,
+    tempBranchName,
   )
 
   if (conflict) {
@@ -455,7 +441,7 @@ async function resolveDetachedSyncState(
     parentCommit: baseCommit,
     entries: [...cleanLocalEntries, ...conflictLocalEntries],
     message,
-	branch: tempBranchName,
+    branch: tempBranchName,
   })
 
   // merge: default <- temp (GH <- OL)
@@ -621,7 +607,7 @@ async function createCommitFromEntries({
     tree: newTree,
     start_sha: parentCommit,
     message,
-	branch,
+    branch,
   })
 }
 
@@ -632,7 +618,8 @@ async function mergeWithTempBranch(
   tempBranchName
 ) {
   try {
-    const mergeCommit = await api.mergeBranch(token, repoFullName, branchName, tempBranchName)
+    const mergeCommit =
+       await api.mergeBranch(token, repoFullName, branchName, tempBranchName)
 
     return { conflict: false, mergeCommit }
 
@@ -713,7 +700,7 @@ async function exportChangesToGit({
     parentCommit: baseCommit,
     entries,
     message,
-	branch,
+    branch,
   })
 
   return newCommit
