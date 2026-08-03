@@ -27,7 +27,7 @@ async function getGitConnState(userId) {
     if (err instanceof InvalidTokenError) {
       logger.debug( { err, userId }, 'token invalid, treating as not connected')
       return false
-	}
+    }
     throw OError.tag(err, 'failed to validate token', { userId })
   }
 }

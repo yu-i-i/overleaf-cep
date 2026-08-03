@@ -118,14 +118,14 @@ async function oauth2Callback(req, res) {
   let refresh_token
   let refresh_timestamp
   try {
-	[token, refresh_token, refresh_timestamp] = await api.exchangeCodeForToken(code)
+    [token, refresh_token, refresh_timestamp] = await api.exchangeCodeForToken(code)
     if (!token || !refresh_token) {
       HttpErrorHandler.badRequest(req, res, 'Failed to obtain access token from Git server')
       return
     }
   } catch (err) {
     const info = OError.getFullInfo(err)
-	const err_body = err.body
+    const err_body = err.body
     logger.error(OError.getFullStack(err))
     logger.error({ info, err_body, userId }, 'Failed to obtain access token from Git server')
     HttpErrorHandler.badRequest(req, res, err.message || 'Bad request')

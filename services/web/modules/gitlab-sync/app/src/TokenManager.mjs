@@ -25,43 +25,43 @@ async function decryptAccessToken(tokenEncrypted) {
 }
 
 async function refreshToken(userId, decData) {
-	logger.info({ userId }, "refreshing GitLab token")
+  logger.info({ userId }, "refreshing GitLab token")
 
-	if (!decData.refresh_token) {
-		logger.error("refresh_token invalid")
-		return false
-	}
+  if (!decData.refresh_token) {
+    logger.error("refresh_token invalid")
+    return false
+  }
 
-	let token
-	let refresh_token
-	let refresh_timestamp
+  let token
+  let refresh_token
+  let refresh_timestamp
 
-	try {
-		[token, refresh_token, refresh_timestamp] = await api.refreshToken(decData.refresh_token)
-		if (!token || !refresh_token) {
-			HttpErrorHandler.badRequest(req, res, 'Failed to refresh access token')
-			return false
-		}
-	} catch (err) {
-		const info = OError.getFullInfo(err)
-		logger.error(OError.getFullStack(err))
-		logger.error({ info, userId }, 'Failed to refresh access token')
-		HttpErrorHandler.badRequest(req, res, err.message || 'Bad request')
-		return false
-	}
+  try {
+    [token, refresh_token, refresh_timestamp] = await api.refreshToken(decData.refresh_token)
+    if (!token || !refresh_token) {
+      HttpErrorHandler.badRequest(req, res, 'Failed to refresh access token')
+      return false
+    }
+  } catch (err) {
+    const info = OError.getFullInfo(err)
+    logger.error(OError.getFullStack(err))
+    logger.error({ info, userId }, 'Failed to refresh access token')
+    HttpErrorHandler.badRequest(req, res, err.message || 'Bad request')
+    return false
+  }
 
-	try {
-		await saveUserToken(userId, { token, refresh_token, refresh_timestamp })
-	} catch (err) {
-		const info = OError.getFullInfo(err)
-		const errStatus = info?.status || 500
-		logger.error(OError.getFullStack(err))
-		logger.error({ info, userId }, 'Error saving user token')
-		HttpErrorHandler.handleErrorByStatusCode(req, res, err, errStatus)
-		return false
-	}
+  try {
+    await saveUserToken(userId, { token, refresh_token, refresh_timestamp })
+  } catch (err) {
+    const info = OError.getFullInfo(err)
+    const errStatus = info?.status || 500
+    logger.error(OError.getFullStack(err))
+    logger.error({ info, userId }, 'Error saving user token')
+    HttpErrorHandler.handleErrorByStatusCode(req, res, err, errStatus)
+    return false
+  }
 
-	return true
+  return true
 }
 
 // ------------------------- exports -------------------------- //
@@ -72,10 +72,10 @@ async function getUserToken(userId) {
 
   const now = Math.floor(Date.now() / 1000);
   if (!decData.refresh_timestamp || decData.refresh_timestamp < now) {
-	const refreshed = await refreshToken(userId, decData)
-	if (refreshed) {
-		return await getUserToken(userId)
-	}
+    const refreshed = await refreshToken(userId, decData)
+    if (refreshed) {
+      return await getUserToken(userId)
+    }
   }
 
   return decData.token

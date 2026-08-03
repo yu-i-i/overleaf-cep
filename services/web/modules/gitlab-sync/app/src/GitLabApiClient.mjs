@@ -190,7 +190,7 @@ async function fetchAllPages(url, options, operation) {
 }
 
 function getTokenRefreshTimestamp(token, safetyMarginInSec = 300) {
-	return token.created_at + token.expires_in - safetyMarginInSec;
+  return token.created_at + token.expires_in - safetyMarginInSec;
 }
 
 
@@ -200,8 +200,8 @@ async function compareCommitsFull(token, repoFullName, from, to) {
   url.searchParams.set('to', to)
 
   return await fetchGitLabJson(url.toString(), {
-	headers: buildHeaders(token),
-	signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    headers: buildHeaders(token),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'compareCommitsFull')
 }
 
@@ -224,8 +224,8 @@ function exchangeCodeForToken(code) {
     headers: buildHeaders(),
     json: {
       client_id: Settings.gitlabSync.clientID,
-	  client_secret: Settings.gitlabSync.clientSecret,
-	  code: code,
+      client_secret: Settings.gitlabSync.clientSecret,
+      code: code,
       grant_type: 'authorization_code',
       redirect_uri: Settings.gitlabSync.callbackURL,
     },
