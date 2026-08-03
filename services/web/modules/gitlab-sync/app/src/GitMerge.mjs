@@ -278,8 +278,7 @@ async function resolveConflictSyncState(
     token,
     repoFullName,
     defaultBranchName,
-    newOlBranchHead,
-    tempBranchName,
+    tempBranchName
   )
 
   if (conflict) {

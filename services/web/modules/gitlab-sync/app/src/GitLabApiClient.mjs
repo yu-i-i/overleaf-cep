@@ -468,7 +468,7 @@ async function getBlobContent(token, repoFullName, sha) {
   return await fetchGitLabJson(url, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS)
-  }, 'getBlobContent').then(r => Buffer.from(r.content, 'base64'))
+  }, 'getBlobContent').then(r => r.content || '')
 }
 
 async function listNewCommitsWithStatus(token, fullName, branchName, fromCommit) {
