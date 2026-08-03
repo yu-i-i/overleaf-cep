@@ -40,9 +40,8 @@ async function doGitMergeWithoutLock(userId, projectId, message, claimConflictIs
     claimConflictIsResolved && mergeStatus !== 'conflict'
   ) return { mergeStatus, repoFullName, unmergedBranchName }
 
-  const tokens = await TokenManager.getUserToken(userId)
-  if (!tokens) throw new InvalidTokenError('no user token', { userId, status: 400 });
-  const { token } = tokens
+  const token = await TokenManager.getUserToken(userId)
+  if (!token) throw new InvalidTokenError('no user token', { userId, status: 400 });
 
   await DocumentUpdaterHandler.promises.flushProjectToMongo(projectId)
 

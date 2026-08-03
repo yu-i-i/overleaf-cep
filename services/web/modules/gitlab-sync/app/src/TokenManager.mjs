@@ -24,10 +24,10 @@ async function decryptAccessToken(tokenEncrypted) {
   }
 }
 
-async function refreshToken(userId, tokens) {
+async function refreshToken(userId, decData) {
 	logger.info({ userId }, "refreshing GitLab token")
 
-	if (!tokens.refresh_token) {
+	if (!decData.refresh_token) {
 		logger.error("refresh_token invalid")
 		return false
 	}
@@ -37,7 +37,7 @@ async function refreshToken(userId, tokens) {
 	let refresh_timestamp
 
 	try {
-		[token, refresh_token, refresh_timestamp] = await api.refreshToken(tokens.refresh_token)
+		[token, refresh_token, refresh_timestamp] = await api.refreshToken(decData.refresh_token)
 		if (!token || !refresh_token) {
 			HttpErrorHandler.badRequest(req, res, 'Failed to refresh access token')
 			return false
@@ -68,17 +68,17 @@ async function refreshToken(userId, tokens) {
 async function getUserToken(userId) {
   const credentials = await GitLabSyncUserCredentials.findOne(normalizeQuery({ userId }))
   if (!credentials) throw new InvalidTokenError('no user token', { userId, status: 400 })
-  let tokens = await decryptAccessToken(credentials.gitlab)
+  let decData = await decryptAccessToken(credentials.gitlab)
 
   const now = Math.floor(Date.now() / 1000);
-  if (!tokens.refresh_timestamp || tokens.refresh_timestamp < now) {
-	const refreshed = await refreshToken(userId, tokens)
+  if (!decData.refresh_timestamp || decData.refresh_timestamp < now) {
+	const refreshed = await refreshToken(userId, decData)
 	if (refreshed) {
 		return await getUserToken(userId)
 	}
   }
 
-  return tokens
+  return decData.token
 }
 
 async function saveUserToken(userId, accessToken) {
