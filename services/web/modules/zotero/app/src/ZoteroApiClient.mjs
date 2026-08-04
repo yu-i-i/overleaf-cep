@@ -108,10 +108,11 @@ async function _fetchBibtex(apiKey, basePath, format) {
     const headers = buildHeaders(apiKey)
     while (true) {
       const url = `${ZOTERO_API_URL}${basePath}?format=${format}&limit=${limit}&start=${start}`
-      const { body: bibtex, response } = await fetchStringWithResponse(url, {
+      const { body: bibtexFetched, response } = await fetchStringWithResponse(url, {
         headers,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
       })
+      const bibtex = bibtexFetched.replace(/^@misc\{noauthor_notitle_nodate(?:-\d+)?,\r?\n\}\r?\n*/gm, '')
 
       if (bibtex.trim()) allBibtex += bibtex
 
