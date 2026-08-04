@@ -126,6 +126,11 @@
             "args": []
         },
         {
+             "name": "faccessat2",
+             "action": "SCMP_ACT_ALLOW",
+             "args": []
+        },
+        {
             "name": "fadvise64",
             "action": "SCMP_ACT_ALLOW",
             "args": []
