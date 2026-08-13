@@ -50,6 +50,13 @@
       padding: 0;
       background: var(--navbar-brand-image-url) no-repeat left center;
       background-size: contain;
+
+      &.navbar-logo-custom {
+        background-image: var(
+          --navbar-custom-logo-light-url,
+          var(--navbar-brand-image-url)
+        );
+      }
     }
 
     .navbar-title {
@@ -312,6 +319,13 @@
 }
 
 @include theme('default') {
+  .navbar-default .navbar-brand .navbar-logo.navbar-logo-custom {
+    background-image: var(
+      --navbar-custom-logo-dark-url,
+      var(--navbar-custom-logo-light-url, var(--navbar-brand-image-url))
+    );
+  }
+
   #project-list-root,
   #library-root {
     .website-redesign-navbar,

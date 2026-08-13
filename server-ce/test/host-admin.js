@@ -190,6 +190,8 @@ const allowedVars = z.object(
   Object.fromEntries(
     [
       'OVERLEAF_APP_NAME',
+      'OVERLEAF_HEADER_IMAGE_URL_LIGHT',
+      'OVERLEAF_HEADER_IMAGE_URL_DARK',
       'OVERLEAF_LEFT_FOOTER',
       'OVERLEAF_RIGHT_FOOTER',
       'OVERLEAF_PROXY_LEARN',
