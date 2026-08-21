@@ -3,14 +3,19 @@ name: Build overleaf-cep main (arm64)
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Tag for the built image'
+      ref:
+        description: 'overleaf-cep tag to build (e.g. v6.2.1-ext)'
         required: true
-        default: '6.2.0-ext-v5.0-arm64'
+      tag:
+        description: 'Output image tag (e.g. 6.2.1-ext-v5.0-arm64)'
+        required: true
+      base_tag:
+        description: 'Base image tag to build against (defaults to :latest)'
+        required: false
+        default: 'latest'
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/overleaf-cep
-  BASE_IMAGE: ghcr.io/${{ github.repository_owner }}/overleaf-base:latest
 
 jobs:
   build-main:
@@ -19,8 +24,10 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Checkout
+      - name: Checkout overleaf-cep at requested ref
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -37,6 +44,6 @@ jobs:
           docker buildx build \
             --platform linux/arm64 \
             --file server-ce/Dockerfile \
-            --build-arg OVERLEAF_BASE_TAG=${{ env.BASE_IMAGE }} \
+            --build-arg OVERLEAF_BASE_TAG=ghcr.io/${{ github.repository_owner }}/overleaf-base:${{ inputs.base_tag }} \
             --tag ${{ env.IMAGE }}:${{ inputs.tag }} \
             --push .
