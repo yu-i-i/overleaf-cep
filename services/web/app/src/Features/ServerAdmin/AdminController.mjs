@@ -48,6 +48,11 @@ const AdminController = {
       openSockets,
       systemMessages,
       privilegesMatrix,
+      // overleaf-lab: LLM module flag for the "LLM Configuration" tab (reviewer ask:
+      // settings live on Manage Site, not as a separate navbar entry).
+      llmEnabled:
+        process.env.LLM_ENABLED === 'true' ||
+        !!(Settings.llm && Settings.llm.enabled),
     }
 
     if (Features.hasFeature('saas')) {

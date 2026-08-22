@@ -13,7 +13,7 @@ import {
   NestedMenuBarDropdown,
 } from '@/shared/components/menu-bar/menu-bar-dropdown'
 import { MenuBarOption } from '@/shared/components/menu-bar/menu-bar-option'
-import { Fragment, useCallback, useMemo } from 'react'
+import { Fragment, ReactNode, useCallback, useMemo } from 'react'
 
 type CommandId = string
 type TaggedCommand = Command & {
@@ -23,11 +23,14 @@ type TaggedCommand = Command & {
 type Entry<T> = T | GroupStructure<T>
 type GroupStructure<T> = {
   id: string
-  title: string
+  // overleaf-lab: title may be a ReactNode so module sections can render
+  // icon + label groups (e.g. the LLM "AI Generate" entry); plain strings
+  // (the common case) render exactly as before.
+  title: string | ReactNode
   children: Array<Entry<T>>
 }
 export type MenuSectionStructure<T = CommandId> = {
-  title?: string
+  title?: string | ReactNode
   id: string
   children: Array<Entry<T>>
 }

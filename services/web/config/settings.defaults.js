@@ -1079,7 +1079,12 @@ module.exports = {
         '../modules/llm/frontend/js/components/pdf-log-entry-ask-ai-button'
       ),
     ],
-    pdfLogEntryComponents: [],
+    pdfLogEntryComponents: [
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/components/pdf-llm-compile-fix-card'
+      ),
+    ],
     pdfLogEntriesComponents: [],
     pdfPreviewPromotions: [],
     diagnosticActions: [],
@@ -1090,7 +1095,14 @@ module.exports = {
         '../modules/symbol-palette/frontend/components/symbol-palette'
       ),
     ],
-    sourceEditorToolbarStartButtons: [],
+    sourceEditorToolbarStartButtons: [
+        // overleaf-lab (2026-08, reference-synced): the editor toolbar "Ask AI"
+        // (smart_toy) button — opens the LLM context menu.
+        Path.resolve(
+            __dirname,
+            '../modules/llm/frontend/js/extensions/llm-editor-toolbar-ask-ai'
+        ),
+    ],
     sourceEditorToolbarButtonGroups: [],
     sourceEditorToolbarComponents: [],
     sourceEditorToolbarEndButtons: [],
@@ -1136,8 +1148,30 @@ module.exports = {
         __dirname,
         '../modules/template-gallery/frontend/js/features/template/components/menubar-manage-template'
       ),
+      // overleaf-lab: LLM whole-document generators (title/abstract/keywords) registered
+      // for the Generate group (see insertMenuSections below).
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/extensions/llm-file-menu-commands'
+      ),
     ],
-    insertMenuSections: [],
+    insertMenuSections: [
+      // overleaf-lab (owner request 2026-08): the "AI Generate" group
+      // (smart_toy icon + Title/Abstract/Keywords) moved from the File menu
+      // to the INSERT menu — upstream-style placement for AI tools.
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/extensions/llm-insert-menu-section'
+      ),
+    ],
+    // overleaf-lab: BYO LLM provider management embedded in Account Settings (reviewer #2);
+    // the core section renders it when present, else falls back to a link card.
+    llmUserSettingsSection: [
+      Path.resolve(
+        __dirname,
+        '../modules/llm/frontend/js/components/llm-settings-section'
+      ),
+    ],
     oauth2Server: [
       Path.resolve(
         __dirname,
@@ -1202,7 +1236,12 @@ module.exports = {
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],
     settingsModalSpellcheckSections: [],
-    editorFloatingMenuActions: [],
+    editorFloatingMenuActions: [
+        Path.resolve(
+            __dirname,
+            '../modules/llm/frontend/js/extensions/llm-fm-ask-ai.tsx'
+        ),
+    ],
     errorLogsComponents: [],
     referenceIndices: [
       Path.resolve(

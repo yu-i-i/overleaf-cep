@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import MaterialIcon from '@/shared/components/material-icon'
 import OLButton from '@/shared/components/ol/ol-button'
 import { useLLMCompliance } from '../hooks/use-llm-compliance'
+import { useLLMModelSelection } from '../hooks/use-llm-model-selection'
 import type {
     ComplianceItem,
     ComplianceStatus,
@@ -74,6 +75,10 @@ function ComplianceReportItem({ item }: { item: ComplianceItem }) {
 
 function LLMCompliancePane() {
     const { t } = useTranslation()
+    // overleaf-lab (owner request 2026-08-26): the per-pane model picker is
+    // gone — the Review run still uses the ONE shared (user-scoped) selection,
+    // made via File → "Select LLM Model".
+    const { selected: selectedModel } = useLLMModelSelection()
     const {
         rubrics,
         rubricsLoaded,
@@ -103,7 +108,7 @@ function LLMCompliancePane() {
             <div style={{ padding: 12, color: MUTED }}>
                 {t(
                     'compliance_no_rubrics',
-                    'No review rubrics have been configured. Ask your administrator to add one in the LLM settings.'
+                    'No review rubrics are configured for your profile yet. Add your own in your LLM settings (<i>AI Settings → Compliance Review</i>).'
                 )}
             </div>
         )
@@ -345,8 +350,10 @@ function LLMCompliancePane() {
                 overflow: 'hidden',
             }}
         >
-            {/* Header row: rubric selector + run button */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* Header row: rubric selector + run button. overleaf-lab (owner
+                request 2026-08-26): the model picker is gone — File → "Select
+                LLM Model" is the sole selection entry point. */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <select
                     className="form-select"
                     value={selectedRubricId}
@@ -365,7 +372,7 @@ function LLMCompliancePane() {
                     <OLButton
                         variant="primary"
                         type="button"
-                        onClick={runReview}
+                        onClick={() => runReview(selectedModel || undefined)}
                         disabled={!selectedRubricId}
                     >
                         <MaterialIcon type="fact_check" />{' '}

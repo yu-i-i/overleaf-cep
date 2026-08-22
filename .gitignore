@@ -4,3 +4,8 @@
 # user defined files
 .env
 docker-compose.override.yml
+
+# local-only agent docs + plan notes (never track: they hold credentials/creds refs)
+references/
+AGENTS.md
+todo.md

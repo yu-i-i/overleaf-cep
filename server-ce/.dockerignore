@@ -8,3 +8,13 @@ server-ce/test
 services/web/scripts/plan-prices
 services/web/scripts/translations
 services/web/scripts/ukamf
+
+# dev-environment node_modules symlinks must never enter the image:
+# BuildKit cannot replace a directory already present in the base/cache
+# layer (overleaf/services/web/node_modules) with a file/symlink
+node_modules
+services/web/node_modules
+libraries/*/node_modules
+services/*/node_modules
+services/web/modules/*/node_modules
+tools/migrations/node_modules

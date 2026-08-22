@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import getMeta from '@/utils/meta'
+import { getJSON, postJSON } from '@/infrastructure/fetch-json'
 
 // overleaf-lab: shapes for the document compliance review feature. The backend is
 // now a job queue: start enqueues a review and returns a jobId, the client polls
@@ -181,6 +182,9 @@ export const useLLMCompliance = () => {
     const [rubrics, setRubrics] = useState<ComplianceRubric[]>([])
     const [rubricsLoaded, setRubricsLoaded] = useState(false)
     const [selectedRubricId, setSelectedRubricId] = useState('')
+    // overleaf-lab (owner request 2026-08-25): the Review tab uses the ONE
+    // shared model selection — see use-llm-model-selection (the "Select LLM
+    // Model" dialog). No per-pane model state here.
     const [phase, setPhase] = useState<CompliancePhase>('idle')
     const [position, setPosition] = useState(0)
     const [result, setResult] = useState<ComplianceResult | null>(null)
@@ -242,16 +246,10 @@ export const useLLMCompliance = () => {
                 return
             }
             try {
-                const response = await fetch(
-                    `/project/${projectId}/llm/compliance/rubrics`,
-                    { credentials: 'same-origin' }
+                // F14: shared fetch utility (CSRF/JSON handling + typed FetchError).
+                const data: RubricsResponse = await getJSON(
+                    `/project/${projectId}/llm/compliance/rubrics`
                 )
-                if (!response.ok) {
-                    throw new Error(
-                        `[LLMCompliance] Rubrics endpoint returned ${response.status}`
-                    )
-                }
-                const data: RubricsResponse = await response.json()
                 if (cancelled) return
 
                 const loadedRubrics = data.rubrics || []
@@ -259,8 +257,7 @@ export const useLLMCompliance = () => {
                 setSelectedRubricId(loadedRubrics[0]?.id || '')
                 setRubricsLoaded(true)
             } catch (err) {
-                console.error('[LLMCompliance] Failed to fetch rubrics:', err)
-                if (cancelled) return
+                                if (cancelled) return
                 setRubrics([])
                 setRubricsLoaded(true)
             }
@@ -273,16 +270,21 @@ export const useLLMCompliance = () => {
         }
     }, [projectId])
 
+    // overleaf-lab (owner request 2026-08-25): the Review run uses the ONE
+    // shared model selection (the "Select LLM Model" dialog / use-llm-model-
+    // selection hook) — no per-pane model list fetch here anymore.
+
     // overleaf-lab: one poll tick. Updates phase/position/result/errorInfo and
     // stops polling on any terminal state (done/error/cancelled/not_found).
     const pollOnce = useCallback(
         async (jobId: string) => {
             try {
-                const response = await fetch(
-                    `/project/${projectId}/llm/compliance/status/${jobId}`,
-                    { credentials: 'same-origin' }
+                // F14: shared fetch utility. The endpoint reports unknown/expired
+                // jobs as 200 + {ok:false}, so getJSON resolves and the json.ok
+                // branch below still handles them exactly as before.
+                const json = await getJSON(
+                    `/project/${projectId}/llm/compliance/status/${jobId}`
                 )
-                const json = await response.json()
                 if (!mountedRef.current) return
 
                 if (!json.ok) {
@@ -370,8 +372,7 @@ export const useLLMCompliance = () => {
             } catch (err) {
                 // overleaf-lab: a transient network error should not kill the poll;
                 // keep the interval and try again on the next tick.
-                console.error('[LLMCompliance] Status poll failed:', err)
-            }
+                            }
         },
         [projectId, stopPolling]
     )
@@ -386,30 +387,28 @@ export const useLLMCompliance = () => {
         [pollOnce, stopPolling]
     )
 
-    const runReview = useCallback(async () => {
-        if (!selectedRubricId) return
+    const runReview = useCallback(
+        async (modelOverride?: string) => {
+            if (!selectedRubricId) return
 
-        setResult(null)
-        setErrorInfo(null)
-        setPosition(0)
-        setProgress(null)
+            setResult(null)
+            setErrorInfo(null)
+            setPosition(0)
+            setProgress(null)
 
-        try {
-            const csrfToken = getMeta('ol-csrfToken')
-            const response = await fetch(
-                `/project/${projectId}/llm/compliance/start`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken,
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ rubricId: selectedRubricId }),
-                }
-            )
-
-            const json = await response.json()
+            try {
+                // F14: postJSON adds the CSRF header + JSON content type itself.
+                const json = await postJSON(
+                    `/project/${projectId}/llm/compliance/start`,
+                    {
+                        body: {
+                            rubricId: selectedRubricId,
+                            // overleaf-lab: model selector — explicit model ref
+                            // or omitted = deployment default.
+                            ...(modelOverride ? { model: modelOverride } : {}),
+                        },
+                    }
+                )
             if (!mountedRef.current) return
 
             if (json.ok) {
@@ -424,8 +423,7 @@ export const useLLMCompliance = () => {
                 setPhase('error')
             }
         } catch (err) {
-            console.error('[LLMCompliance] Start review request failed:', err)
-            if (!mountedRef.current) return
+                        if (!mountedRef.current) return
             setErrorInfo({ errorCode: 'failed', message: 'Request failed' })
             setPhase('error')
         }
@@ -441,15 +439,10 @@ export const useLLMCompliance = () => {
         if (!jobId) return
 
         try {
-            const csrfToken = getMeta('ol-csrfToken')
-            await fetch(`/project/${projectId}/llm/compliance/cancel/${jobId}`, {
-                method: 'POST',
-                headers: { 'X-CSRF-Token': csrfToken },
-                credentials: 'same-origin',
-            })
+            // F14: shared fetch utility (CSRF/JSON handled by the wrapper).
+            await postJSON(`/project/${projectId}/llm/compliance/cancel/${jobId}`)
         } catch (err) {
-            console.error('[LLMCompliance] Cancel request failed:', err)
-        }
+                    }
     }, [projectId, stopPolling])
 
     // overleaf-lab: best-effort cancel on page refresh/close. keepalive lets the
@@ -463,13 +456,16 @@ export const useLLMCompliance = () => {
                 jobId &&
                 (currentPhase === 'queued' || currentPhase === 'running')
             ) {
-                const csrfToken = getMeta('ol-csrfToken')
-                fetch(`/project/${projectId}/llm/compliance/cancel/${jobId}`, {
-                    method: 'POST',
-                    keepalive: true,
-                    credentials: 'same-origin',
-                    headers: { 'X-CSRF-Token': csrfToken },
-                })
+                // F14 + keepalive: the helper forwards config to fetch, so the
+                // best-effort cancel still survives the page unload.
+                postJSON(
+                    `/project/${projectId}/llm/compliance/cancel/${jobId}`,
+                    { keepalive: true }
+                )
+                    .then(
+                        () => undefined,
+                        () => undefined
+                    )
             }
         }
 

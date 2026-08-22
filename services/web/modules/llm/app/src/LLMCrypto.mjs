@@ -50,6 +50,30 @@ export function decryptSecret(stored) {
         return stored
     }
 
+    return storedToPlaintext(stored)
+}
+
+/*
+ * F20 helpers (legacy-row migration safety):
+ * - normalizeStoredSecret: value already encrypted -> as-is;
+ *   legacy plaintext -> encrypt now (so rows never persist plaintext keys).
+ * - storedToPlaintext: encrypted -> decrypt; legacy plaintext -> as-is.
+ */
+export function hasEncPrefix(v) {
+    return typeof v === 'string' && v.startsWith(ENC_PREFIX)
+}
+
+export function normalizeStoredSecret(v) {
+    if (!v) return ''
+    if (hasEncPrefix(v)) return v
+    return encryptSecret(String(v))
+}
+
+export function storedToPlaintext(stored) {
+    if (!stored) {
+        return stored
+    }
+
     // Legacy plaintext back-compat: values written before encryption was added
     // (or while LLM_KEY_SECRET was unset) have no prefix and are returned as-is.
     if (!stored.startsWith(ENC_PREFIX)) {

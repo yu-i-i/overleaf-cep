@@ -91,6 +91,11 @@ export const ToolbarMenuBar = () => {
         id: 'file-file-tree',
         children: ['new_file', 'new_folder', 'upload_file', 'copy_project'],
       },
+      // overleaf-lab: the "AI Generate" group (whole-document LLM generators)
+      // lives in the INSERT menu now (owner request 2026-08, upstream-style
+      // placement + smart_toy mark). It is contributed by modules/llm through
+      // the `insertMenuSections` overleafModuleImports hook; CommandDropdown
+      // filters out unregistered commands, so non-LLM deployments never see it.
       { id: 'file-tools', children: ['show_version_history', 'word_count'] },
       { id: 'submit', children: ['submit-project', 'manage-template'] },
       {
@@ -108,6 +113,15 @@ export const ToolbarMenuBar = () => {
             ],
           },
         ],
+      },
+      // overleaf-lab (owner request 2026-08-26): File → "Select LLM Model"
+      // (smart_toy leading icon, contributed by modules/llm via the
+      // llm_select_model command in llm-file-menu-commands) — the ONE and
+      // ONLY model selection entry point. The section is filtered out
+      // automatically when the command is not registered (non-LLM deploys).
+      {
+        id: 'file-llm-model',
+        children: ['llm_select_model'],
       },
       {
         id: 'settings',

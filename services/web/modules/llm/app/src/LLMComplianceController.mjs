@@ -3,7 +3,13 @@ import Settings from '@overleaf/settings'
 import { expressify } from '@overleaf/promise-utils'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
 import ProjectEntityHandler from '../../../../app/src/Features/Project/ProjectEntityHandler.mjs'
-import { getAdminLLMSettings, getComplianceRubrics, getLLMFeatureFlags, getLLMPrompts } from './LLMAdminController.mjs'
+import { getAdminLLMSettings, getLLMFeatureFlags, getLLMPrompts } from './LLMAdminController.mjs'
+import { getComplianceRubricsForUser } from './LLMSettingsController.mjs' // overleaf-lab (2026-08-27): user-scoped rubrics
+import OError from '@overleaf/o-error'
+import { chatText, chatObject, listModels as listModelsSdk, normalizeProviderSpec } from './LLMClient.mjs' // overleaf-lab: AI-SDK provider seam (PR item 4: provider-agnostic review passes)
+// overleaf-lab: Review-tab model selector — resolve an explicit model ref (site
+// model id or 'u:<rowId>:<model>') to the right lane + spec.
+import { resolveModelLane } from './LLMChatController.mjs'
 
 // overleaf-lab: in-memory job queue for compliance reviews. A review sends the
 // whole project to the LLM and can run for minutes, so we run one at a time per
@@ -16,6 +22,10 @@ let running = false // one review at a time
 // user last looked at the panel, so the retention must be generous.
 const JOB_TTL_MS = 30 * 60 * 1000
 
+// overleaf-lab: F6 — concurrency caps (enforced in startReview).
+const MAX_USER_REVIEWS_IN_FLIGHT = 3 // 1 running + 2 queued per user
+const MAX_GLOBAL_QUEUE = 5 // queued jobs across all users
+
 // overleaf-lab: FALLBACK token budget for the review's JSON answer, used when the
 // admin has not set one in the LLM settings page (which is the normal way to change
 // it). The effective value is BOTH the hard max_tokens sent to the model AND the room
@@ -25,6 +35,12 @@ const REVIEW_MAX_TOKENS =
     Number.parseInt(process.env.LLM_REVIEW_MAX_TOKENS, 10) > 0
         ? Number.parseInt(process.env.LLM_REVIEW_MAX_TOKENS, 10)
         : 12000
+
+// overleaf-lab: F6 — maximum model passes per review job (see the cap where
+// mainPassCount is computed).
+const MAX_PASSES_PER_JOB = Number.parseInt(process.env.LLM_REVIEW_MAX_PASSES, 10) > 0
+    ? Number.parseInt(process.env.LLM_REVIEW_MAX_PASSES, 10)
+    : 200
 
 // overleaf-lab: rough backend throughput, now used only to SIZE THE PER-PASS TIMEOUT
 // (progress is pass-based and needs no time estimate, so a wrong rate can only make
@@ -50,6 +66,55 @@ const FALLBACK_GEN_TPS = 4
 // the first review just runs on the fallbacks (only the timeout cap depends on this).
 let measuredPrefillTps = null
 let measuredGenTps = null
+
+// overleaf-lab: AI-SDK seam for review passes. currentBaseSpec is set per job
+// from the effective admin settings; llmChat() derives the full spec from the
+// body's model (same body shape as the old provider calls).
+let currentBaseSpec = null
+
+function specFor(model) {
+    return normalizeProviderSpec(currentBaseSpec || {}, { model })
+}
+
+const STRUCTURED_FALLBACK_CODES = new Set(['empty-response', 'llm-error'])
+
+async function chatDetailedCompat(spec, body, opts = {}) {
+    const schema = body.response_format?.json_schema?.schema
+    const call = {
+        maxOutputTokens: body.max_tokens,
+        temperature: body.temperature,
+        signal: opts.signal,
+        timeoutMs: opts.timeoutMs,
+    }
+    try {
+        if (schema) {
+            const { object } = await chatObject(spec, body.messages, schema, call)
+            return { content: JSON.stringify(object), raw: {} }
+        }
+        const { text } = await chatText(spec, body.messages, call)
+        return { content: text, raw: {} }
+    } catch (err) {
+        if (err && (err.code === 'llm-abort' || /abort/i.test(String(err.name || '')))) {
+            throw err
+        }
+        if (schema && STRUCTURED_FALLBACK_CODES.has(err?.code)) {
+            // The backend does not honor structured output (or the strict parse
+            // failed): ask for plain JSON text and let the caller's extractJson
+            // + retry loop do the tolerant work.
+            try {
+                const { text } = await chatText(spec, body.messages, call)
+                return { content: text, raw: {} }
+            } catch (fallbackErr) {
+                throw err
+            }
+        }
+        throw err
+    }
+}
+
+function llmChat(body, opts) {
+    return chatDetailedCompat(specFor(body.model), body, opts)
+}
 
 // overleaf-lab: sample-size gates for trusting a timings measurement. llama.cpp
 // reports prompt_per_second over the tokens it ACTUALLY evaluated (prompt_n): on a
@@ -100,39 +165,52 @@ function recordTimings(timings) {
     }
 }
 
-// overleaf-lab: ask the backend for the EXACT token count of the prompt. llama.cpp
-// exposes /tokenize, and the router maps <base>/v1/tokenize onto the server root where
-// it actually lives, so the module only needs the one OpenAI-style base URL.
+// overleaf-lab: provider errors arrive as OError (BaseProvider.handleError) whose
+// CAUSE carries the transport-level failure, so abort detection must look one
+// level deeper than a bare fetch() would. Both the user cancel and the pass-timeout
+// safety net abort through job.controller.
+function isAbortErr(err) {
+    return (
+        (err && err.name === 'AbortError') ||
+        (err && err.cause && (err.cause.name === 'AbortError' || err.cause.name === 'TimeoutError'))
+    )
+}
+
+// overleaf-lab: rebuild a best-effort error string from an OError (API message +
+// raw body) so parseBackendError's context-overflow detection keeps working against
+// provider errors, exactly as it did against raw fetch bodies.
+function providerErrorText(err) {
+    let apiMessage = ''
+    try {
+        const info = OError.getFullInfo(err)
+        apiMessage =
+            (info && info.error && info.error.message) || (info && info.message) || ''
+    } catch {
+        apiMessage = ''
+    }
+    const raw = (err && err.cause && (err.cause.body || err.cause.message)) || ''
+    return `${apiMessage} ${raw}`.trim()
+}
+
+// overleaf-lab: ask the backend for the EXACT token count of the prompt. The
+// OpenAI-compatible provider maps this to the llama.cpp /tokenize extension;
+// other providers (e.g. Anthropic) have none and report null, which the caller
+// treats as "estimate only". Provider-agnostic since PR item 4: the provider
+// owns the endpoint shape and the auth header.
 //
 // Why this matters more than it looks: a character-per-token heuristic can only ever be
 // roughly right for LaTeX, whose density varies a lot between prose and math. When it
 // errs low the backend rejects the request and tells us the truth, which is recoverable.
 // When it errs HIGH we refuse a document that would actually have fit, and nothing
 // downstream can correct that: the user is simply blocked. The exact count removes both.
-// Returns null for any backend without /tokenize, so the caller falls back.
-async function countPromptTokens(llmApiUrl, llmApiKey, text) {
-    try {
-        const headers = { 'Content-Type': 'application/json' }
-        if (typeof llmApiKey === 'string' && llmApiKey.length > 0) {
-            headers.Authorization = `Bearer ${llmApiKey}`
-        }
-        const response = await fetch(`${llmApiUrl}/tokenize`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ content: text }),
-        })
-        if (!response.ok) {
-            return null
-        }
-        const data = await response.json()
-        if (Array.isArray(data && data.tokens)) {
-            return data.tokens.length
-        }
-        return null
-    } catch (err) {
-        logger.debug({ err }, '[LLM] compliance: /tokenize unavailable, using the estimate')
-        return null
-    }
+// Returns null for any backend without the exact count, so the caller falls back.
+// overleaf-lab: exact token counting. The custom provider factory used to expose
+// llama.cpp's /tokenize endpoint; the AI-SDK seam (v6) has no cross-provider exact
+// counter, so the conservative estimate (estimateTokens + safety margin) is the
+// authoritative budgeting path. Kept as an async function so a backend that DOES
+// serve exact counts can plug back in without touching the call sites.
+async function countPromptTokens() {
+    return null
 }
 // overleaf-lab: floor for the review timeout (the value it used to be fixed at).
 const REVIEW_MIN_TIMEOUT_MS = 60 * 60 * 1000
@@ -274,6 +352,54 @@ function buildScanHints(strippedDocs, customPatterns = []) {
 // The save endpoint already refuses invalid regexes, but settings written by other
 // means must not break a review, so invalid lines are skipped here too. Capped to
 // keep the hint block small.
+/*
+ * F5: ReDoS guard for admin-authored rubric regexes. These patterns run over
+ * document text, so a catastrophic pattern (nested quantifiers such as (a+)+,
+ * recursive groups) could hang a review. Heuristic: reject recursive-group
+ * syntax and any group containing a quantifier that is itself quantified.
+ * Patterns that fail are skipped (with a debug log), never fatal.
+ */
+function containsNestedQuantifier(pattern) {
+    for (let i = 0; i < pattern.length; i++) {
+        if (pattern[i] !== '(' || pattern[i - 1] === '\\') continue
+        let depth = 1
+        let inner = false
+        let close = -1
+        for (let j = i + 1; j < pattern.length; j++) {
+            if (pattern[j - 1] === '\\') continue
+            const c = pattern[j]
+            if (c === '(') depth++
+            else if (c === ')') {
+                depth--
+                if (depth === 0) {
+                    close = j
+                    break
+                }
+            }
+            else if (depth === 1 && (c === '+' || c === '*' || c === '{')) {
+                inner = true
+            }
+        }
+        if (close !== -1 && inner && /^\s*(?:\+|\*|\{)/.test(pattern.slice(close + 1))) {
+            return true
+        }
+        if (close !== -1) i = close // continue after this group
+    }
+    return false
+}
+
+function safeRubricRegex(pattern) {
+    if (typeof pattern !== 'string' || !pattern || pattern.length > 300) return null
+    if (/\(?\?R|\(?\?&/.test(pattern)) return null // recursive groups
+    if (containsNestedQuantifier(pattern)) return null
+    try {
+        return new RegExp(pattern, 'i')
+    }
+    catch {
+        return null
+    }
+}
+
 function parseScanPatterns(text) {
     const patterns = []
     for (const rawLine of String(text || '').split('\n')) {
@@ -291,9 +417,16 @@ function parseScanPatterns(text) {
             continue
         }
         try {
-            patterns.push({ label: label || body, regex: new RegExp(body, 'i') })
-        } catch (err) {
-            logger.debug({ line }, '[LLM] compliance: skipping invalid scan pattern')
+            const regex = safeRubricRegex(body)
+            if (regex) {
+                patterns.push({ label: label || body, regex })
+            }
+            else {
+                logger.debug({ line }, '[LLM] compliance: skipping unsafe/invalid scan pattern')
+            }
+        }
+        catch (err) {
+            logger.debug({ line, err: err?.message }, '[LLM] compliance: skipping invalid scan pattern')
         }
     }
     return patterns
@@ -481,19 +614,6 @@ function splitRubric(text) {
     }
     return { preamble: preambleLines.join('\n').trim(), requirements }
 }
-
-// overleaf-lab: the compliance reviewer system prompt now lives in LLMPrompts.mjs as
-// DEFAULT_REVIEW_SYSTEM_PROMPT and is resolved per review via getLLMPrompts() so a
-// super-admin override takes effect. See performReview below.
-
-// overleaf-lab: remove <think>...</think> blocks (case-insensitive, dot-all), same
-// approach as LLMChatController, for models like DeepSeek/Qwen that emit reasoning.
-function stripThinkTags(text) {
-    let cleaned = text.replace(/<think>[\s\S]*?<\/think>\s*/gi, '')
-    cleaned = cleaned.replace(/<think>[\s\S]*/gi, '')
-    return cleaned.trim()
-}
-
 // overleaf-lab: strip LaTeX line comments to save tokens. For each line, cut from
 // the first unescaped `%` (a `%` not preceded by a backslash) to end of line, while
 // keeping escaped `\%`. This is simple and conservative: it can over-strip inside
@@ -656,28 +776,32 @@ async function performReview(job) {
 
     // overleaf-lab: resolve the rubric fresh at run time (the job only stores id and
     // name) so the guidelines text is current when the job finally runs.
-    const rubrics = await getComplianceRubrics()
+    // overleaf-lab (2026-08-27): from the USER's rubric set (own or inherited).
+    const rubrics = await getComplianceRubricsForUser(userId)
     const rubric = rubrics.find(r => r.id === job.rubricId)
     if (!rubric) {
         throw new Error('Rubric is no longer available')
     }
 
-    // Effective backend configuration.
+    // overleaf-lab (2026-08-27): the ONE shared model resolution — explicit
+    // job override > user's profile selection > first BYO row > site backend.
+    // The former admin "Review model" and the not_configured URL check are gone:
+    // a deployment without a global LLM works through the same lane chain.
     const admin = await getAdminLLMSettings()
-    const llmApiUrl = admin.llmApiUrl
-    const llmApiKey = admin.llmApiKey
-    if (!llmApiUrl) {
-        throw new Error('LLM backend is not configured')
-    }
+    const resolved = await resolveModelLane(userId, job.modelOverride || undefined).catch(err => {
+        throw Object.assign(
+            new Error(err?.message || 'No usable LLM backend is configured'),
+            { code: 'model-unavailable' },
+        )
+    })
+    currentBaseSpec = resolved.spec
+    const reviewModel = resolved.model
+    // overleaf-lab: deployment context budgets (admin-configured, with safe
+    // defaults) — unchanged by the per-user migration.
     const maxContextTokens = admin.maxContextTokens || 32000
-    // overleaf-lab: the admin-set answer budget wins; fall back to the env default.
+    // overleaf-lab: the admin-set answer budget; the effective room adapts to
+    // what the document leaves free inside maxContextTokens.
     const reviewMaxTokens = admin.reviewMaxTokens || REVIEW_MAX_TOKENS
-    // overleaf-lab: prefer the admin-chosen review model, then the first allowed
-    // model, then the env-derived default (mirrors the chat model fallback).
-    const reviewModel =
-        (admin.reviewModel && admin.reviewModel.trim()) ||
-        (admin.allowedModels && admin.allowedModels[0]) ||
-        ((process.env.LLM_MODEL_NAME || process.env.LLM_AVAILABLE_MODELS || 'default').split(',')[0].trim())
 
     // overleaf-lab: resolve the effective editable prompts (admin override or the
     // shipped default) so the review uses the admin-tuned system prompt.
@@ -750,11 +874,7 @@ async function performReview(job) {
         estimateTokens(scanHints) +
         estimateTokens(rubric.guidelines) +
         estimateTokens(prompts.reviewSystemPrompt)
-    const exactPromptTokens = await countPromptTokens(
-        llmApiUrl,
-        llmApiKey,
-        `${prompts.reviewSystemPrompt}\n${rubric.guidelines}\n${assembled}\n${scanHints}`
-    )
+    const exactPromptTokens = await countPromptTokens()
     const promptTokens = exactPromptTokens || heuristicPromptTokens
     logger.debug(
         { projectId, promptTokens, exact: exactPromptTokens != null, heuristicPromptTokens },
@@ -793,31 +913,15 @@ async function performReview(job) {
     // surface any real error.
     if (typeof admin.reviewModel === 'string' && admin.reviewModel.trim().length > 0) {
         try {
-            const modelsHeaders = {}
-            if (typeof llmApiKey === 'string' && llmApiKey.length > 0) {
-                modelsHeaders.Authorization = `Bearer ${llmApiKey}`
-            }
-            const modelsResponse = await fetch(`${llmApiUrl}/models`, {
-                method: 'GET',
-                headers: modelsHeaders,
-            })
-            if (modelsResponse.ok) {
-                const modelsData = await modelsResponse.json()
-                const ids = Array.isArray(modelsData?.data)
-                    ? modelsData.data.map(entry => String(entry.id))
-                    : []
-                if (!ids.includes(reviewModel)) {
-                    return {
-                        type: 'error',
-                        errorCode: 'model_unavailable',
-                        message: 'The configured review model is not available on the backend',
-                    }
+            // overleaf-lab: provider-agnostic model preflight (PR item 4) — same list
+            // API as the admin model scan; the provider owns path + auth.
+            const { ids } = await listModelsSdk(specFor(reviewModel), { timeoutMs: 60000 })
+            if (!ids.includes(reviewModel)) {
+                return {
+                    type: 'error',
+                    errorCode: 'model_unavailable',
+                    message: 'The configured review model is not available on the backend',
                 }
-            } else {
-                logger.warn(
-                    { projectId, status: modelsResponse.status },
-                    '[LLM] compliance: /models check returned non-ok, continuing'
-                )
             }
         } catch (err) {
             logger.warn({ projectId, err }, '[LLM] compliance: /models check failed, continuing')
@@ -833,12 +937,8 @@ async function performReview(job) {
     const guidelinesFor = requirement =>
         `GUIDELINES (check ONLY these):\n${preamble ? `${preamble}\n` : ''}${requirement}`
 
-    // overleaf-lab: send Authorization only when a non-empty key exists, so a
-    // keyless local server is not sent a malformed empty Bearer header.
-    const chatHeaders = { 'Content-Type': 'application/json' }
-    if (typeof llmApiKey === 'string' && llmApiKey.length > 0) {
-        chatHeaders.Authorization = `Bearer ${llmApiKey}`
-    }
+    // overleaf-lab: auth is the provider's job now (OpenAI-compatible Bearer or
+    // Anthropic x-api-key, sent only when a key exists).
 
     // overleaf-lab: per-pass safety timeout, SIZED FROM THE WORK with the old fixed
     // hour as the floor. The worst case per pass is a full document prefill (the
@@ -856,11 +956,20 @@ async function performReview(job) {
 
     // overleaf-lab: pass-based progress, read by the status endpoint. A [per-file]
     // requirement counts one pass per source file.
-    const mainPassCount = requirements.reduce(
+    let mainPassCount = requirements.reduce(
         (n, r) =>
             n + (isPerFileRequirement(r) && strippedDocs.length > 1 ? strippedDocs.length : 1),
         0
     )
+    // overleaf-lab: F6 — hard cap on passes per job. [per-file] requirements on a
+    // 100-file project would otherwise multiply passes (and cost) by 100x.
+    if (mainPassCount > MAX_PASSES_PER_JOB) {
+        logger.warn(
+            { projectId, requested: mainPassCount, cap: MAX_PASSES_PER_JOB },
+            '[LLM] compliance: pass cap applied'
+        )
+        mainPassCount = MAX_PASSES_PER_JOB
+    }
     job.passesTotal = mainPassCount
     job.passesDone = 0
     let completedPasses = 0
@@ -877,6 +986,21 @@ async function performReview(job) {
         }
         const perFile = isPerFileRequirement(requirements[i]) && strippedDocs.length > 1
         const requirement = stripPerFileMarker(requirements[i])
+        // overleaf-lab: F6 — hard stop at the configured pass budget. This and
+        // every remaining requirement are reported as 'skipped' below so the
+        // report stays complete and honest about coverage.
+        const passCost = perFile ? strippedDocs.length : 1
+        if (completedPasses + passCost > MAX_PASSES_PER_JOB) {
+            for (let k = i; k < requirements.length; k++) {
+                allItems.push({
+                    requirement: stripPerFileMarker(requirements[k]),
+                    status: 'skipped',
+                    evidence: `Pass budget reached (${MAX_PASSES_PER_JOB} passes; see LLM_REVIEW_MAX_PASSES)`,
+                    suggestion: '',
+                })
+            }
+            break
+        }
         job.passesDone = completedPasses
         job.currentRequirement = requirement.replace(/\s+/g, ' ').slice(0, 160)
 
@@ -926,30 +1050,31 @@ async function performReview(job) {
                     }
                 }, passTimeoutMs())
                 try {
-                    const response = await fetch(`${llmApiUrl}/chat/completions`, {
-                        method: 'POST',
-                        headers: chatHeaders,
-                        body: JSON.stringify(subBody),
-                        signal: job.controller ? job.controller.signal : undefined,
-                    })
-                    if (!response.ok) {
-                        const errorText = await response.text()
-                        logger.warn(
-                            { projectId, pass: i, file: doc.path, status: response.status },
-                            '[LLM] compliance: per-file sub-pass refused'
-                        )
+                    // overleaf-lab: PR item 4 — provider call; a refusal now throws
+                    // (OError) instead of returning a non-ok Response.
+                    let detailed = null
+                    try {
+                        detailed = await llmChat(subBody, {
+                            signal: job.controller ? job.controller.signal : undefined,
+                        })
+                    } catch (err) {
+                        if (job.status === 'cancelled' || isAbortErr(err)) {
+                            throw err
+                        }
+                        const backendError = parseBackendError(providerErrorText(err))
                         fileResults.push({
                             path: doc.path,
                             status: 'na',
-                            evidence: `check refused (HTTP ${response.status})`,
+                            evidence: backendError.message
+                                ? `check refused: ${backendError.message.slice(0, 200)}`
+                                : `check refused (${err.message})`,
                             suggestion: '',
                         })
-                    } else {
-                        const data = await response.json()
+                    }
+                    if (detailed) {
+                        const data = detailed.raw
                         recordTimings(data && data.timings)
-                        const content = stripThinkTags(
-                            data?.choices?.[0]?.message?.content || ''
-                        )
+                        const content = detailed.content
                         try {
                             const parsed = extractJson(content)
                             const first = Array.isArray(parsed.items) ? parsed.items[0] : null
@@ -977,7 +1102,7 @@ async function performReview(job) {
                         }
                     }
                 } catch (err) {
-                    if (job.status === 'cancelled' || (err && err.name === 'AbortError')) {
+                    if (job.status === 'cancelled' || isAbortErr(err)) {
                         throw err
                     }
                     logger.warn(
@@ -1033,21 +1158,24 @@ async function performReview(job) {
             }
         }, passTimeoutMs())
         try {
-            const response = await fetch(`${llmApiUrl}/chat/completions`, {
-                method: 'POST',
-                headers: chatHeaders,
-                body: JSON.stringify(requestBody),
-                // overleaf-lab: job signal, so cancel (and the pass timeout) abort it.
-                signal: job.controller ? job.controller.signal : undefined,
-            })
-
-            if (!response.ok) {
-                const errorText = await response.text()
-                logger.error(
-                    { projectId, userId, status: response.status, pass: i, error: errorText },
-                    '[LLM] compliance: LLM API error'
-                )
-                const backendError = parseBackendError(errorText)
+            // overleaf-lab: PR item 4 — provider call; a non-ok response now
+            // SURFACES AS A THROW, so the refusal handling moved into the inner
+            // catch (same semantics: context overflow fails the job, anything
+            // else downgrades this requirement).
+            let data
+            let content
+            try {
+                const detailed = await llmChat(requestBody, {
+                    signal: job.controller ? job.controller.signal : undefined,
+                })
+                data = detailed.raw
+                content = detailed.content
+            } catch (err) {
+                if (job.status === 'cancelled' || isAbortErr(err)) {
+                    throw err
+                }
+                logger.error({ projectId, userId, pass: i, err }, '[LLM] compliance: LLM API error')
+                const backendError = parseBackendError(providerErrorText(err))
 
                 // overleaf-lab: a context overflow means the DOCUMENT does not fit, so
                 // every other pass would fail identically: fail the whole job, with the
@@ -1071,21 +1199,17 @@ async function performReview(job) {
                 allItems.push({
                     requirement: job.currentRequirement,
                     status: 'na',
-                    evidence: `The check could not run (HTTP ${response.status}${
-                        backendError.message
-                            ? `: ${backendError.message.slice(0, 200)}`
-                            : ''
-                    })`,
+                    evidence: backendError.message
+                        ? `The check could not run: ${backendError.message.slice(0, 200)}`
+                        : `The check could not run: ${err.message}`,
                     suggestion: '',
                 })
                 continue
             }
 
-            let data = await response.json()
             // overleaf-lab: a full-size prefill is the best throughput measurement
             // there is; cache-hit passes are rejected by the sample-size gate.
             recordTimings(data && data.timings)
-            let content = stripThinkTags(data?.choices?.[0]?.message?.content || '')
 
             // overleaf-lab: parse, with ONE retry on an unusable answer. The typical
             // cause is a broad requirement (e.g. "check every citation") whose analysis
@@ -1114,18 +1238,27 @@ async function performReview(job) {
                             requestBody.messages[1],
                         ],
                     }
-                    const retryResponse = await fetch(`${llmApiUrl}/chat/completions`, {
-                        method: 'POST',
-                        headers: chatHeaders,
-                        body: JSON.stringify(retryBody),
-                        signal: job.controller ? job.controller.signal : undefined,
-                    })
-                    if (!retryResponse.ok) {
-                        break
+                    let retryD
+                    let retryOk = false
+                    try {
+                        retryD = await llmChat(retryBody, {
+                            signal: job.controller ? job.controller.signal : undefined,
+                        })
+                        retryOk = true
+                    } catch (rerr) {
+                        if (job.status === 'cancelled' || isAbortErr(rerr)) {
+                            throw rerr
+                        }
+                        logger.warn(
+                            { projectId, pass: i, rerr },
+                            '[LLM] compliance: retry refused, treating the answer as unusable'
+                        )
                     }
-                    data = await retryResponse.json()
-                    recordTimings(data && data.timings)
-                    content = stripThinkTags(data?.choices?.[0]?.message?.content || '')
+                    if (retryOk) {
+                        data = retryD.raw
+                        recordTimings(retryD.raw && retryD.raw.timings)
+                        content = retryD.content
+                    }
                 }
                 try {
                     parsed = extractJson(content)
@@ -1174,7 +1307,7 @@ async function performReview(job) {
         } catch (err) {
             // An abort (user cancel or the pass timeout) must stop the whole review;
             // anything else downgrades to an unverifiable requirement.
-            if (job.status === 'cancelled' || (err && err.name === 'AbortError')) {
+            if (job.status === 'cancelled' || isAbortErr(err)) {
                 throw err
             }
             logger.warn({ projectId, pass: i, err }, '[LLM] compliance: pass failed')
@@ -1282,48 +1415,40 @@ async function performReview(job) {
                 }
             }, passTimeoutMs())
             try {
-                const response = await fetch(`${llmApiUrl}/chat/completions`, {
-                    method: 'POST',
-                    headers: chatHeaders,
-                    body: JSON.stringify(verifyBody),
+                // overleaf-lab: PR item 4 — provider call; a refusal now throws and
+                // falls into the outer catch ("keeping the finding"), same as before.
+                const detailed = await llmChat(verifyBody, {
                     signal: job.controller ? job.controller.signal : undefined,
                 })
-                if (response.ok) {
-                    const data = await response.json()
-                    recordTimings(data && data.timings)
-                    const content = stripThinkTags(
-                        data?.choices?.[0]?.message?.content || ''
-                    )
-                    try {
-                        const parsed = extractJson(content)
-                        const verified = Array.isArray(parsed.items)
-                            ? parsed.items[0]
-                            : null
-                        if (
-                            verified &&
-                            ['ok', 'partial', 'missing', 'na'].includes(verified.status)
-                        ) {
-                            allItems[idx] = {
-                                // The requirement is not the verifier's to rewrite.
-                                requirement: finding.requirement,
-                                status: verified.status,
-                                evidence: repairJsonEscapeArtifacts(
-                                    verified.evidence || finding.evidence
-                                ).slice(0, 600),
-                                suggestion: repairJsonEscapeArtifacts(
-                                    verified.suggestion || ''
-                                ).slice(0, 600),
-                            }
+                try {
+                    const parsed = extractJson(detailed.content)
+                    const verified = Array.isArray(parsed.items)
+                        ? parsed.items[0]
+                        : null
+                    if (
+                        verified &&
+                        ['ok', 'partial', 'missing', 'na'].includes(verified.status)
+                    ) {
+                        allItems[idx] = {
+                            // The requirement is not the verifier's to rewrite.
+                            requirement: finding.requirement,
+                            status: verified.status,
+                            evidence: repairJsonEscapeArtifacts(
+                                verified.evidence || finding.evidence
+                            ).slice(0, 600),
+                            suggestion: repairJsonEscapeArtifacts(
+                                verified.suggestion || ''
+                            ).slice(0, 600),
                         }
-                    } catch (err) {
-                        logger.warn(
-                            { projectId, err },
-                            '[LLM] compliance: unparseable verification, keeping the finding'
-                        )
                     }
+                } catch (err) {
+                    logger.warn(
+                        { projectId, err },
+                        '[LLM] compliance: unparseable verification, keeping the finding'
+                    )
                 }
             } catch (err) {
-                if (job.status === 'cancelled' || (err && err.name === 'AbortError')) {
+                if (job.status === 'cancelled' || isAbortErr(err)) {
                     throw err
                 }
                 logger.warn(
@@ -1355,6 +1480,7 @@ async function performReview(job) {
     // empty instead of failing a review whose per-requirement work already succeeded.
     let summary = ''
     try {
+        // overleaf-lab: PR item 4 — provider call; refusal fails only the summary.
         const summaryBody = {
             model: reviewModel,
             messages: [
@@ -1386,19 +1512,22 @@ async function performReview(job) {
                 },
             },
         }
-        const response = await fetch(`${llmApiUrl}/chat/completions`, {
-            method: 'POST',
-            headers: chatHeaders,
-            body: JSON.stringify(summaryBody),
-            signal: job.controller ? job.controller.signal : undefined,
-        })
-        if (response.ok) {
-            const data = await response.json()
-            const content = stripThinkTags(data?.choices?.[0]?.message?.content || '')
-            summary = repairJsonEscapeArtifacts(extractJson(content).summary || '')
+        let detailed = null
+        try {
+            detailed = await llmChat(summaryBody, {
+                signal: job.controller ? job.controller.signal : undefined,
+            })
+        } catch (err) {
+            if (job.status === 'cancelled' || isAbortErr(err)) {
+                throw err
+            }
+            logger.warn({ projectId, err }, '[LLM] compliance: summary synthesis refused')
+        }
+        if (detailed) {
+            summary = repairJsonEscapeArtifacts(extractJson(detailed.content).summary || '')
         }
     } catch (err) {
-        if (job.status === 'cancelled' || (err && err.name === 'AbortError')) {
+        if (job.status === 'cancelled' || isAbortErr(err)) {
             throw err
         }
         logger.warn({ projectId, err }, '[LLM] compliance: summary synthesis failed')
@@ -1473,11 +1602,9 @@ async function processQueue() {
         running = false
         job.controller = null
         // overleaf-lab: never let one job's failure stall the queue.
-        try {
-            processQueue()
-        } catch (err) {
+        processQueue().catch(err => {
             logger.error({ err }, '[LLM] compliance: failed to continue the queue')
-        }
+        })
     }
 }
 
@@ -1487,7 +1614,11 @@ async function getRubrics(req, res) {
     if (!flags.reviewEnabled) {
         return res.json({ rubrics: [] })
     }
-    const rubrics = await getComplianceRubrics()
+    // overleaf-lab (2026-08-27): USER-SCOPED rubrics (the user configured them
+    // under /user/llm-settings); a user without their own inherits the
+    // deployment-wide set.
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const rubrics = await getComplianceRubricsForUser(userId)
     // overleaf-lab: expose names only, never the guidelines text, to the project UI.
     res.json({ rubrics: rubrics.map(r => ({ id: r.id, name: r.name })) })
 }
@@ -1509,21 +1640,52 @@ async function startReview(req, res) {
     // 2. Request context.
     const projectId = req.params.Project_id
     const userId = SessionManager.getLoggedInUserId(req.session)
-    const { rubricId } = req.body || {}
+    const { rubricId, model: requestedModel } = req.body || {}
 
     logger.debug({ projectId, userId, rubricId }, '[LLM] compliance: start requested')
 
     // 3. Resolve the requested rubric (capture its name for the job).
-    const rubrics = await getComplianceRubrics()
+    // overleaf-lab (2026-08-27): from the USER's own rubrics (fall back to the
+    // deployment-wide set) — rubrics are per-user now, not global.
+    const rubrics = await getComplianceRubricsForUser(userId)
     const rubric = rubrics.find(r => r.id === rubricId)
     if (!rubric) {
         return res.json({ ok: false, error: 'no_rubric', message: 'Unknown or missing rubric' })
     }
 
-    // 4. Effective backend configuration must at least have a URL.
-    const admin = await getAdminLLMSettings()
-    if (!admin.llmApiUrl) {
-        return res.json({ ok: false, error: 'not_configured', message: 'LLM backend is not configured' })
+    // 4. A usable lane must exist: the user's selection / BYO row / site backend.
+    // overleaf-lab (2026-08-27): deployments WITHOUT a global LLM are first-class
+    // — resolving the lane also honors the user's profile selection and BYO rows.
+    try {
+        await resolveModelLane(userId, (typeof requestedModel === 'string' && requestedModel.trim()) || undefined)
+    } catch (err) {
+        logger.debug({ userId, err: err?.message }, '[LLM] compliance: no usable lane')
+        return res.json({
+            ok: false,
+            error: 'not_configured',
+            message: 'No usable LLM backend: set a model (File → Select LLM Model) or add your own LLM connection',
+        })
+    }
+
+    // overleaf-lab: F6 — concurrency caps. One user keeps at most one review
+    // running plus two queued; the global queue stays bounded so a slow shared
+    // backend cannot be stacked with work by many projects.
+    const userActive = [...jobs.values()].filter(
+        j => j.userId === userId && (j.status === 'running' || j.status === 'queued')
+    ).length
+    if (userActive >= MAX_USER_REVIEWS_IN_FLIGHT) {
+        return res.json({
+            ok: false,
+            error: 'too_many',
+            message: `You already have ${MAX_USER_REVIEWS_IN_FLIGHT} reviews running or queued; wait for one to finish`,
+        })
+    }
+    if (queue.length >= MAX_GLOBAL_QUEUE) {
+        return res.json({
+            ok: false,
+            error: 'server_busy',
+            message: 'Several reviews are already queued; try again shortly',
+        })
     }
 
     // 5. Create and enqueue the job.
@@ -1534,6 +1696,9 @@ async function startReview(req, res) {
         userId,
         rubricId,
         rubricName: rubric.name,
+        // overleaf-lab: Review-tab model selector — explicit model ref
+        // (site id or 'u:<rowId>:<model>'); null = deployment default.
+        modelOverride: typeof requestedModel === 'string' && requestedModel.trim() ? requestedModel.trim().slice(0, 300) : null,
         status: 'queued',
         result: null,
         errorCode: null,
@@ -1555,7 +1720,9 @@ async function startReview(req, res) {
     queue.push(job.id)
     // overleaf-lab: kick the queue; it runs to its first await, so if nothing else
     // is running this job may already be 'running' by the time we respond.
-    processQueue()
+    processQueue().catch(err => {
+        logger.error({ err }, '[LLM] compliance: failed to launch the queue')
+    })
 
     return res.json({
         ok: true,

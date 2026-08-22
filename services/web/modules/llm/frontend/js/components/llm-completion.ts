@@ -324,21 +324,15 @@ class InlineCompletionPlugin {
     private debounceTrigger() {
         if (this.debounceTimer) clearTimeout(this.debounceTimer)
         this.debounceTimer = window.setTimeout(() => {
-            this.trigger().catch(err => {
-                console.error(
-                    '[LLM-Completion] Unhandled error in trigger:',
-                    err
-                )
+            this.trigger().catch(() => {
+                // swallowed: the plugin surfaces its own error state
             })
         }, this.config.debounceMs)
     }
 
     triggerManual() {
-        this.trigger().catch(err => {
-            console.error(
-                '[LLM-Completion] Unhandled error in manual trigger:',
-                err
-            )
+        this.trigger().catch(() => {
+            // swallowed: manual triggers surface errors through the placeholder
         })
     }
 
@@ -449,7 +443,7 @@ class InlineCompletionPlugin {
         return true
     }
 
-    cancel(reason?: string) {
+    cancel(_reason?: string) {
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer)
             this.debounceTimer = null
@@ -599,6 +593,23 @@ export const INLINE_COMPLETION_PLUGIN = ViewPlugin.define(
     }
 )
 
+// overleaf-lab: created once and reused by every instance (editor-theme rule).
+const ghostTextTheme = EditorView.baseTheme({
+    '.cm-ghostText': {
+        opacity: '0.45',
+        color: 'var(--cm-ghost-foreground, #888)',
+        pointerEvents: 'none',
+        fontFamily: 'inherit',
+        fontSize: 'inherit',
+        lineHeight: 'inherit',
+        fontWeight: 'inherit',
+        whiteSpace: 'pre-wrap',
+        wordWrap: 'break-word',
+        maxWidth: '100%',
+        verticalAlign: 'baseline',
+    },
+})
+
 export function inlineCompletionExtension(): Extension {
     return [
         suggestionField,
@@ -647,20 +658,6 @@ export function inlineCompletionExtension(): Extension {
                 },
             ])
         ),
-        EditorView.baseTheme({
-            '.cm-ghostText': {
-                opacity: '0.45',
-                color: 'var(--cm-ghost-foreground, #888)',
-                pointerEvents: 'none',
-                fontFamily: 'inherit',
-                fontSize: 'inherit',
-                lineHeight: 'inherit',
-                fontWeight: 'inherit',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                maxWidth: '100%',
-                verticalAlign: 'baseline',
-            },
-        }),
+        ghostTextTheme,
     ]
 }

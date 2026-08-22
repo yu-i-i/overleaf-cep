@@ -2,7 +2,8 @@
 // Provides root-level LLM editor features (inline completion, floating toolbar)
 import React, { useEffect, useRef, useState } from 'react'
 import { useCodeMirrorViewContext } from '@/features/source-editor/components/codemirror-context'
-import { inlineCompletionExtension } from './llm-completion'
+import { useEditorOpenDocContext } from '@/features/ide-react/context/editor-open-doc-context'
+import { usePermissionsContext } from '@/features/ide-react/context/permissions-context'
 import LLMToolbar, { LLMToolbarHandle } from './llm-toolbar'
 import { useLLMFeatures } from '../hooks/use-llm-features'
 
@@ -25,7 +26,9 @@ function LLMSourceEditorComponent() {
     useEffect(() => {
         if (!view || extensionInstalled) return
         try {
-            const ext = inlineCompletionExtension()
+            // overleaf-lab: the extension itself registers through the
+            // sourceEditorExtensions config entry; here we only flip the
+            // installed flag once the view exists.
             view.dispatch({
                 effects: (window as any).__cm_llm_reconfigure
                     ? []
@@ -37,6 +40,96 @@ function LLMSourceEditorComponent() {
             // Extension may already be active or view not ready
         }
     }, [view, extensionInstalled])
+
+    // overleaf-lab (2026): AI Error Assist "Apply fix" — the log-pane card
+    // (outside this context) can't reach the CodeMirror view directly, so it
+    // posts a request event; we're inside CodeMirrorViewContext.Provider, so
+    // we own the edit: exact-match the suggested text in the open document,
+    // dispatch a CM transaction (the realtime OT extension syncs it), and
+    // reply. Safe by construction: any mismatch (file changed, wrong doc,
+    // pure deletion of something not present) is refused, never fuzzy-applied.
+    const { openDocName } = useEditorOpenDocContext()
+    const { trackedWrite } = usePermissionsContext()
+    useEffect(() => {
+        const handleApply = (e: Event) => {
+            const detail = (e as CustomEvent).detail || {}
+            const reqId = detail.reqId
+            if (!reqId || !view) return
+            const reply = (ok: boolean, reason?: string, extra?: Record<string, unknown>) => {
+                window.dispatchEvent(
+                    new CustomEvent('llm-cfx-apply-reply', {
+                        detail: { reqId, ok, reason, ...extra }
+                    })
+                )
+            }
+            try {
+                if (!trackedWrite) {
+                    return reply(false, 'read-only')
+                }
+                const base = (s: string | undefined) =>
+                    String(s || '').replace(/^\/?compile\//, '').split('/').pop() || ''
+                const target = base(detail.file)
+                if (target && openDocName && base(openDocName) !== target) {
+                    return reply(false, 'wrong-doc', { openDoc: openDocName })
+                }
+                const doc = view.state.doc
+                const oldText = String(detail.suggestedOld || '')
+                const newText = String(detail.suggestedNew || '')
+                const span = Array.isArray(detail.span)
+                    ? [parseInt(detail.span[0], 10), parseInt(detail.span[1], 10)]
+                    : null
+                let from = -1
+                let to = -1
+                if (span && span[0] >= 1 && span[1] >= span[0] && span[1] <= doc.lines) {
+                    const fromLine = doc.line(span[0])
+                    const toLine = doc.line(span[1])
+                    const start = fromLine.from
+                    const end = toLine.to
+                    const slice = doc.sliceString(start, end)
+                    if (oldText) {
+                        if (slice === oldText) {
+                            from = start
+                            to = end
+                        }
+                        // else: fall through to single-line search below
+                    } else {
+                        from = end
+                        to = end
+                    }
+                }
+                if (from === -1) {
+                    const lineNo = Math.max(1, Math.min(detail.line || 1, doc.lines))
+                    const line = doc.line(lineNo)
+                    if (oldText) {
+                        const at = line.text.indexOf(oldText)
+                        if (at === -1) {
+                            return reply(false, 'not-found')
+                        }
+                        from = line.from + at
+                        to = line.from + at + oldText.length
+                    } else {
+                        from = line.to
+                        to = line.to
+                    }
+                }
+                if (from === to && !newText) {
+                    return reply(false, 'not-found')
+                }
+                view.dispatch({
+                    changes: { from, to, insert: newText },
+                    selection: { anchor: from + newText.length },
+                    scrollIntoView: true
+                })
+                view.focus()
+                reply(true)
+            }
+            catch (err) {
+                reply(false, 'internal', { error: (err as Error).message })
+            }
+        }
+        window.addEventListener('llm-cfx-apply-request', handleApply)
+        return () => window.removeEventListener('llm-cfx-apply-request', handleApply)
+    }, [view, openDocName, trackedWrite])
 
     // Listen for "Ask AI" from the review tooltip menu
     useEffect(() => {

@@ -3,7 +3,7 @@ import {
   DropdownMenu,
   DropdownToggle,
 } from '@/shared/components/dropdown/dropdown-menu'
-import { FC, forwardRef, useCallback } from 'react'
+import { FC, ReactNode, forwardRef, useCallback } from 'react'
 import classNames from 'classnames'
 import { useNestableDropdown } from '@/shared/hooks/use-nestable-dropdown'
 import { NestableDropdownContextProvider } from '@/shared/context/nestable-dropdown-context'
@@ -101,7 +101,7 @@ const NestedDropdownToggle: FC<React.PropsWithChildren> = forwardRef<
 })
 
 export const NestedMenuBarDropdown: FC<
-  React.PropsWithChildren<{ id: string; title: string }>
+  React.PropsWithChildren<{ id: string; title: string | ReactNode }>
 > = ({ children, id, title }) => {
   const { menuId, selected, setSelected } = useNestableDropdown()
   const select = useCallback(() => {

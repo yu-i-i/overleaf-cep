@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import MaterialIcon from '@/shared/components/material-icon'
 import { useLLMChat } from '../hooks/use-llm-chat'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import '../../stylesheets/llm-chat.scss'
 
 interface LLMChatPaneProps {
@@ -23,9 +24,6 @@ const LLMChatPane = React.memo(function LLMChatPane({
         stopGeneration,
         rerunLastMessage,
         clearMessages,
-        models,
-        selectedModel,
-        setSelectedModel,
         canRerun,
         modelsLoaded,
         hasModels,
@@ -56,10 +54,21 @@ const LLMChatPane = React.memo(function LLMChatPane({
         rerunLastMessage()
     }
 
+    const [armedClear, setArmedClear] = useState(false)
+    const armedTimer = useRef<number | null>(null)
+    const armClear = () => {
+        setArmedClear(true)
+        if (armedTimer.current) window.clearTimeout(armedTimer.current)
+        armedTimer.current = window.setTimeout(() => setArmedClear(false), 3000)
+    }
     const handleClear = () => {
-        if (confirm(t('clear_conversation_confirm', 'Clear conversation?'))) {
-            clearMessages()
+        if (!armedClear) {
+            armClear()
+            return
         }
+        if (armedTimer.current) window.clearTimeout(armedTimer.current)
+        setArmedClear(false)
+        clearMessages()
     }
 
     if (modelsLoaded && !hasModels) {
@@ -71,34 +80,15 @@ const LLMChatPane = React.memo(function LLMChatPane({
     }
 
     const displayMessages = messages.filter(m => m.role !== 'system')
-    const showModelSelector = models.length > 0
 
     return (
         <aside className="chat" aria-label={t('ai_assistant', 'AI Assistant')}>
             <div className="llm-chat-container">
-                {/* Header with Model Selector and Action Buttons */}
+                {/* overleaf-lab (owner request 2026-08-26): the per-pane model picker is
+                    gone — the ONLY selection entry point is File → "Select LLM Model".
+                    The chat keeps using the shared (user-scoped) selection, synced
+                    inside use-llm-chat via the LLM_MODEL_CHANGED_EVENT bridge. */}
                 <div className="llm-chat-header">
-                    {showModelSelector && (
-                        <div className="llm-model-selector">
-                            <label htmlFor="model-select">
-                                {t('model_label', 'Model')}
-                            </label>
-                            <select
-                                id="model-select"
-                                value={selectedModel}
-                                onChange={e => setSelectedModel(e.target.value)}
-                                disabled={isLoading}
-                                aria-label={t('model_label', 'Model')}
-                            >
-                                {models.map(model => (
-                                    <option key={model.id} value={model.id}>
-                                        {model.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-
                     <div className="llm-action-buttons">
                         {canRerun && !isLoading && (
                             <button
@@ -116,11 +106,21 @@ const LLMChatPane = React.memo(function LLMChatPane({
                             <button
                                 type="button"
                                 onClick={handleClear}
-                                className="llm-action-button"
-                                title={t('clear_conversation', 'Clear conversation')}
-                                aria-label={t('clear_conversation', 'Clear conversation')}
+                                className={`llm-action-button${armedClear ? ' llm-action-button-armed' : ''}`}
+                                title={armedClear
+                                    ? t('llm_chat_confirm_clear', 'Click again to clear the conversation')
+                                    : t('clear_conversation', 'Clear conversation')}
+                                aria-label={armedClear
+                                    ? t('llm_chat_confirm_clear', 'Click again to clear the conversation')
+                                    : t('clear_conversation', 'Clear conversation')}
                             >
-                                <MaterialIcon type="delete" />
+                                {armedClear ? (
+                                    <span className="llm-action-button-text">
+                                        {t('clear_confirm', 'Clear all?')}
+                                    </span>
+                                ) : (
+                                    <MaterialIcon type="delete" />
+                                )}
                             </button>
                         )}
                     </div>
@@ -158,10 +158,14 @@ const LLMChatPane = React.memo(function LLMChatPane({
                                 <div className="message-container">
                                     <div
                                         className="message-content"
-                                        // Content comes only from the configured LLM API — not from other users
+                                        // Content is LLM output (attacker-influenceable via the
+                                        // document, so sanitize after markdown). See F3.
                                         // eslint-disable-next-line react/no-danger
                                         dangerouslySetInnerHTML={{
-                                            __html: marked.parse(msg.content) as string,
+                                            __html: DOMPurify.sanitize(
+                                                marked.parse(msg.content) as string,
+                                                { USE_PROFILES: { html: true, svg: false, mathMl: false } }
+                                            ),
                                         }}
                                     />
                                 </div>

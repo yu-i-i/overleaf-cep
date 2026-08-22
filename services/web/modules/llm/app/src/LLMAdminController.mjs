@@ -1,10 +1,10 @@
 import logger from '@overleaf/logger'
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import { z } from 'zod'
 import { expressify } from '@overleaf/promise-utils'
 import { encryptSecret, decryptSecret } from './LLMCrypto.mjs' // overleaf-lab: at-rest encryption of admin API key
-import { createLLMProvider } from './LLMProviderFactory.mjs'
+import { listModels, detectProviderType } from './LLMClient.mjs' // overleaf-lab: AI-SDK provider seam
 import {
   DEFAULT_ASK_AI_SYSTEM_PROMPT,
   DEFAULT_ERROR_PROMPT,
@@ -40,7 +40,13 @@ function readAdminSettings() {
 function writeAdminSettings(data) {
   try {
     fs.mkdirSync(path.dirname(ADMIN_SETTINGS_PATH), { recursive: true })
-    fs.writeFileSync(ADMIN_SETTINGS_PATH, JSON.stringify(data, null, 2), { mode: 0o600 })
+    // F9: atomic write — temp file in the same directory + rename (POSIX
+    // rename is atomic) fixes torn reads; explicit chmod also corrects the
+    // mode of an EXISTING file created with looser permissions.
+    const tmp = `${ADMIN_SETTINGS_PATH}.tmp-${process.pid}-${Date.now()}`
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2))
+    fs.chmodSync(tmp, 0o600)
+    fs.renameSync(tmp, ADMIN_SETTINGS_PATH)
   } catch (err) {
     logger.error({ err, path: ADMIN_SETTINGS_PATH }, '[LLM] Could not write admin settings file')
     throw err
@@ -71,9 +77,21 @@ async function buildDisplaySettings() {
   return {
     systemPrompt: settings.systemPrompt || '',
     llmApiUrl: settings.llmApiUrl || process.env.LLM_API_URL || '',
-    llmApiType: settings.llmApiType || process.env.LLM_API_TYPE || 'anthropic',
+    llmApiType:
+      settings.llmApiType ||
+      process.env.LLM_API_TYPE ||
+      detectProviderType(settings.llmApiUrl || process.env.LLM_API_URL),
     hasLlmApiKey: !!(settings.llmApiKey || process.env.LLM_API_KEY),
     allowedModels: jsonHasModels ? settings.allowedModels : envModels,
+    // overleaf-lab: item 8 (PR decision) — the FULL fetched model list; allowedModels
+    // is the checked/enabled subset. The UI keeps unchecked models visible so an
+    // admin can re-enable them without rescan.
+    knownModels:
+      Array.isArray(settings.knownModels) && settings.knownModels.length > 0
+        ? settings.knownModels
+        : jsonHasModels
+          ? settings.allowedModels
+          : envModels,
     completionModel: settings.completionModel || '',
     llmApiUrlFromEnv: !settings.llmApiUrl && !!process.env.LLM_API_URL,
     llmApiTypeFromEnv: !settings.llmApiType && !!process.env.LLM_API_TYPE,
@@ -115,13 +133,18 @@ async function getAdminSettings(req, res) {
 }
 
 const llmSettingsSchema = z.object({
-  systemPrompt: z.string().max(4000),
+  // overleaf-lab: optional so a save that omits it (or sends '') still works; the
+  // chat falls back to its own language instruction when no prompt is set.
+  systemPrompt: z.string().max(4000).optional(),
 
   llmApiUrl: z.string().optional(),
   llmApiType: z.string().optional(),
   llmApiKey: z.string().optional(),
+  clearLlmApiKey: z.boolean().optional(),
 
   allowedModels: z.array(z.string()).optional(),
+  // overleaf-lab: item 8 — the full fetched model list (checked subset = allowedModels)
+  knownModels: z.array(z.string()).optional(),
 
   completionModel: z.string().optional(),
 
@@ -152,16 +175,16 @@ const llmSettingsSchema = z.object({
 async function saveAdminSettings(req, res) {
   const safeBody = llmSettingsSchema.safeParse(req.body)
   if (!safeBody.success) {
-    const errors = Object.fromEntries(
-      safeBody.error.issues.map(issue => [
-        issue.path.join('.'),
-        issue.message,
-      ])
-    )
-    logger.error( errors, 'Bad admin settings')
-// TODO: send all errors to the frontend and show them
+    const errors = safeBody.error.issues.map(issue => ({
+      field: issue.path.join('.'),
+      message: issue.message,
+    }))
+    logger.error( { errors }, 'Bad admin settings')
+    // F8: return ALL validation errors so the UI can surface them.
     return res.status(400).json({
+      ok: false,
       error: safeBody.error.issues[0].message,
+      errors,
     })
   }
 
@@ -170,7 +193,9 @@ async function saveAdminSettings(req, res) {
     llmApiUrl,
     llmApiType,
     llmApiKey,
+    clearLlmApiKey,
     allowedModels,
+    knownModels,
     completionModel,
     complianceRubrics,
     reviewModel,
@@ -188,25 +213,19 @@ async function saveAdminSettings(req, res) {
 
   const existing = readAdminSettings()
 
-  // overleaf-lab: sanitize each rubric and cap the count. Entries without an id or
-  // name are dropped; text fields are length-capped. When not provided, keep the
+  // overleaf-lab: sanitize each rubric and cap the count via the shared helper
+  // (same rules as the per-user rubric save). When not provided, keep the
   // existing rubrics untouched.
-  let sanitizedRubrics
-  if (Array.isArray(complianceRubrics)) {
-    sanitizedRubrics = complianceRubrics
-      .map(r => ({
-        id: String((r && r.id) || ''),
-        name: String((r && r.name) || '').slice(0, 200),
-        guidelines: String((r && r.guidelines) || '').slice(0, 20000),
-        // overleaf-lab: per-rubric mechanical scans ("Label :: regex" per
-        // line); policy lives with the rubric it verifies, never in code.
-        scanPatterns: String((r && r.scanPatterns) || '').slice(0, 4000),
-      }))
-      .filter(r => r.id && r.name)
-      .slice(0, 50)
-  } else {
-    sanitizedRubrics = Array.isArray(existing.complianceRubrics) ? existing.complianceRubrics : []
+  const sanitizedRubricsInput = sanitizeComplianceRubrics(complianceRubrics)
+  // overleaf-lab: validate the RAW input so an over-long scan-patterns block
+  // fails loudly (the sanitizer would otherwise silently truncate it).
+  const rubricError = validateComplianceRubrics(Array.isArray(complianceRubrics) ? complianceRubrics : [])
+  if (rubricError) {
+    return res.status(400).json({ error: rubricError })
   }
+  const sanitizedRubrics = sanitizedRubricsInput === null
+    ? (Array.isArray(existing.complianceRubrics) ? existing.complianceRubrics : [])
+    : sanitizedRubricsInput
 
   // overleaf-lab: clamp the context window to a sane range; keep existing (or the
   // 32000 default) when not provided.
@@ -233,39 +252,8 @@ async function saveAdminSettings(req, res) {
     sanitizedReviewMaxTokens = existing.reviewMaxTokens || DEFAULT_REVIEW_MAX_TOKENS
   }
 
-  // overleaf-lab: validate each rubric's scan patterns ("Label :: regex" per line)
-  // so the admin learns about a broken regex at save time, not from a silently
-  // hint-less review. The reviewer side skips invalid lines anyway (defense in
-  // depth for settings written by other means).
-  if (Array.isArray(complianceRubrics)) {
-    for (const r of complianceRubrics) {
-      const patternsText = r && typeof r.scanPatterns === 'string' ? r.scanPatterns : ''
-      if (patternsText.length > 4000) {
-        return res.status(400).json({
-          error: `Scan patterns of rubric "${(r && r.name) || '?'}" must be 4000 characters or fewer`,
-        })
-      }
-      for (const rawLine of patternsText.split('\n')) {
-        const line = rawLine.trim()
-        if (!line) {
-          continue
-        }
-        const sep = line.indexOf('::')
-        const body = (sep === -1 ? line : line.slice(sep + 2)).trim()
-        if (!body) {
-          continue
-        }
-        try {
-          // eslint-disable-next-line no-new
-          new RegExp(body, 'i')
-        } catch (err) {
-          return res.status(400).json({
-            error: `Invalid scan pattern regex in rubric "${(r && r.name) || '?'}": ${body}`,
-          })
-        }
-      }
-    }
-  }
+  // overleaf-lab: scan-pattern validation moved to the shared helper above
+  // (validateComplianceRubrics — same 4000-char cap + per-line RegExp check).
 
   // overleaf-lab: sanitize the action prompt overrides. When provided, keep only
   // known keys with string values, each capped at 4000 chars. When not provided,
@@ -290,10 +278,17 @@ async function saveAdminSettings(req, res) {
 
   const updatedSettings = {
     ...existing,
-    systemPrompt,
+    systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : (existing.systemPrompt || ''),
     llmApiUrl: typeof llmApiUrl === 'string' ? llmApiUrl : (existing.llmApiUrl || ''),
     llmApiType: typeof llmApiType === 'string' ? llmApiType : (existing.llmApiType || ''),
     allowedModels: Array.isArray(allowedModels) ? allowedModels : existing.allowedModels || [],
+    knownModels: Array.isArray(knownModels)
+      ? knownModels
+      : Array.isArray(existing.knownModels)
+        ? existing.knownModels
+        : Array.isArray(existing.allowedModels)
+          ? existing.allowedModels
+          : [],
     completionModel: typeof completionModel === 'string' ? completionModel : (existing.completionModel || ''),
     complianceRubrics: sanitizedRubrics,
     reviewModel: typeof reviewModel === 'string' ? reviewModel : (existing.reviewModel || ''),
@@ -311,7 +306,9 @@ async function saveAdminSettings(req, res) {
     askAiActionPrompts: sanitizedActionPrompts,
   }
 
-  if (typeof llmApiKey === 'string' && llmApiKey.trim().length > 0) {
+  if (clearLlmApiKey) {
+    updatedSettings.llmApiKey = '' // overleaf-lab: explicit "remove stored key" from the admin UI
+  } else if (typeof llmApiKey === 'string' && llmApiKey.trim().length > 0) {
     updatedSettings.llmApiKey = encryptSecret(llmApiKey.trim()) // overleaf-lab: encrypt admin key at rest
   }
 
@@ -322,6 +319,7 @@ async function saveAdminSettings(req, res) {
     llmApiType: !!updatedSettings.llmApiType,
     hasLlmApiKey: !!updatedSettings.llmApiKey,
     allowedModels: updatedSettings.allowedModels?.length || 0,
+    knownModels: updatedSettings.knownModels?.length || 0,
   }, '[LLM] Admin settings updated')
 
   res.json({ success: true })
@@ -344,7 +342,10 @@ export async function getAdminLLMSettings() {
   const jsonKey = settings.llmApiKey ? decryptSecret(settings.llmApiKey) : ''
   return {
     llmApiUrl: settings.llmApiUrl || process.env.LLM_API_URL || null,
-    llmApiType: settings.llmApiType || process.env.LLM_API_TYPE || null,
+    llmApiType:
+      settings.llmApiType ||
+      process.env.LLM_API_TYPE ||
+      detectProviderType(settings.llmApiUrl || process.env.LLM_API_URL),
     llmApiKey: jsonKey || process.env.LLM_API_KEY || null,
     allowedModels: jsonHasModels ? settings.allowedModels : envModelList(),
     completionModel: settings.completionModel || '',
@@ -379,6 +380,55 @@ export async function getComplianceRubrics() {
   return Array.isArray(settings.complianceRubrics) ? settings.complianceRubrics : []
 }
 
+// overleaf-lab (2026-08-27): shared rubric hygiene, used by BOTH the admin save
+// and the per-user compliance rubric save (owner request: rubrics became
+// user-scoped in /user/llm-settings — same caps, same validation).
+// Sanitizes a rubric list (drops entries without id/name, caps text fields,
+// caps the list). Returns null when `list` is not an array (caller keeps the
+// existing value).
+export function sanitizeComplianceRubrics(list) {
+  if (!Array.isArray(list)) return null
+  return list
+    .map(r => ({
+      id: String((r && r.id) || ''),
+      name: String((r && r.name) || '').slice(0, 200),
+      guidelines: String((r && r.guidelines) || '').slice(0, 20000),
+      // overleaf-lab: per-rubric mechanical scans ("Label :: regex" per
+      // line); policy lives with the rubric it verifies, never in code.
+      scanPatterns: String((r && r.scanPatterns) || '').slice(0, 4000),
+    }))
+    .filter(r => r.id && r.name)
+    .slice(0, 50)
+}
+
+// overleaf-lab: validates each rubric's scan patterns ("Label :: regex" per
+// line) so a broken regex fails at SAVE time, not as a silently hint-less
+// review. Returns the first error message, or null when everything parses
+// (reviewer-side parsing skips invalid lines anyway — defense in depth).
+export function validateComplianceRubrics(list) {
+  if (!Array.isArray(list)) return null
+  for (const r of list) {
+    const patternsText = r && typeof r.scanPatterns === 'string' ? r.scanPatterns : ''
+    if (patternsText.length > 4000) {
+      return `Scan patterns of rubric "${(r && r.name) || '?'}" must be 4000 characters or fewer`
+    }
+    for (const rawLine of patternsText.split('\n')) {
+      const line = rawLine.trim()
+      if (!line) continue
+      const sep = line.indexOf('::')
+      const body = (sep === -1 ? line : line.slice(sep + 2)).trim()
+      if (!body) continue
+      try {
+        // eslint-disable-next-line no-new
+        new RegExp(body, 'i')
+      } catch (err) {
+        return `Invalid scan pattern regex in rubric "${(r && r.name) || '?'}": ${body}`
+      }
+    }
+  }
+  return null
+}
+
 // overleaf-lab: resolve the EFFECTIVE editable prompts (admin override when set,
 // else the shipped default). Consumed by the compliance reviewer and the
 // project-scoped GET /llm/prompts endpoint so the frontend and backend agree.
@@ -396,73 +446,87 @@ async function checkAdminLLMConnection(req, res) {
   const { apiUrl, apiKey, apiType } = req.body
   const adminSettings = await getAdminLLMSettings()
   const llmApiUrl = apiUrl || adminSettings.llmApiUrl
-  const llmApiType = apiType || adminSettings.llmApiType
   const llmApiKey = apiKey || adminSettings.llmApiKey
+  const llmApiType = apiType || adminSettings.llmApiType || detectProviderType(llmApiUrl)
 
-  // use first configured/allowed model, if no model is configured, use a model hardcoded in the provider code
   const testModel =
     adminSettings.allowedModels[0] ||
     (process.env.LLM_MODEL_NAME || '').split(',')[0].trim()
 
-  if (!llmApiUrl || !llmApiType) {
+  if (!llmApiUrl) {
     return res.status(400).json({
       success: false,
-      error: 'LLM API URL and type is required',
+      error: 'LLM API URL is required',
     })
   }
 
+  // overleaf-lab: PR decision (item 7) — "testing the connection" IS a
+  // successful model-list fetch: it proves reachability, auth, and that the
+  // backend serves at least one model, in ONE round trip. The first configured
+  // model (if any) must be in the list, which catches typos/stopped models.
+  const spec = normalizeSpecFor(llmApiUrl, llmApiKey, llmApiType, testModel || 'probe')
+
   try {
-    const provider = createLLMProvider({ llmApiUrl, llmApiKey, llmApiType })
-    await provider.checkConnection(testModel)
+    const { ids } = await listModels(spec, { timeoutMs: 60000 })
 
-    res.json({ success: true, message: 'Connection successful' })
+    if (testModel && !ids.includes(testModel)) {
+      logger.warn({ testModel, ids: ids.length }, '[LLM] Admin check: configured model not in backend list')
+      return res.status(404).json({
+        success: false,
+        error: `Model "${testModel}" is not available on this backend`,
+        status: 404,
+        models: ids,
+      })
+    }
 
+    res.json({ success: true, message: 'Connection successful', models: ids })
   } catch (err) {
-    const info = OError.getFullInfo(err)
-    const errStatus  = info?.status || 500
-    logger.error({ err }, '[LLM] Admin connection check failed')
-    res.status(errStatus).json({
+    const status = err.code === 'auth' ? 401 : (err.status || 500)
+    logger.error({ err: err.message, code: err.code }, '[LLM] Admin connection check failed')
+    res.status(status).json({
       success: false,
       error: 'LLM connection failed',
-      status: errStatus,
+      status,
       details: err.message,
+      models: [],
     })
   }
 }
 
+function normalizeSpecFor(baseUrl, apiKey, providerType, model) {
+  const type = providerType || detectProviderType(baseUrl)
+  const base = String(baseUrl || '').replace(/\/+$/, '')
+  const baseForType = type === 'anthropic' ? base.replace(/\/v\d+$/, '') : base
+  return { providerType: type, baseUrl: baseForType, apiKey: apiKey || '', model }
+}
+
 async function scanAdminModels(req, res) {
-  const { apiUrl, apiKey, apiType } = req.query
+  // overleaf-lab: credentials come from the POST body, never the URL query
+  // string (keys in query strings leak into access logs).
+  const { apiUrl, apiKey, apiType } = req.body
   const adminSettings = await getAdminLLMSettings()
   const llmApiUrl = apiUrl || adminSettings.llmApiUrl
-  const llmApiType = apiType || adminSettings.llmApiType
   const llmApiKey = apiKey || adminSettings.llmApiKey
+  const llmApiType = apiType || adminSettings.llmApiType || detectProviderType(llmApiUrl)
 
-  if (!llmApiUrl || !llmApiType) {
+  if (!llmApiUrl) {
     return res.status(400).json({
       success: false,
-      error: 'Admin LLM API URL and type must be configured first',
+      error: 'Admin LLM API URL must be configured first',
     })
   }
 
   try {
-    const provider = createLLMProvider({ llmApiUrl, llmApiKey, llmApiType })
-    const result = await provider.listModels()
-
-    const ids = Array.isArray(result?.data)
-      ? result.data.map(entry => String(entry.id))
-      : []
-
+    const { ids } = await listModels(normalizeSpecFor(llmApiUrl, llmApiKey, llmApiType, 'scan'), { timeoutMs: 60000 })
     res.json({ success: true, models: ids })
-
   } catch (error) {
-    const info = OError.getFullInfo(err)
-    const errStatus  = info?.status || 500
-    logger.error({ err }, '[LLM] Admin connection check failed')
-    res.status(errStatus).json({
+    const status = error.code === 'auth' ? 401 : (error.status || 500)
+    logger.error({ error: error.message, code: error.code }, '[LLM] Admin model scan failed')
+    res.status(status).json({
       success: false,
       error: 'Model scan failed',
-      status: errStatus,
-      details: err.message,
+      status,
+      details: error.message,
     })
   }
 }

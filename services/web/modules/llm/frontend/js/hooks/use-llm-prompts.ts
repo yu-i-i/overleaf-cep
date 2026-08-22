@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import getMeta from '@/utils/meta'
+import { getJSON } from '@/infrastructure/fetch-json'
 
 // overleaf-lab: shared client-side view of the admin-editable LLM prompts
 // (Ask-AI system prompt, error prompt, per-action transform templates) for the
@@ -47,13 +48,8 @@ function fetchPrompts(): Promise<PromptsState> {
         return inflight
     }
 
-    inflight = fetch(`/project/${projectId}/llm/prompts`, {
-        credentials: 'same-origin',
-    })
-        .then(resp => {
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-            return resp.json()
-        })
+    // F14: shared fetch utility (CSRF/JSON handled; throws FetchError on non-ok).
+    inflight = getJSON(`/project/${projectId}/llm/prompts`)
         .then((data: any) => {
             // overleaf-lab: keep only well-typed fields; anything missing stays
             // undefined so callers fall back to their hardcoded value per field.
@@ -76,10 +72,9 @@ function fetchPrompts(): Promise<PromptsState> {
             cache = state
             return state
         })
-        .catch(err => {
+        .catch(() => {
             // overleaf-lab: on failure, callers keep their hardcoded prompts.
-            console.error('[LLMPrompts] Failed to fetch prompts:', err)
-            cache = { ...NO_PROMPTS }
+                        cache = { ...NO_PROMPTS }
             return cache
         })
 

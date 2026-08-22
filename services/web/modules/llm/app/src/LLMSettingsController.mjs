@@ -1,313 +1,539 @@
+/*
+ * LLMSettingsController - bring-your-own (BYO) LLM provider rows.
+ *
+ * Data model (per user):
+ *   User.llmProviders: [ {
+ *     id              string   (8 hex chars)
+ *     name            string   (1..80)
+ *     providerType    'openai' | 'anthropic' | 'openaiCompatible'
+ *     baseUrl         string   (required for openaiCompatible; default endpoints
+ *                              used when empty for openai/anthropic)
+ *     apiKey          string   (encrypted at rest via LLMCrypto; '' = keyless)
+ *     models          string[] (1..100)
+ *     completionModel string   (optional; must be one of models)
+ *     enabled         boolean
+ *     createdAt       string   (ISO timestamp)
+ *   } ]
+ *
+ * Legacy single-connection settings (llmApiUrl/llmApiKey/llmModelName/...)
+ * are migrated to row #1 on first read/write when present.
+ *
+ * Every endpoint here is gated by LLM_ALLOW_USER_SETTINGS (F1 fix: the gate
+ * previously only enforced chat(), not settings/check/scan/save).
+ */
+
+import { z } from 'zod'
+import Settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
-import fetch from 'node-fetch'
-import { AbortController } from 'abort-controller'
-import { fileURLToPath } from 'url'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
 import { User } from '../../../../app/src/models/User.mjs'
 import { expressify } from '@overleaf/promise-utils'
-import { encryptSecret, decryptSecret } from './LLMCrypto.mjs' // overleaf-lab: at-rest encryption of user API keys
-import { getLLMFeatureFlags } from './LLMAdminController.mjs' // overleaf-lab: per-feature enable flags
+import { encryptSecret, normalizeStoredSecret, storedToPlaintext } from './LLMCrypto.mjs'
+import { normalizeProviderSpec, chatText, listModels, detectProviderType, PROVIDER_TYPES } from './LLMClient.mjs'
+import { sanitizeComplianceRubrics, validateComplianceRubrics, getComplianceRubrics, getLLMFeatureFlags } from './LLMAdminController.mjs'
+import OError from '@overleaf/o-error'
 
-const llmSettingsPugPath = fileURLToPath(
-    new URL('../../app/views/llm-settings.pug', import.meta.url)
-)
+// overleaf-lab: hard cap on rows per user - keeps the editor model list and
+// the user document bounded.
+const MAX_PROVIDERS_PER_USER = 10
+const MAX_ROWS_IN_LIST = 500 // listModels result cap
 
-async function llmSettingsPage(req, res) {
-    const userId = SessionManager.getLoggedInUserId(req.session)
-
-    logger.debug({ userId, pugPath: llmSettingsPugPath }, '[LLM] llmSettingsPage: rendering')
-
-    // overleaf-lab: when both chat and inline completion are disabled by the admin,
-    // the personal-settings page has nothing to configure, so send the user home.
-    const flags = await getLLMFeatureFlags()
-    if (!flags.chatEnabled && !flags.completionEnabled) {
-        return res.redirect('/')
-    }
-
-    let user = {}
-    try {
-        user = await User.findById(
-            userId,
-            'useOwnLLMSettings llmModelName llmApiUrl llmApiKey llmCompletionModel'
-        )
-    } catch (err) {
-        logger.warn({ userId, err }, '[LLM] Error loading user for settings page')
-    }
-
-    const llmSettings = {
-        useOwnSettings: user?.useOwnLLMSettings || false,
-        modelName: user?.llmModelName || '',
-        apiUrl: user?.llmApiUrl || '',
-        hasApiKey: !!(user?.llmApiKey),
-        completionModel: user?.llmCompletionModel || '', // overleaf-lab: per-user inline-completion model
-    }
-
-    logger.debug(
-        { userId, useOwnSettings: llmSettings.useOwnSettings, hasApiKey: llmSettings.hasApiKey },
-        '[LLM] llmSettingsPage: user settings loaded'
-    )
-
-    res.render(llmSettingsPugPath, {
-        user: { llmSettings },
-        // overleaf-lab: expose the enable flags so the page can hide the disabled section.
-        featureFlags: { chatEnabled: flags.chatEnabled, completionEnabled: flags.completionEnabled },
+export const rowSchema = z
+    .object({
+        name: z.string().trim().min(1).max(80),
+        providerType: z.enum(['openai', 'anthropic', 'openaiCompatible']),
+        baseUrl: z.string().trim().max(500).optional().default(''),
+        apiKey: z.string().trim().max(2000).optional().default(''),
+        models: z.array(z.string().trim().min(1).max(200)).min(1).max(100),
+        completionModel: z.string().trim().max(200).optional().default(''),
+        enabled: z.boolean().optional().default(true),
     })
+    .superRefine((value, ctx) => {
+        if (value.providerType === 'openaiCompatible' && !value.baseUrl) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['baseUrl'],
+                message: 'A base URL is required for OpenAI-compatible providers'
+            })
+        }
+        if (value.completionModel && !value.models.includes(value.completionModel)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['completionModel'],
+                message: 'completionModel must be one of the listed models'
+            })
+        }
+    })
+
+function makeRowId() {
+    return Math.random().toString(16).slice(2, 10).padEnd(8, '0')
 }
 
-async function checkLLMConnection(req, res) {
-    const { apiUrl, apiKey: providedApiKey, modelName } = req.body
-    const userId = SessionManager.getLoggedInUserId(req.session)
+/*
+ * F1: the single source of truth for "is BYO allowed on this deployment?".
+ * Used by every user-facing LLM endpoint (settings CRUD, check/scan, and the
+ * user-lane branches of chat/completion in LLMChatController).
+ */
+export function isUserSettingsAllowed() {
+    return process.env.LLM_ALLOW_USER_SETTINGS === 'true'
+}
 
-    logger.debug(
-        { userId, apiUrl, modelName, hasProvidedKey: !!providedApiKey },
-        '[LLM] checkLLMConnection: request received'
-    )
+async function requireUserSettingsAllowed(req, res) {
+    if (isUserSettingsAllowed()) return true
+    logger.info({ userId: req.session?.userId }, '[LLM] Blocked BYO settings access (LLM_ALLOW_USER_SETTINGS not set)')
+    res.status(403).json({ ok: false, error: 'disabled', message: 'Bring-your-own LLM settings are disabled on this deployment' })
+    return false
+}
 
-    // If no API key provided, fall back to stored key
-    let apiKey = providedApiKey
-    if (!apiKey) {
-        try {
-            const user = await User.findById(userId, 'llmApiKey')
-            if (user && user.llmApiKey) {
-                apiKey = decryptSecret(user.llmApiKey) // overleaf-lab: decrypt stored key at rest
-                logger.debug({ userId }, '[LLM] checkLLMConnection: using stored API key')
-            }
-        } catch (err) {
-            logger.warn({ err }, '[LLM] Could not fetch stored API key')
-        }
-    }
-
-    // overleaf-lab: the key is optional (a local llama.cpp server has no auth);
-    // only the URL and model name are required.
-    if (!apiUrl || !modelName) {
-        return res.status(400).json({ error: 'Missing required parameters' })
-    }
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => {
-        controller.abort()
-    }, 30000)
-
-    try {
-        const llmApiUrl = `${apiUrl}/chat/completions`
-
-        const requestBody = {
-            model: modelName,
-            messages: [{ role: 'user', content: 'Test connection' }],
-            max_tokens: 10,
-            temperature: 0.7,
-        }
-
-        const startTime = Date.now()
-
-        const headers = { 'Content-Type': 'application/json' }
-        if (typeof apiKey === 'string' && apiKey.length > 0) {
-            headers.Authorization = `Bearer ${apiKey}`
-        }
-
-        const response = await fetch(llmApiUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(requestBody),
-            signal: controller.signal,
-        })
-
-        clearTimeout(timeout)
-        const duration = Date.now() - startTime
-
-        logger.debug(
-            { userId, apiUrl, modelName, status: response.status, duration: `${duration}ms` },
-            '[LLM] checkLLMConnection: LLM API responded'
-        )
-
-        if (!response.ok) {
-            const errorText = await response.text()
-            return res.status(400).json({
-                success: false,
-                error: 'LLM connection failed',
-                details: errorText,
-                status: response.status,
-            })
-        }
-
-        res.json({
-            success: true,
-            message: 'LLM connection successful',
-            duration: `${duration}ms`,
-        })
-    } catch (error) {
-        clearTimeout(timeout)
-
-        if (error.name === 'AbortError') {
-            return res.status(504).json({
-                success: false,
-                error: 'Connection timeout',
-                details: 'The LLM API did not respond within 30 seconds',
-            })
-        }
-
-        res.status(500).json({
-            success: false,
-            error: 'Failed to test LLM connection',
-            details: error.message,
-        })
+function publicRow(row) {
+    return {
+        id: row.id,
+        name: row.name,
+        providerType: row.providerType,
+        baseUrl: row.baseUrl || '',
+        hasKey: !!row.apiKey,
+        models: row.models,
+        completionModel: row.completionModel || '',
+        enabled: row.enabled !== false,
+        createdAt: row.createdAt || new Date(0).toISOString()
     }
 }
 
-// overleaf-lab: scan the user's own LLM provider for available model ids.
-// Mirrors LLMAdminController.scanAdminModels but resolves credentials from the
-// request body, falling back to the user's stored key/URL (like checkLLMConnection).
-async function scanUserModels(req, res) {
-    const userId = SessionManager.getLoggedInUserId(req.session)
-    const { apiUrl: providedApiUrl, apiKey: providedApiKey } = req.body
+/*
+ * Load the user's provider rows, migrating legacy single-connection settings
+ * to row #1 (virtually, without writing) when present.
+ */
+export async function loadProviders(userId) {
+    const user = await User.findById(userId, 'llmProviders llmApiUrl llmApiType llmApiKey llmModelName llmModels llmModelNames llmCompletionModel llmCompletionModels useOwnLLMSettings')
+    if (!user) return []
 
-    logger.debug(
-        { userId, apiUrl: providedApiUrl, hasProvidedKey: !!providedApiKey },
-        '[LLM] scanUserModels: request received'
-    )
+    const providers = Array.isArray(user.llmProviders)
+        ? user.llmProviders.filter(r => r?.id && Array.isArray(r?.models))
+        : []
 
-    let apiKey = providedApiKey
-    let apiUrl = providedApiUrl
-    // Fall back to stored key/URL when either is omitted
-    if (!apiKey || !apiUrl) {
+    // Legacy settings (one single saved connection) are always represented
+    // as the "Imported settings" row, next to any BYO rows. F20: the legacy
+    // plaintext key is encrypted on migration; the row is persisted (if still
+    // not present) so save/edit/delete operate on a real row with an
+    // encrypted key. Making the row visible when other rows exist is
+    // required for delete (the delete of that row is what unsets the legacy
+    // fields — owner bug report: "row reappears after delete / can't delete").
+    if (user.llmApiUrl
+        && !providers.some(r => r.id === 'legacy'
+            || (r.name === 'Imported settings' && r.baseUrl === user.llmApiUrl))) {
+        const models = [
+            ...(user.llmModelNames || user.llmModels || []),
+            ...(user.llmModelName && !user.llmModels?.includes(user.llmModelName) ? [user.llmModelName] : [])
+        ]
+        const completionModels = [
+            ...(user.llmCompletionModels || []),
+            ...(user.llmCompletionModel && !user.llmCompletionModels?.includes(user.llmCompletionModel) ? [user.llmCompletionModel] : [])
+        ]
+        const legacyType = ['openai', 'anthropic', 'openaiCompatible'].includes(user.llmApiType) ? user.llmApiType : null
+        const row = {
+            id: 'legacy',
+            name: 'Imported settings',
+            providerType: legacyType || detectProviderType(user.llmApiUrl),
+            baseUrl: user.llmApiUrl,
+            apiKey: normalizeStoredSecret(user.llmApiKey || ''),
+            models: models.slice(0, 100),
+            completionModel: (completionModels[0] && models.includes(completionModels[0])) ? completionModels[0] : (models[0] || ''),
+            enabled: true,
+            createdAt: new Date(0).toISOString()
+        }
         try {
-            const user = await User.findById(userId, 'llmApiKey llmApiUrl')
-            if (user) {
-                if (!apiKey && user.llmApiKey) {
-                    apiKey = decryptSecret(user.llmApiKey) // overleaf-lab: decrypt stored key at rest
-                }
-                if (!apiUrl && user.llmApiUrl) {
-                    apiUrl = user.llmApiUrl
-                }
+            const result = await User.updateOne(
+                { _id: userId },
+                { $set: { llmProviders: [row, ...providers] } }
+            )
+            if (result && result.modifiedCount) {
+                logger.info({ userId }, '[LLM] loadProviders: migrated legacy settings to "Imported settings" row (key encrypted)')
             }
-        } catch (err) {
-            logger.warn({ userId, err }, '[LLM] Could not fetch stored settings for model scan')
         }
+        catch (err) {
+            logger.warn({ userId, err: err?.message }, '[LLM] loadProviders: legacy migration persist failed (continuing with virtual row)')
+        }
+        return [row, ...providers]
     }
 
-    // overleaf-lab: only the URL is required. A local llama.cpp server has no
-    // auth, so an empty key is valid; send Authorization only when a key exists.
-    if (!apiUrl) {
-        return res.status(400).json({
-            success: false,
-            error: 'API URL is required',
-        })
+    return providers
+}
+
+async function getProvidersJson(req, res) {
+    if (!(await requireUserSettingsAllowed(req, res))) return
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const providers = await loadProviders(userId)
+    res.json({ ok: true, providers: providers.map(publicRow), maxProviders: MAX_PROVIDERS_PER_USER })
+}
+
+async function addProvider(req, res) {
+    if (!(await requireUserSettingsAllowed(req, res))) return
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const parsed = rowSchema.safeParse(req.body || {})
+    if (!parsed.success) {
+        const details = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')
+        return res.status(400).json({ ok: false, error: 'invalid', details })
     }
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 30000)
-
-    try {
-        const headers = {}
-        if (typeof apiKey === 'string' && apiKey.length > 0) {
-            headers.Authorization = `Bearer ${apiKey}`
-        }
-        const response = await fetch(`${apiUrl}/models`, {
-            method: 'GET',
-            headers,
-            signal: controller.signal,
-        })
-
-        clearTimeout(timeout)
-
-        if (!response.ok) {
-            const body = await response.text()
-            return res.status(400).json({
-                success: false,
-                error: 'Failed to fetch models',
-                status: response.status,
-                details: body,
-            })
-        }
-
-        const data = await response.json()
-        const ids = Array.isArray(data?.data)
-            ? data.data.map(entry => String(entry.id)).sort()
+    const user = await User.findById(userId, 'llmProviders llmApiUrl llmModelName')
+    const existing = Array.isArray(user?.llmProviders) ? user.llmProviders : []
+    if (existing.length >= MAX_PROVIDERS_PER_USER) {
+        return res.status(400).json({ ok: false, error: 'limit', message: `Maximum of ${MAX_PROVIDERS_PER_USER} providers` })
+    }
+    const row = {
+        ...parsed.data,
+        id: makeRowId(),
+        models: [...new Set(parsed.data.models)],
+        apiKey: parsed.data.apiKey ? encryptSecret(parsed.data.apiKey) : '',
+        createdAt: new Date().toISOString()
+    }
+    // Persisting the legacy migration as row #1 too, so the virtual row gains
+    // a real id on first write.
+    const migrated =
+        existing.length === 0
+            ? (await loadProviders(userId)).map(r => ({ ...r, id: r.id === 'legacy' ? makeRowId() : r.id, apiKey: normalizeStoredSecret(r.apiKey) }))
             : []
-
-        res.json({ success: true, models: ids })
-    } catch (error) {
-        clearTimeout(timeout)
-
-        if (error.name === 'AbortError') {
-            return res.status(504).json({
-                success: false,
-                error: 'Connection timeout',
-                details: 'The LLM API did not respond within 30 seconds',
-            })
-        }
-
-        logger.error({ userId, err: error }, '[LLM] User model scan failed')
-        res.status(500).json({ success: false, error: 'Model scan failed' })
+    const merged = [...migrated, ...existing, row]
+    // WS5: atomic cap guard — the condition lives in the update itself so two
+    // concurrent adds cannot both pass the >=MAX check (last writer gets 400).
+    const capGuard = await User.updateOne(
+        {
+            _id: userId,
+            $expr: {
+                $lt: [{ $size: { $ifNull: ['$llmProviders', []] } }, MAX_PROVIDERS_PER_USER],
+            },
+        },
+        { $set: { llmProviders: merged } }
+    )
+    if (!capGuard.modifiedCount) {
+        return res.status(400).json({ ok: false, error: 'limit', message: `Maximum of ${MAX_PROVIDERS_PER_USER} providers` })
     }
+    logger.info({ userId, rowId: row.id, name: row.name }, '[LLM] addProvider: row added')
+    res.status(201).json({ ok: true, provider: publicRow(row) })
 }
 
-async function saveLLMSettings(req, res) {
+async function updateProvider(req, res) {
+    if (!(await requireUserSettingsAllowed(req, res))) return
     const userId = SessionManager.getLoggedInUserId(req.session)
-    const { useOwnLLMSettings, llmApiKey, llmModelName, llmApiUrl, llmCompletionModel } = req.body
+    const rowId = req.params.id
+    const user = await User.findById(userId, 'llmProviders llmApiUrl llmApiKey llmModelName llmModels llmModelNames llmCompletionModel llmCompletionModels llmApiType useOwnLLMSettings')
+    const current = (await loadProviders(userId)).find(r => r.id === rowId)
+    if (!current) return res.status(404).json({ ok: false, error: 'not-found' })
 
-    logger.debug(
-        {
-            userId,
-            useOwnLLMSettings,
-            llmModelName,
-            llmApiUrl,
-            hasApiKey: !!llmApiKey,
-        },
-        '[LLM] saveLLMSettings: request received'
-    )
-
-    try {
-        if (useOwnLLMSettings) {
-            // overleaf-lab: the API key is optional (a local llama.cpp server has no
-            // auth); only the URL and model name are required. When a key IS provided
-            // it is still encrypted and stored below.
-            if (!llmApiUrl || !llmModelName) {
-                return res.status(400).json({
-                    success: false,
-                    error:
-                        'API URL and Model Name are required when enabling custom LLM settings',
-                })
-            }
-        }
-
-        const updateData = {
-            useOwnLLMSettings: Boolean(useOwnLLMSettings),
-            llmModelName: llmModelName || '',
-            llmApiUrl: llmApiUrl || '',
-            // overleaf-lab: per-user inline-completion model; only meaningful with own settings
-            llmCompletionModel: (useOwnLLMSettings && llmCompletionModel) ? llmCompletionModel : '',
-        }
-
-        // Only update API key if a new one is provided
-        if (llmApiKey && llmApiKey.trim() !== '') {
-            updateData.llmApiKey = encryptSecret(llmApiKey) // overleaf-lab: encrypt user key at rest
-        }
-
-        await User.updateOne({ _id: userId }, { $set: updateData })
-
-        logger.debug({ userId, useOwnLLMSettings }, '[LLM] saveLLMSettings: saved successfully')
-
-        res.json({
-            success: true,
-            message: 'LLM settings saved successfully',
-        })
-    } catch (error) {
-        logger.error(
-            { userId, err: error },
-            '[LLM] Error saving settings'
-        )
-
-        res.status(500).json({
-            success: false,
-            error: 'Failed to save LLM settings',
-        })
+    // Partial update: merge over current row, then validate the full shape.
+    const merged = {
+        ...current,
+        name: req.body?.name ?? current.name,
+        providerType: req.body?.providerType ?? current.providerType,
+        baseUrl: req.body?.baseUrl !== undefined ? req.body.baseUrl : (current.baseUrl || ''),
+        models: req.body?.models ?? current.models,
+        completionModel: req.body?.completionModel !== undefined ? req.body.completionModel : (current.completionModel || ''),
+        enabled: req.body?.enabled ?? current.enabled
     }
+    const parsed = rowSchema.safeParse(merged)
+    if (!parsed.success) {
+        const details = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')
+        return res.status(400).json({ ok: false, error: 'invalid', details })
+    }
+    let apiKey = normalizeStoredSecret(current.apiKey || '')
+    if (req.body?.clearApiKey) apiKey = ''
+    else if (req.body?.apiKey && req.body.apiKey.trim() !== '') apiKey = encryptSecret(req.body.apiKey)
+
+    const rows = (Array.isArray(user?.llmProviders) ? user.llmProviders : (await loadProviders(userId))).map(r =>
+        (r.id === rowId || r.id === 'legacy') ? { ...parsed.data, id: rowId === 'legacy' ? makeRowId() : rowId, apiKey, createdAt: new Date().toISOString() } : r
+    )
+    await User.updateOne({ _id: userId }, { $set: { llmProviders: rows } })
+    logger.info({ userId, rowId }, '[LLM] updateProvider: row updated')
+    res.json({ ok: true, provider: publicRow({ ...parsed.data, id: rowId, apiKey }) })
+}
+
+async function deleteProvider(req, res) {
+    if (!(await requireUserSettingsAllowed(req, res))) return
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const rowId = req.params.id
+    const providers = await loadProviders(userId)
+    if (!providers.some(r => r.id === rowId)) return res.status(404).json({ ok: false, error: 'not-found' })
+    const rows = (await User.findById(userId, 'llmProviders')).llmProviders || providers.map(r => ({ ...r, id: r.id === 'legacy' ? makeRowId() : r.id, apiKey: normalizeStoredSecret(r.apiKey) }))
+    const remaining = rows.filter(r => r.id !== rowId && !(rowId === 'legacy' && r.name === 'Imported settings'))
+    // overleaf-lab: deleting the "Imported settings" row must also clear the
+    // underlying legacy single-connection fields, otherwise loadProviders()
+    // re-migrates them on the next read and the deleted row comes back to life.
+    const targetIsLegacy = providers.some(
+        r => r.id === rowId && (r.id === 'legacy' || r.name === 'Imported settings')
+    ) || (rowId === 'legacy' && providers.some(r => r.name === 'Imported settings'))
+    const update = { $set: { llmProviders: remaining } }
+    if (targetIsLegacy) {
+        update.$unset = {
+            llmApiUrl: 1,
+            llmApiType: 1,
+            llmApiKey: 1,
+            llmModelName: 1,
+            llmModels: 1,
+            llmModelNames: 1,
+            llmCompletionModel: 1,
+            llmCompletionModels: 1,
+            useOwnLLMSettings: 1
+        }
+    }
+    await User.updateOne({ _id: userId }, update)
+    logger.info({ userId, rowId, targetIsLegacy }, '[LLM] deleteProvider: row deleted')
+    res.json({ ok: true })
+}
+
+async function checkProviderConnection(req, res) {
+    if (!(await requireUserSettingsAllowed(req, res))) return
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const body = req.body || {}
+
+    // Credentials: explicit body values win, else the referenced row.
+    let baseUrl = body.baseUrl || ''
+    let apiKey = body.apiKey || ''
+    let providerType = body.providerType || ''
+    const model = body.model || ''
+    if (body.rowId) {
+        const row = (await loadProviders(userId)).find(r => r.id === body.rowId)
+        if (!row) return res.status(404).json({ ok: false, error: 'not-found' })
+        baseUrl = baseUrl || row.baseUrl || ''
+        providerType = providerType || row.providerType
+        if (!apiKey && row.apiKey) apiKey = storedToPlaintext(row.apiKey)
+    }
+    if (!baseUrl && !providerType) return res.status(400).json({ ok: false, error: 'invalid', details: 'baseUrl or rowId is required' })
+    // overleaf-lab (reviewer #5): auto-detect the API type. Try the requested
+    // type first; if it fails, try every other supported type before giving
+    // up, so an endpoint that is OpenAI-compatible (or Anthropic) is detected
+    // automatically and the UI can persist the working type on the row.
+    const requestedType = providerType || detectProviderType(baseUrl)
+    const candidateTypes = [requestedType, ...PROVIDER_TYPES.filter(t => t !== requestedType)]
+
+    const started = Date.now()
+    let lastError = null
+    for (const type of candidateTypes) {
+        let spec
+        try {
+            spec = normalizeProviderSpec({ providerType: type, baseUrl, apiKey }, { model: model || 'qwen' })
+        }
+        catch (error) {
+            lastError = error
+            continue
+        }
+        try {
+            const { ids } = await listModels(spec, { timeoutMs: 60000 })
+            const models = ids.slice(0, MAX_ROWS_IN_LIST)
+            if (model && !models.includes(model)) {
+                // The model check is definitive for the requested type; do not
+                // fall through to other types just because the model is missing.
+                logger.warn({ userId, model, count: models.length }, '[LLM] checkProviderConnection: model not in list')
+                return res.status(404).json({ ok: false, error: 'model-not-found', details: `Model "${model}" not available`, models, duration: `${Date.now() - started}ms` })
+            }
+            // Lightweight chat probe (catches backends whose /models works but
+            // chat is misconfigured).
+            await chatText(
+                normalizeProviderSpec({ providerType: type, baseUrl, apiKey }, { model: model || models[0] || 'qwen' }),
+                [{ role: 'user', content: 'Reply with the single word OK.' }],
+                { maxOutputTokens: 16, temperature: 0, timeoutMs: 60000 }
+            )
+            if (type !== requestedType) {
+                logger.info(
+                    { userId, requestedType, detectedType: type, models: models.length },
+                    '[LLM] checkProviderConnection: API type auto-detected'
+                )
+            }
+            return res.json({
+                ok: true,
+                message: 'Connection successful',
+                models,
+                providerType: type,
+                detectedProviderType: type !== requestedType ? type : undefined,
+                duration: `${Date.now() - started}ms`
+            })
+        }
+        catch (error) {
+            lastError = error
+            logger.debug(
+                { userId, type, err: error?.message },
+                '[LLM] checkProviderConnection: type attempt failed, trying next'
+            )
+        }
+    }
+    const info = lastError?.code === 'auth' ? { status: 401 } : (lastError?.status || (OError.getFullInfo(lastError)?.status || 500))
+    logger.warn({ userId, providerType: requestedType, err: lastError?.message }, '[LLM] checkProviderConnection: failed')
+    return res.status(info.status || 500).json({ ok: false, error: lastError?.code || 'llm-error', message: lastError?.message, duration: `${Date.now() - started}ms` })
+}
+
+async function scanProviderModels(req, res) {
+    if (!(await requireUserSettingsAllowed(req, res))) return
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const body = req.body || {}
+    let baseUrl = body.baseUrl || ''
+    let apiKey = body.apiKey || ''
+    let providerType = body.providerType || ''
+    if (body.rowId) {
+        const row = (await loadProviders(userId)).find(r => r.id === body.rowId)
+        if (!row) return res.status(404).json({ ok: false, error: 'not-found' })
+        baseUrl = baseUrl || row.baseUrl || ''
+        providerType = providerType || row.providerType
+        if (!apiKey && row.apiKey) apiKey = storedToPlaintext(row.apiKey)
+    }
+    providerType = providerType || detectProviderType(baseUrl)
+    if (!baseUrl) return res.status(400).json({ ok: false, error: 'invalid', details: 'baseUrl or rowId is required' })
+
+    // overleaf-lab (reviewer #5): same auto-detection as /check — try the
+    // requested API type first, then the others, so scanning also works when
+    // the type field was guessed wrong.
+    const requestedType = providerType
+    const candidateTypes = [requestedType, ...PROVIDER_TYPES.filter(t => t !== requestedType)]
+    let lastError = null
+    for (const type of candidateTypes) {
+        const spec = normalizeProviderSpec({ providerType: type, baseUrl, apiKey }, { model: 'scan' })
+        try {
+            const { ids } = await listModels(spec, { timeoutMs: 60000 })
+            if (type !== requestedType) {
+                logger.info({ userId, requestedType, detectedType: type, models: ids.length }, '[LLM] scanProviderModels: API type auto-detected')
+            }
+            return res.json({ ok: true, models: ids.slice(0, MAX_ROWS_IN_LIST), providerType: type, detectedProviderType: type !== requestedType ? type : undefined })
+        }
+        catch (error) {
+            lastError = error
+            logger.debug({ userId, type, err: error?.message }, '[LLM] scanProviderModels: type attempt failed, trying next')
+        }
+    }
+    const status = lastError?.code === 'auth' ? 401 : (lastError?.status || (OError.getFullInfo(lastError)?.status || 500))
+    logger.warn({ userId, providerType: requestedType, err: lastError?.message }, '[LLM] scanProviderModels: failed')
+    return res.status(status || 500).json({ ok: false, error: lastError?.code || 'llm-error', message: lastError?.message })
+}
+
+// Redirect: BYO rows live in Account Settings (core section). Kept as a
+// redirect so old bookmarks / navbar entries do not 404.
+async function llmSettingsPage(req, res) {
+    // overleaf-lab: dedicated BYO settings page (the Account ▸ 'AI Settings' item
+    // and the Account Settings card both link here; it used to be a redirect to
+    // the generic settings page, which showed no LLM UI at all).
+    const allowUser = !!(Settings.llm && Settings.llm.allowUserSettings)
+    // WS5: keep the page-level surface consistent with the API — disabled BYO
+    // deployments answer 403 for the page as well (not just the JSON routes).
+    if (!allowUser) {
+        return res.status(403).json({ ok: false, error: 'disabled', message: 'BYO provider settings are disabled on this deployment (LLM_ALLOW_USER_SETTINGS). Use the site backend.' })
+    }
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    const userDoc = userId ? await User.findOne({ _id: userId }).lean() : null
+    const context = {
+        user: {
+            firstName: userDoc?.first_name || '',
+            lastName: userDoc?.last_name || '',
+            email: userDoc?.email || '',
+            llmSettings: { allowed: allowUser },
+        },
+        featureFlags: { chatEnabled: true, completionEnabled: true },
+    }
+    res.render(new URL('../../app/views/llm-settings.pug', import.meta.url).pathname, context)
+}
+
+/*
+ * overleaf-lab (owner request 2026-08-26): user-scoped shared LLM model
+ * selection. The single "Select LLM Model" choice (File menu) drives every AI
+ * surface (chat, review, generators, ask-AI). The selection is stored on the
+ * user profile (llmSelectedModel) so it follows the user across projects and
+ * browsers — not per project. Value is a model id, a namespaced
+ * `u:<rowId>:<model>` BYO id, or '' (deployment default). No BYO gate here:
+ * picking the site model is always allowed; a BYO value simply 403s at run
+ * time on deployments without LLM_ALLOW_USER_SETTINGS.
+ */
+const SELECTED_MODEL_MAX = 500
+
+async function getSelectedModel(req, res) {
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    if (!userId) {
+        return res.status(401).json({ ok: false, error: 'unauthorized', message: 'Login required' })
+    }
+    const userDoc = await User.findOne({ _id: userId }).lean()
+    const selected = typeof userDoc?.llmSelectedModel === 'string' ? userDoc.llmSelectedModel : ''
+    res.json({ ok: true, selected })
+}
+
+async function saveSelectedModel(req, res) {
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    if (!userId) {
+        return res.status(401).json({ ok: false, error: 'unauthorized', message: 'Login required' })
+    }
+    const value = typeof req.body?.selected === 'string' ? req.body.selected.trim() : ''
+    if (value.length > SELECTED_MODEL_MAX) {
+        return res.status(400).json({ ok: false, error: 'bad-request', message: 'Model value too long' })
+    }
+    await User.updateOne({ _id: userId }, { $set: { llmSelectedModel: value } })
+    res.json({ ok: true, selected: value })
+}
+
+// overleaf-lab (2026-08-27, owner request): USER-SCOPED compliance review
+// rubrics. Each user configures their own rubrics under /user/llm-settings; the
+// compliance reviewer (LLMComplianceController) reads them per user. Storage is
+// the user document (llmComplianceRubrics) — no new collection.
+//
+// Migration behavior: a user who has never saved their own rubrics inherits the
+// deployment-wide rubrics configured by the admin, so existing setups keep
+// working on the first visit.
+// overleaf-lab (2026-08-27): the internal (no-auth) lookup used by the
+// compliance reviewer — the user's own rubrics, falling back to the
+// deployment-wide set when the user has never saved their own.
+export async function getComplianceRubricsForUser(userId) {
+    const userDoc = await User.findOne({ _id: userId }).lean().catch(() => null)
+    const mine = Array.isArray(userDoc?.llmComplianceRubrics) && userDoc.llmComplianceRubrics.length
+        ? userDoc.llmComplianceRubrics
+        : null
+    if (mine) return mine
+    return getComplianceRubrics()
+}
+
+async function getUserCompliance(req, res) {
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    if (!userId) {
+        return res.status(401).json({ ok: false, error: 'unauthorized', message: 'Login required' })
+    }
+    const flags = await getLLMFeatureFlags()
+    if (!flags.reviewEnabled) {
+        return res.json({ ok: true, rubrics: [], inherited: false })
+    }
+    const rubrics = await getComplianceRubricsForUser(userId)
+    const userDoc = await User.findOne({ _id: userId }).lean()
+    const inherited = !(Array.isArray(userDoc?.llmComplianceRubrics) && userDoc.llmComplianceRubrics.length)
+    res.json({ ok: true, rubrics, inherited })
+}
+
+async function saveUserCompliance(req, res) {
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    if (!userId) {
+        return res.status(401).json({ ok: false, error: 'unauthorized', message: 'Login required' })
+    }
+    const flags = await getLLMFeatureFlags()
+    if (!flags.reviewEnabled) {
+        return res.status(403).json({ ok: false, error: 'disabled', message: 'The compliance review feature is disabled' })
+    }
+    const list = req.body?.rubrics
+    const sanitized = sanitizeComplianceRubrics(list)
+    if (sanitized === null) {
+        return res.status(400).json({ ok: false, error: 'bad-request', message: 'Invalid rubrics' })
+    }
+    const problem = validateComplianceRubrics(Array.isArray(list) ? list : [])
+    if (problem) {
+        return res.status(400).json({ ok: false, error: 'bad-request', message: problem })
+    }
+    await User.updateOne({ _id: userId }, { $set: { llmComplianceRubrics: sanitized } })
+    res.json({ ok: true, rubrics: sanitized })
 }
 
 export default {
-    llmSettingsPage: expressify(llmSettingsPage),
-    checkLLMConnection: expressify(checkLLMConnection),
-    scanUserModels: expressify(scanUserModels),
-    saveLLMSettings: expressify(saveLLMSettings),
+    isUserSettingsAllowed,
+    requireUserSettingsAllowed,
+    MAX_PROVIDERS_PER_USER,
+    llmSettingsPage, // sync render - must NOT be expressified (no .catch)
+    getProvidersJson: expressify(getProvidersJson),
+    addProvider: expressify(addProvider),
+    updateProvider: expressify(updateProvider),
+    deleteProvider: expressify(deleteProvider),
+    checkProviderConnection: expressify(checkProviderConnection),
+    scanProviderModels: expressify(scanProviderModels),
+    // overleaf-lab: user-scoped shared model selection (File → "Select LLM Model")
+    getSelectedModel: expressify(getSelectedModel),
+    saveSelectedModel: expressify(saveSelectedModel),
+    // overleaf-lab (2026-08-27): user-scoped compliance review rubrics
+    getUserCompliance: expressify(getUserCompliance),
+    saveUserCompliance: expressify(saveUserCompliance)
 }

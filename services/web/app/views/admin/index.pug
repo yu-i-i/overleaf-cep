@@ -17,6 +17,8 @@ block content
 										+bookmarkable-tabset-header('active-projects', 'Active Projects')
 										+bookmarkable-tabset-header('open-sockets', 'Open Sockets')
 										+bookmarkable-tabset-header('open-close-editor', 'Open/Close Editor')
+										if llmEnabled
+											+bookmarkable-tabset-header('llm-configuration', 'LLM Configuration')
 										if hasFeature('saas')
 											+bookmarkable-tabset-header('privileges-matrix', 'Privileges Matrix')
 											+bookmarkable-tabset-header('tpds', 'TPDS/Dropbox Management')
@@ -77,6 +79,13 @@ block content
 													input(name='_csrf' type='hidden' value=csrfToken)
 													button.btn.btn-danger(type='submit') Reopen Editor
 												p.small Will reopen the editor after closing.
+
+									.tab-pane(role='tabpanel' id='llm-configuration')
+										if llmEnabled
+											p.text-muted Site-wide LLM backend, model allowlist, and compliance review settings.
+												iframe(src='/admin/llm/settings' title='LLM Configuration' style='width: 100%; height: calc(100vh - 280px); min-height: 480px; border: 0;')
+										else
+											p.text-muted LLM is disabled on this deployment (set LLM_ENABLED=true to enable).
 
 									if hasFeature('saas')
 										.tab-pane(role='tabpanel' id='privileges-matrix')

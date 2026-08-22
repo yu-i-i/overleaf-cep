@@ -8,15 +8,21 @@
 // was replaced with the literal `{{selection}}` placeholder the UI substitutes.
 
 // overleaf-lab: the floating "Ask AI" selection toolbar system prompt.
-export const DEFAULT_ASK_AI_SYSTEM_PROMPT = `You are a LaTeX writing assistant embedded in an editor. Preserve existing LaTeX commands, math, and citation keys exactly, and reply in the same language as the input. When asked to rewrite or transform text, return only the resulting text, with no preamble and no Markdown code fences.`
+// overleaf-lab (2026-08 prompt review): clarified the language rule — the
+// default is "same language as the input", EXCEPT when the action names an
+// explicit target language (Translate), which the action template enforces.
+export const DEFAULT_ASK_AI_SYSTEM_PROMPT = `You are a LaTeX writing assistant embedded in an editor. Preserve existing LaTeX commands, math, and citation keys exactly. Reply in the same language as the input text, unless the request explicitly names a target language (e.g. a translation) — in that case use the target language. When asked to rewrite or transform text, return only the resulting text, with no preamble and no Markdown code fences.`
 
 // overleaf-lab: trailing instruction block appended to a compile error before it is
 // sent to the chat by the "Ask AI about this error" button.
+// overleaf-lab (2026-08 prompt review): tightened — the old four-point list
+// invited long, generic answers; the common case is "fix this one line".
 export const DEFAULT_ERROR_PROMPT = `**Please help me:**
-1. Explain what this error means in simple terms
-2. Show me exactly what's wrong in my code
-3. Provide the corrected code
-4. Explain how to avoid this error in the future`
+1. In one or two sentences, what this error actually means
+2. The exact line(s) with the problem and why
+3. The minimal corrected code (only the changed lines, in a \`\`\`latex block)
+4. One short tip to avoid it in the future
+Keep the answer compact — a precise two-line fix beats a long explanation.`
 
 // overleaf-lab: system prompt for the document compliance reviewer.
 export const DEFAULT_REVIEW_SYSTEM_PROMPT = `You are a meticulous reviewer that checks whether a LaTeX document complies with writing guidelines for academic theses and internship reports.
@@ -38,6 +44,8 @@ Evidence rules:
 
 Reply in the same language as the GUIDELINES (for example, in Italian if the guidelines are in Italian). This includes the "suggestion" field.
 
+Length discipline: keep each "analysis" under about 2000 characters — it is a worksheet, not a transcript; if the enumeration is long, summarize it ("checked items 1-31: 4 problems, listed below").
+
 Return ONLY a JSON object, with no preamble, no explanation, and no code fences, in exactly this shape:
 {
   "items": [
@@ -48,20 +56,20 @@ Use "ok" when clearly satisfied, "partial" when partially satisfied or only part
 
 // overleaf-lab: per-action templates for the "Ask AI" selection toolbar. Each
 // template embeds the selected text where the `{{selection}}` placeholder appears;
-// the frontend substitutes it before sending. Keys map to the toolbar modes:
-// 1=paraphrase, 2=academic, 3=concise, 4=punchy, 5=split, 6=join, 7=summarize,
-// 8=explain, 9=title, 10=abstract.
+// the frontend substitutes it before sending. Keys map to the toolbar modes —
+// after the 2026-08-27 reference-synced menu rebuild ONLY these remain
+// (audit #7 removed the orphaned punchy/split/join/summarize/explain/mathFix/
+// checkCitations templates; title/abstract/keywords run through the
+// whole-document generators endpoint instead).
 export const DEFAULT_ASK_AI_ACTION_PROMPTS = {
-    paraphrase: `Paraphrase the following LaTeX text. Keep every LaTeX command, math, and citation key intact. Output only the paraphrased text, with no preamble, no explanation, and no code fences.\n\n{{selection}}`,
-    academic: `Rewrite the following LaTeX text in fluent, formal academic English. Preserve every LaTeX command, math, and citation key. Output only the rewritten text, with no preamble and no code fences.\n\n{{selection}}`,
-    concise: `Rewrite the following LaTeX text more concisely, preserving its meaning and every LaTeX command, math, and citation. Output only the rewritten text, nothing else.\n\n{{selection}}`,
-    punchy: `Rewrite the following LaTeX text in a punchier, more engaging style while keeping it accurate. Preserve every LaTeX command, math, and citation. Output only the rewritten text, nothing else.\n\n{{selection}}`,
-    split: `Split the following LaTeX paragraph into several shorter, well-structured paragraphs. Keep the wording and all LaTeX; only add paragraph breaks. Output only the resulting LaTeX, nothing else.\n\n{{selection}}`,
-    join: `Join the following LaTeX paragraphs into a single cohesive paragraph, preserving every LaTeX command, math, and citation. Output only the resulting paragraph, nothing else.\n\n{{selection}}`,
-    summarize: `Summarize the following LaTeX text concisely. Output only the summary as plain LaTeX, with no preamble and no code fences.\n\n{{selection}}`,
-    explain: `Explain the following LaTeX text clearly and concisely for the author:\n\n{{selection}}`,
-    title: `Propose one concise, specific academic title for the following content. Output only the title text: no quotes, no label, no trailing period.\n\n{{selection}}`,
-    abstract: `Write a single self-contained academic abstract (about 150 to 250 words) for the following content. Output only the abstract text: no heading, no label, and no code fences.\n\n{{selection}}`,
+    paraphrase: `Paraphrase the following LaTeX text. Keep every LaTeX command, math, and citation key intact. Output only the paraphrased text, with no preamble, no explanation, and no code fences. Do not call, name, or simulate any tool, function, or API — answer directly with the text.\n\n{{selection}}`,
+    academic: `Rewrite the following LaTeX text in fluent, formal academic English. Preserve every LaTeX command, math, and citation key. Output only the rewritten text, with no preamble and no code fences. Do not call, name, or simulate any tool, function, or API — answer directly with the text.\n\n{{selection}}`,
+    concise: `Rewrite the following LaTeX text more concisely, preserving its meaning and every LaTeX command, math, and citation. Output only the rewritten text, nothing else. Do not call, name, or simulate any tool, function, or API — answer directly with the text.\n\n{{selection}}`,
+    // overleaf-lab (2026-08): reference-synced menu actions — translate (the
+    // extra `{{language}}` placeholder is substituted by the frontend) and a
+    // focused synonym helper.
+    translate: `Translate the following LaTeX text into {{language}}. Keep every LaTeX command, math, and citation key exactly as-is (translate only the natural-language text). Output only the translated text, with no preamble and no code fences. Do not call, name, or simulate any tool, function, or API — answer directly with the translated text.\n\n{{selection}}`,
+    synonyms: `Suggest two or three well-chosen academic synonyms or phrasings for each key content word in the following LaTeX text, one per line, in the format "word — alternative(s)". Keep every LaTeX command intact and do not rewrite the whole text. Output only the list, with no preamble and no code fences, and do not call or simulate any tool or function.\n\n{{selection}}`,
 }
 
 // overleaf-lab: return the default action prompts with any valid string overrides

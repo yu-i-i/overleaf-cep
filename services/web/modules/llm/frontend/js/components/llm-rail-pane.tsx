@@ -6,9 +6,22 @@ import LLMCompliancePane from './llm-compliance-pane'
 import { RailElement } from '@/features/ide-react/util/rail-types'
 import getMeta from '@/utils/meta'
 import { useLLMFeatures } from '../hooks/use-llm-features'
+import '../../stylesheets/llm-ui.scss'
+import { watchEditorTheme } from '../utils/llm-editor-theme'
 
 function LLMRailPane() {
     const { t } = useTranslation()
+    const rootRef = React.useRef<HTMLDivElement>(null)
+
+    // overleaf-lab (owner request 2026-08-25): the AI surfaces inside the IDE
+    // follow the EDITOR theme (Appearance → Editor theme): read the live
+    // editor colors into --wf-editor-bg/-fg on this root, event-driven only
+    // (MutationObserver on the html dark toggle + the editor element).
+    React.useEffect(() => {
+        const watcher = watchEditorTheme([rootRef.current])
+        return () => watcher.stop()
+    }, [])
+
     // overleaf-lab: switch between the chat assistant and the whole-document
     // compliance review inside the same rail panel.
     const [tab, setTab] = useState<'chat' | 'review'>('chat')
@@ -46,12 +59,12 @@ function LLMRailPane() {
         opacity: active ? 1 : 0.6,
         fontWeight: active ? 600 : 400,
         borderBottom: active
-            ? '2px solid var(--bg-accent-01, #3265b5)'
+            ? '2px solid var(--wf-accent, var(--bg-accent-01, #3265b5))'
             : '2px solid transparent',
     })
 
     return (
-        <div className="llm-rail-panel">
+        <div className="llm-rail-panel llm-wf-editor-scoped" ref={rootRef}>
             <RailPanelHeader title={t('ai_assistant', 'AI Assistant')} />
 
             {features.loaded && !chatVisible && !reviewVisible ? (

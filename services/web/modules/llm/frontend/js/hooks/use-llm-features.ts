@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import getMeta from '@/utils/meta'
+import { getJSON } from '@/infrastructure/fetch-json'
 
 // overleaf-lab: shared client-side view of the super-admin LLM feature flags
 // (chat / inline completion / compliance review) for the CURRENT project. The
@@ -43,13 +44,9 @@ function fetchFeatures(): Promise<Features> {
         return inflight
     }
 
-    inflight = fetch(`/project/${projectId}/llm/features`, {
-        credentials: 'same-origin',
-    })
-        .then(resp => {
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-            return resp.json()
-        })
+    // F14: shared fetch utility (throws FetchError on non-ok; .catch below maps
+    // failures to the all-enabled fallback exactly as before).
+    inflight = getJSON(`/project/${projectId}/llm/features`)
         .then((data: any) => {
             // overleaf-lab: every flag defaults to true when absent.
             const features: Features = {
@@ -62,10 +59,9 @@ function fetchFeatures(): Promise<Features> {
             cache = features
             return features
         })
-        .catch(err => {
+        .catch(() => {
             // overleaf-lab: fail open on the client; the backend still enforces.
-            console.error('[LLMFeatures] Failed to fetch feature flags:', err)
-            cache = { ...ALL_ENABLED }
+                        cache = { ...ALL_ENABLED }
             return cache
         })
 
