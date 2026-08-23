@@ -56,6 +56,10 @@ const LLMChatPane = React.memo(function LLMChatPane({
 
     const [armedClear, setArmedClear] = useState(false)
     const armedTimer = useRef<number | null>(null)
+    // clear the disarm timer on unmount (no setState-after-unmount)
+    useEffect(() => () => {
+        if (armedTimer.current) window.clearTimeout(armedTimer.current)
+    }, [])
     const armClear = () => {
         setArmedClear(true)
         if (armedTimer.current) window.clearTimeout(armedTimer.current)

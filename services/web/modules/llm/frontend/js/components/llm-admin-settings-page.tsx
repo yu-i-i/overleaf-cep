@@ -18,6 +18,7 @@ import {
   DropdownItem,
 } from '@/shared/components/dropdown/dropdown-menu'
 import '../../stylesheets/llm-settings.scss'
+import LLMUsageMeter from './llm-usage-meter' // overleaf-lab (usage meter)
 // overleaf-lab: shared upstream-AI design tokens (--wf-*) used by the settings chrome
 import '../../stylesheets/llm-ui.scss'
 
@@ -312,6 +313,7 @@ export default function LLMAdminSettingsPage() {
                   { id: 'models', icon: 'model_training', label: t('model_selection', 'Model Selection') },
                   { id: 'prompt', icon: 'description', label: t('system_prompt', 'System Prompt') },
                   { id: 'prompts', icon: 'edit_note', label: t('ai_prompts', 'AI Prompts') },
+                  { id: 'usage', icon: 'insights', label: t('llm_usage', 'Usage') }, // overleaf-lab (usage meter)
               ].map(s => (
                   <button
                       key={s.id}
@@ -905,6 +907,22 @@ export default function LLMAdminSettingsPage() {
                   {t('save_settings', 'Save Settings')}
               </OLButton>
           </form>
+
+          {/* ── Section 6: Usage (usage meter) — read-only, outside the form ── */}
+          <div className="llm-settings-section" data-sec="usage">
+              <div className="llm-settings-section-header">
+                  <span className="llm-settings-section-badge">6</span>
+                  <MaterialIcon type="insights" />
+                  {t('llm_usage', 'Usage')}
+              </div>
+              <p className="llm-settings-section-desc">
+                  {t(
+                      'llm_usage_desc',
+                      'Token usage across the whole site (all users, site and personal connections). Data comes from real model responses and is updated after each request.'
+                  )}
+              </p>
+              <LLMUsageMeter scope="admin" />
+          </div>
         </div>
     )
 }

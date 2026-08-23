@@ -280,7 +280,12 @@ async function chat(req, res) {
         const { text, usage, finishReason } = await chatText(
             spec,
             finalMessages,
-            { maxOutputTokens: 8192, temperature: 0.7, timeoutMs: 300000 }
+            {
+                maxOutputTokens: 8192,
+                temperature: 0.7,
+                timeoutMs: 300000,
+                usageMeta: { userId, action: 'chat', lane, projectId }, // overleaf-lab (usage meter)
+            }
         )
         assertNonEmpty(text)
         budget.record(usage?.outputTokens)
@@ -380,7 +385,12 @@ async function completion(req, res) {
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt }
                 ],
-                { maxOutputTokens: maxTokens, temperature: 0.2, timeoutMs: 15000 }
+                {
+                    maxOutputTokens: maxTokens,
+                    temperature: 0.2,
+                    timeoutMs: 15000,
+                    usageMeta: { userId, action: 'completion', lane: resolved.lane, projectId }, // overleaf-lab (usage meter)
+                }
             )
             const data = text || ''
             budget.record(usage?.outputTokens)
@@ -631,7 +641,8 @@ async function compileFix(req, res) {
                 {
                     temperature: 0.4,
                     maxOutputTokens: 8000,
-                    timeoutMs: 180000
+                    timeoutMs: 180000,
+                    usageMeta: { userId, action: 'compile-fix', lane, projectId } // overleaf-lab (usage meter)
                 }
             )
             const clean = validateCompileFixObject(object)
@@ -823,7 +834,8 @@ async function generateDocument(req, res) {
             const r = await chatText(spec, [...prefix, { role: 'user', content: userContent }], {
                 maxOutputTokens: generator.maxOutputTokens,
                 temperature: generator.temperature,
-                timeoutMs: 300000
+                timeoutMs: 300000,
+                usageMeta: { userId, action: `generate-${type}`, lane, projectId } // overleaf-lab (usage meter)
             })
             usage = r.usage || usage
             toolish = /^(tool|function)\s*call\b|^\s*get_[a-z0-9_]+\(/im.test((r.text || '').trim())

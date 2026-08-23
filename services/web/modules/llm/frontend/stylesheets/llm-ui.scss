@@ -416,3 +416,124 @@
     color: var(--link-ui-themed, #28518f);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// overleaf-lab (usage meter, 2026-08-28): shared "Usage" card for the admin
+// page and /user/llm-settings. Same upstream design language: panel surface,
+// navy accent for the bars, muted secondary text, rounded corners.
+.llm-usage {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    background-color: var(--wf-panel-bg, #fafafa);
+    color: var(--wf-panel-text, #1e293b);
+    border: 1px solid var(--wf-panel-border, #e3e8ef);
+    border-radius: 10px;
+
+    &-muted {
+        color: var(--wf-muted, #475569);
+        font-size: 14px;
+    }
+
+    &-stats {
+        display: flex;
+        gap: 22px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    &-stat {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.25;
+
+        &-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        &-label {
+            font-size: 12px;
+            color: var(--wf-muted, #475569);
+            white-space: nowrap;
+        }
+    }
+
+    &-chart {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 180px;
+        flex: 1 1 220px;
+
+        &-caption {
+            font-size: 12px;
+            color: var(--wf-muted, #475569);
+        }
+    }
+
+    &-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 72px;
+        padding: 4px 2px 2px;
+        border-bottom: 1px solid var(--wf-border-in, #dfe5ec);
+    }
+
+    &-bar {
+        flex: 1 1 0;
+        min-width: 3px;
+        max-width: 14px;
+        background-color: var(--wf-accent, #28518f);
+        opacity: 0.75;
+        border-radius: 2px 2px 0 0;
+        height: 2px;
+    }
+
+    &-bd {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 210px;
+
+        &-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--wf-muted, #475569);
+            margin-bottom: 2px;
+        }
+
+        &-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            font-size: 13px;
+
+            &+.llm-usage-bd-row {
+                margin-top: 0;
+            }
+        }
+
+        &-name {
+            color: var(--wf-panel-text, #1e293b);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            &-model {
+                font-family: monospace;
+                font-size: 12px;
+            }
+        }
+
+        &-val {
+            color: var(--wf-muted, #475569);
+            white-space: nowrap;
+        }
+    }
+}

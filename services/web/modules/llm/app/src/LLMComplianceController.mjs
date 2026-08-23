@@ -10,6 +10,15 @@ import { chatText, chatObject, listModels as listModelsSdk, normalizeProviderSpe
 // overleaf-lab: Review-tab model selector — resolve an explicit model ref (site
 // model id or 'u:<rowId>:<model>') to the right lane + spec.
 import { resolveModelLane } from './LLMChatController.mjs'
+// overleaf-lab (audit M2): Mongo persistence for review jobs — survives restarts.
+import {
+    persistJobCreate,
+    persistJobUpdate,
+    persistJobFinalStatus,
+    persistStuckJobs,
+    findUserJobDoc,
+    countUserActiveJobs,
+} from './models/LLMReviewJob.mjs'
 
 // overleaf-lab: in-memory job queue for compliance reviews. A review sends the
 // whole project to the LLM and can run for minutes, so we run one at a time per
@@ -72,6 +81,10 @@ let measuredGenTps = null
 // body's model (same body shape as the old provider calls).
 let currentBaseSpec = null
 
+// overleaf-lab (usage meter): set per job by performReview — the in-process
+// review worker is single-flight, so one module-level meta is race-free.
+let currentUsageMeta = null
+
 function specFor(model) {
     return normalizeProviderSpec(currentBaseSpec || {}, { model })
 }
@@ -85,6 +98,7 @@ async function chatDetailedCompat(spec, body, opts = {}) {
         temperature: body.temperature,
         signal: opts.signal,
         timeoutMs: opts.timeoutMs,
+        usageMeta: opts.usageMeta, // overleaf-lab (usage meter)
     }
     try {
         if (schema) {
@@ -113,7 +127,9 @@ async function chatDetailedCompat(spec, body, opts = {}) {
 }
 
 function llmChat(body, opts) {
-    return chatDetailedCompat(specFor(body.model), body, opts)
+    // overleaf-lab (usage meter): every review pass is metered under the job
+    // owner (set by performReview).
+    return chatDetailedCompat(specFor(body.model), body, { ...opts, usageMeta: currentUsageMeta })
 }
 
 // overleaf-lab: sample-size gates for trusting a timings measurement. llama.cpp
@@ -736,6 +752,18 @@ function extractJson(text) {
 
 // overleaf-lab: unique id for a review job. Date.now/Math.random are fine here,
 // this is normal Node code (not a security token).
+// overleaf-lab (audit M2): jobs still queued/running belong to a dead process
+// (single worker) — mark them failed so clients get a definitive answer instead
+// of the pre-M2 "not found or expired". Cheap and idempotent; runs once per
+// process, lazily, on the first request after a restart.
+let sweepDone = false
+async function sweepStuckJobsOnce() {
+    if (sweepDone) {
+        return
+    }
+    sweepDone = true
+    await persistStuckJobs()
+}
 function newJobId() {
     return `job-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
@@ -772,6 +800,12 @@ function jobsAhead(jobId) {
 // empty_document). Throws on an HTTP/parse failure or an abort (cancel or the
 // review timeout); processQueue maps those to the 'cancelled' or 'failed' state.
 async function performReview(job) {
+    currentUsageMeta = {
+        userId: job.userId,
+        action: 'review',
+        lane: job.modelOverride && String(job.modelOverride).startsWith('u:') ? 'user' : 'site',
+        projectId: job.projectId,
+    } // overleaf-lab (usage meter)
     const { projectId, userId } = job
 
     // overleaf-lab: resolve the rubric fresh at run time (the job only stores id and
@@ -1565,6 +1599,7 @@ async function processQueue() {
     job.status = 'running'
     job.startedAt = Date.now()
     job.controller = new AbortController()
+    void persistJobUpdate(job.id, job) // overleaf-lab (audit M2)
 
     try {
         const outcome = await performReview(job)
@@ -1599,6 +1634,7 @@ async function processQueue() {
         }
     } finally {
         job.finishedAt = Date.now()
+        void persistJobUpdate(job.id, job) // overleaf-lab (audit M2)
         running = false
         job.controller = null
         // overleaf-lab: never let one job's failure stall the queue.
@@ -1667,12 +1703,18 @@ async function startReview(req, res) {
         })
     }
 
+    // overleaf-lab (audit M2): mark jobs stuck by the previous process (if any).
+    await sweepStuckJobsOnce()
     // overleaf-lab: F6 — concurrency caps. One user keeps at most one review
     // running plus two queued; the global queue stays bounded so a slow shared
     // backend cannot be stacked with work by many projects.
-    const userActive = [...jobs.values()].filter(
+    // overleaf-lab (audit M2): count from Mongo when possible (it includes the
+    // in-memory jobs, which are all mirrored); fall back to the in-memory count
+    // if Mongo cannot be reached, so a store hiccup never blocks reviews.
+    const inMemoryActive = [...jobs.values()].filter(
         j => j.userId === userId && (j.status === 'running' || j.status === 'queued')
     ).length
+    const userActive = (await countUserActiveJobs(userId)) ?? inMemoryActive
     if (userActive >= MAX_USER_REVIEWS_IN_FLIGHT) {
         return res.json({
             ok: false,
@@ -1717,6 +1759,7 @@ async function startReview(req, res) {
         currentRequirement: '',
     }
     jobs.set(job.id, job)
+    void persistJobCreate(job) // overleaf-lab (audit M2)
     queue.push(job.id)
     // overleaf-lab: kick the queue; it runs to its first await, so if nothing else
     // is running this job may already be 'running' by the time we respond.
@@ -1738,6 +1781,46 @@ async function statusReview(req, res) {
     const job = jobs.get(req.params.jobId)
     const userId = SessionManager.getLoggedInUserId(req.session)
     if (!job || job.userId !== userId) {
+        await sweepStuckJobsOnce() // overleaf-lab (audit M2)
+        // overleaf-lab (audit M2): the job is not live in this process. It may
+        // still exist in Mongo from before a restart — answer from there, and
+        // turn a stale queued/running doc into a definitive failure.
+        const doc = await findUserJobDoc(req.params.jobId, userId)
+        if (doc) {
+            if (doc.status === 'running' || doc.status === 'queued') {
+                const message =
+                    'The server restarted while the review was running. Please start it again.'
+                await persistJobFinalStatus(doc.jobId, {
+                    status: 'error',
+                    errorCode: 'server-restarted',
+                    message,
+                    finishedAt: new Date(),
+                })
+                return res.json({
+                    ok: true,
+                    status: 'error',
+                    errorCode: 'server-restarted',
+                    message,
+                })
+            }
+            if (doc.status === 'done') {
+                return res.json({ ok: true, status: 'done', result: doc.result })
+            }
+            if (doc.status === 'error') {
+                return res.json({
+                    ok: true,
+                    status: 'error',
+                    errorCode: doc.errorCode,
+                    message: doc.message,
+                    documentTokensEstimate: doc.documentTokensEstimate,
+                    maxContextTokens: doc.maxContextTokens,
+                    reviewMaxTokens: doc.reviewMaxTokens,
+                })
+            }
+            if (doc.status === 'cancelled') {
+                return res.json({ ok: true, status: 'cancelled' })
+            }
+        }
         return res.json({ ok: false, error: 'not_found', message: 'Review not found or expired' })
     }
 
@@ -1805,6 +1888,14 @@ async function cancelReview(req, res) {
             }
         }
         // done/error/cancelled: no-op.
+    } else if (!job) {
+        // overleaf-lab (audit M2): the job is not live here (e.g. after a
+        // restart) — cancel it in Mongo if it is still pending, so the poller
+        // sees a definitive state.
+        const doc = await findUserJobDoc(req.params.jobId, userId)
+        if (doc && (doc.status === 'queued' || doc.status === 'running')) {
+            await persistJobFinalStatus(doc.jobId, { status: 'cancelled', finishedAt: new Date() })
+        }
     }
     return res.json({ ok: true })
 }

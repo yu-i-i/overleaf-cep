@@ -193,6 +193,15 @@ export default {
             LLMSettingsController.deleteProvider
         )
         logger.debug({}, '[LLM] Route registered: POST /user/llm-providers/:id/delete')
+        // overleaf-lab (usage meter): per-user token accounting for /user/llm-settings.
+        // Registered before any ':' route in this block — 'usage' is a literal,
+        // but keep the convention (literal first) so it can never be swallowed.
+        webRouter.get(
+            '/user/llm-usage',
+            AuthenticationController.requireLogin(),
+            LLMSettingsController.userUsageSummary
+        )
+        logger.debug({}, '[LLM] Route registered: GET /user/llm-usage')
 
         // overleaf-lab: /user/llm-settings is the dedicated BYO settings page
         // (Account menu 'AI Settings' and the Account Settings card link here).
@@ -249,5 +258,13 @@ export default {
             LLMAdminController.scanAdminModels
         )
         logger.debug({}, '[LLM] Route registered: POST /admin/llm/models')
+
+        // overleaf-lab (usage meter): whole-site token accounting for the admin page.
+        webRouter.get(
+            '/admin/llm/usage',
+            AuthorizationMiddleware.ensureUserIsSiteAdmin,
+            LLMAdminController.usageSummary
+        )
+        logger.debug({}, '[LLM] Route registered: GET /admin/llm/usage')
     }
 }

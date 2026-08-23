@@ -263,6 +263,22 @@
     min-width: 0;
   }
 
+  // overleaf-lab (fix 2026-08-28, owner report): the Usage card is a top-level
+  // grid item (read-only, outside the settings form) — it belongs in the
+  // CONTENT column, not in the menu. Pin it to the form's cell (row 2, col 2)
+  // and hide the form (with its Save button — there is nothing to save on the
+  // Usage view) while Usage is active.
+  &[data-active='usage'] {
+    .llm-admin-content {
+      display: none;
+    }
+    .llm-settings-section[data-sec='usage'] {
+      grid-row: 2;
+      grid-column: 2;
+      min-width: 0;
+    }
+  }
+
   // Hide every section except the active one (data-active is set on the
   // container, data-sec on each section).
   [data-sec] {
@@ -274,7 +290,8 @@
   &[data-active='models'] [data-sec='models'],
   &[data-active='prompt'] [data-sec='prompt'],
   &[data-active='compliance'] [data-sec='compliance'],
-  &[data-active='prompts'] [data-sec='prompts'] {
+  &[data-active='prompts'] [data-sec='prompts'],
+  &[data-active='usage'] [data-sec='usage'] {
     display: block;
   }
 

@@ -241,7 +241,7 @@ const LLMToolbar = forwardRef<LLMToolbarHandle, Record<string, never>>((_, ref) 
         const modePrompts: Record<number, string> = {
             0: ask, // free-form chat
             1: `Paraphrase the following LaTeX text. Keep every LaTeX command, math, and citation key intact. Output only the paraphrased text, with no preamble, no explanation, and no code fences.\n\n${basisText}`,
-            2: `Rewrite the following LaTeX text in fluent, formal academic English. Preserve every LaTeX command, math, and citation key. Output only the rewritten text, with no preamble and no code fences.\n\n${basisText}`,
+            2: `Rewrite the following LaTeX text in a fluent, formal academic style, keeping the text's own language. Preserve every LaTeX command, math, and citation key. Output only the rewritten text, with no preamble and no code fences.\n\n${basisText}`,
             3: `Rewrite the following LaTeX text more concisely, preserving its meaning and every LaTeX command, math, and citation. Output only the rewritten text, nothing else.\n\n${basisText}`,
             4: `Rewrite the following LaTeX text in a punchier, more engaging style while keeping it accurate. Preserve every LaTeX command, math, and citation. Output only the rewritten text, nothing else.\n\n${basisText}`,
             5: `Split the following LaTeX paragraph into several shorter, well-structured paragraphs. Keep the wording and all LaTeX; only add paragraph breaks. Output only the resulting LaTeX, nothing else.\n\n${basisText}`,
@@ -303,6 +303,10 @@ const LLMToolbar = forwardRef<LLMToolbarHandle, Record<string, never>>((_, ref) 
             }
             return out
         }
+        // overleaf-lab (owner report 2026-08-28): small models drift to the
+        // instruction or conversation language (observed: Italian rephrasing of
+        // an English selection even though the system prompt says otherwise —
+        // see the language lock appended INSIDE each per-action message below).
         if (mode >= 1) {
             const actionKey = modeActionKey[mode]
             const template = actionKey
@@ -314,6 +318,14 @@ const LLMToolbar = forwardRef<LLMToolbarHandle, Record<string, never>>((_, ref) 
                     : `${template}\n\n${basisText}`
             } else {
                 userContent = fillVars(modePrompts[mode] || ask, basisText)
+            }
+            // overleaf-lab (owner rule 2026-08-28): the language rule must ride
+            // in the per-action message itself; only Translate (mode 12) may
+            // change the language, so the lock is appended to every other action.
+            if (mode !== 12) {
+                userContent +=
+                    '\n\nIMPORTANT - language: produce the output in EXACTLY the same language as the text provided above. ' +
+                    'Do not translate it and do not switch to any other language; only the Translate action is allowed to change the language.'
             }
         } else {
             // overleaf-lab: PR item 10 — when the user asks while a passage is

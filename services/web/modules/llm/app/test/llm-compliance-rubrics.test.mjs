@@ -7,6 +7,15 @@ import {
     sanitizeComplianceRubrics,
     validateComplianceRubrics,
 } from '../src/LLMAdminController.mjs'
+import {
+    LLMReviewJob,
+    persistJobCreate,
+    persistJobUpdate,
+    persistJobFinalStatus,
+    persistStuckJobs,
+    findUserJobDoc,
+    countUserActiveJobs,
+} from '../src/models/LLMReviewJob.mjs' // overleaf-lab (audit M2)
 
 test('sanitizeComplianceRubrics: non-array -> null (caller keeps existing)', () => {
     assert.equal(sanitizeComplianceRubrics(undefined), null)
@@ -61,4 +70,47 @@ test('validateComplianceRubrics: invalid regex and over-long patterns are reject
         validateComplianceRubrics(tooLong),
         /must be 4000 characters or fewer/,
     )
+})
+
+
+
+
+test('audit M2: review job schema — identity, status enum, indexes', () => {
+    const s = LLMReviewJob.schema
+    assert.equal(s.path('jobId').options.unique, true)
+    assert.equal(s.path('status').options.enum.join(','), 'queued,running,done,error,cancelled')
+    assert.notEqual(s.path('userId').index, undefined)
+    // overleaf-lab: mongoose reports `type: Object` as instance 'Mixed'
+    assert.ok(['Mixed', 'Object'].includes(s.path('result').instance))
+})
+
+test('audit M2: persist helpers are non-fatal without a Mongo connection', async () => {
+    const job = {
+        id: 'job-x',
+        projectId: 'p1',
+        userId: 'u1',
+        status: 'queued',
+        result: null,
+        errorCode: null,
+        message: null,
+        rubricId: 'r',
+        rubricName: 'R',
+        modelOverride: null,
+        documentTokensEstimate: null,
+        maxContextTokens: null,
+        reviewMaxTokens: null,
+        passesTotal: null,
+        passesDone: 0,
+        currentRequirement: '',
+        createdAt: Date.now(),
+        startedAt: null,
+        finishedAt: null,
+    }
+    // every helper must RESOLVE (error logged and swallowed), never throw
+    await persistJobCreate(job)
+    await persistJobUpdate('job-x', job)
+    assert.equal(await findUserJobDoc('job-x', 'u1'), null)
+    assert.equal(await countUserActiveJobs('u1'), null)
+    await persistJobFinalStatus('job-x', { status: 'cancelled' })
+    await persistStuckJobs('restarted')
 })

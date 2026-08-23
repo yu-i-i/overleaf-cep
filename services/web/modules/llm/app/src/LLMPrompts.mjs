@@ -63,7 +63,7 @@ Use "ok" when clearly satisfied, "partial" when partially satisfied or only part
 // whole-document generators endpoint instead).
 export const DEFAULT_ASK_AI_ACTION_PROMPTS = {
     paraphrase: `Paraphrase the following LaTeX text. Keep every LaTeX command, math, and citation key intact. Output only the paraphrased text, with no preamble, no explanation, and no code fences. Do not call, name, or simulate any tool, function, or API — answer directly with the text.\n\n{{selection}}`,
-    academic: `Rewrite the following LaTeX text in fluent, formal academic English. Preserve every LaTeX command, math, and citation key. Output only the rewritten text, with no preamble and no code fences. Do not call, name, or simulate any tool, function, or API — answer directly with the text.\n\n{{selection}}`,
+    academic: `Rewrite the following LaTeX text in a fluent, formal academic style, keeping the text's own language. Preserve every LaTeX command, math, and citation key. Output only the rewritten text, with no preamble and no code fences. Do not call, name, or simulate any tool, function, or API — answer directly with the text.\n\n{{selection}}`,
     concise: `Rewrite the following LaTeX text more concisely, preserving its meaning and every LaTeX command, math, and citation. Output only the rewritten text, nothing else. Do not call, name, or simulate any tool, function, or API — answer directly with the text.\n\n{{selection}}`,
     // overleaf-lab (2026-08): reference-synced menu actions — translate (the
     // extra `{{language}}` placeholder is substituted by the frontend) and a

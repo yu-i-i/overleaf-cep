@@ -22,6 +22,7 @@
  * previously only enforced chat(), not settings/check/scan/save).
  */
 
+import { getUsageSummary } from './LLMUsage.mjs' // overleaf-lab (usage meter)
 import { z } from 'zod'
 import Settings from '@overleaf/settings'
 import logger from '@overleaf/logger'
@@ -29,7 +30,7 @@ import SessionManager from '../../../../app/src/Features/Authentication/SessionM
 import { User } from '../../../../app/src/models/User.mjs'
 import { expressify } from '@overleaf/promise-utils'
 import { encryptSecret, normalizeStoredSecret, storedToPlaintext } from './LLMCrypto.mjs'
-import { normalizeProviderSpec, chatText, listModels, detectProviderType, PROVIDER_TYPES } from './LLMClient.mjs'
+import { normalizeProviderSpec, chatText, listModels, detectProviderType, PROVIDER_TYPES, assertPublicLlmBaseUrl } from './LLMClient.mjs'
 import { sanitizeComplianceRubrics, validateComplianceRubrics, getComplianceRubrics, getLLMFeatureFlags } from './LLMAdminController.mjs'
 import OError from '@overleaf/o-error'
 
@@ -166,6 +167,20 @@ async function getProvidersJson(req, res) {
     res.json({ ok: true, providers: providers.map(publicRow), maxProviders: MAX_PROVIDERS_PER_USER })
 }
 
+
+
+// overleaf-lab (audit M1): SSRF guard for user-supplied base URLs. Returns a
+// 400 response (or null when the URL is acceptable) so every entry point can
+// share the same error message.
+function assertPublicOr400(res, baseUrl) {
+    try {
+        assertPublicLlmBaseUrl(baseUrl)
+        return null
+    } catch (err) {
+        return res.status(400).json({ ok: false, error: 'blocked-url', details: err.message })
+    }
+}
+
 async function addProvider(req, res) {
     if (!(await requireUserSettingsAllowed(req, res))) return
     const userId = SessionManager.getLoggedInUserId(req.session)
@@ -174,6 +189,12 @@ async function addProvider(req, res) {
         const details = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')
         return res.status(400).json({ ok: false, error: 'invalid', details })
     }
+
+
+    // overleaf-lab (audit M1): SSRF guard on the user-supplied base URL.
+    const blocked = assertPublicOr400(res, parsed.data.baseUrl)
+    if (blocked) return blocked
+
     const user = await User.findById(userId, 'llmProviders llmApiUrl llmModelName')
     const existing = Array.isArray(user?.llmProviders) ? user.llmProviders : []
     if (existing.length >= MAX_PROVIDERS_PER_USER) {
@@ -234,6 +255,11 @@ async function updateProvider(req, res) {
         const details = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')
         return res.status(400).json({ ok: false, error: 'invalid', details })
     }
+
+
+    // overleaf-lab (audit M1): SSRF guard on the user-supplied base URL.
+    if (assertPublicOr400(res, parsed.data.baseUrl)) return
+
     let apiKey = normalizeStoredSecret(current.apiKey || '')
     if (req.body?.clearApiKey) apiKey = ''
     else if (req.body?.apiKey && req.body.apiKey.trim() !== '') apiKey = encryptSecret(req.body.apiKey)
@@ -296,6 +322,9 @@ async function checkProviderConnection(req, res) {
         providerType = providerType || row.providerType
         if (!apiKey && row.apiKey) apiKey = storedToPlaintext(row.apiKey)
     }
+    // overleaf-lab (audit M1): SSRF guard on the effective base URL.
+    const blockedChk = assertPublicOr400(res, baseUrl || '')
+    if (blockedChk) return blockedChk
     if (!baseUrl && !providerType) return res.status(400).json({ ok: false, error: 'invalid', details: 'baseUrl or rowId is required' })
     // overleaf-lab (reviewer #5): auto-detect the API type. Try the requested
     // type first; if it fails, try every other supported type before giving
@@ -329,7 +358,12 @@ async function checkProviderConnection(req, res) {
             await chatText(
                 normalizeProviderSpec({ providerType: type, baseUrl, apiKey }, { model: model || models[0] || 'qwen' }),
                 [{ role: 'user', content: 'Reply with the single word OK.' }],
-                { maxOutputTokens: 16, temperature: 0, timeoutMs: 60000 }
+                {
+                    maxOutputTokens: 16,
+                    temperature: 0,
+                    timeoutMs: 60000,
+                    usageMeta: { userId, action: 'check', lane: 'user' } // overleaf-lab (usage meter)
+                }
             )
             if (type !== requestedType) {
                 logger.info(
@@ -374,6 +408,9 @@ async function scanProviderModels(req, res) {
         if (!apiKey && row.apiKey) apiKey = storedToPlaintext(row.apiKey)
     }
     providerType = providerType || detectProviderType(baseUrl)
+    // overleaf-lab (audit M1): SSRF guard on the effective base URL.
+    const blockedScan = assertPublicOr400(res, baseUrl || '')
+    if (blockedScan) return blockedScan
     if (!baseUrl) return res.status(400).json({ ok: false, error: 'invalid', details: 'baseUrl or rowId is required' })
 
     // overleaf-lab (reviewer #5): same auto-detection as /check — try the
@@ -458,6 +495,13 @@ async function saveSelectedModel(req, res) {
     if (value.length > SELECTED_MODEL_MAX) {
         return res.status(400).json({ ok: false, error: 'bad-request', message: 'Model value too long' })
     }
+    // overleaf-lab (harden): a broken selection here silently downgrades EVERY
+    // AI surface to fallback lanes — only accept a well-formed model reference
+    // (`name`, `name:tag`, `site:name`, or `u:<rowId>:name`) or the empty
+    // string (explicit reset). Anything else is a client bug, not a model.
+    if (value && !/^[A-Za-z0-9._\-/]+(:[A-Za-z0-9._\-/]+){0,2}$/.test(value)) {
+        return res.status(400).json({ ok: false, error: 'bad-request', message: 'Invalid model reference' })
+    }
     await User.updateOne({ _id: userId }, { $set: { llmSelectedModel: value } })
     res.json({ ok: true, selected: value })
 }
@@ -519,6 +563,21 @@ async function saveUserCompliance(req, res) {
     res.json({ ok: true, rubrics: sanitized })
 }
 
+
+// overleaf-lab (usage meter): the user's own token accounting for /user/llm-settings.
+async function userUsageSummary(req, res) {
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    if (!userId) {
+        return res.status(401).json({ ok: false })
+    }
+    const days = parseInt(req.query.days, 10)
+    const summary = await getUsageSummary({ userId, days: Number.isFinite(days) ? days : 30 })
+    if (summary) {
+        return res.json({ ok: true, ...summary })
+    }
+    return res.json({ ok: false, error: 'unavailable' })
+}
+
 export default {
     isUserSettingsAllowed,
     requireUserSettingsAllowed,
@@ -530,6 +589,7 @@ export default {
     deleteProvider: expressify(deleteProvider),
     checkProviderConnection: expressify(checkProviderConnection),
     scanProviderModels: expressify(scanProviderModels),
+    userUsageSummary: expressify(userUsageSummary), // overleaf-lab (usage meter)
     // overleaf-lab: user-scoped shared model selection (File → "Select LLM Model")
     getSelectedModel: expressify(getSelectedModel),
     saveSelectedModel: expressify(saveSelectedModel),

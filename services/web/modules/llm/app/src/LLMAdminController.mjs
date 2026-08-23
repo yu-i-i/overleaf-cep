@@ -1,6 +1,7 @@
 import logger from '@overleaf/logger'
 import fs from 'node:fs'
 import path from 'node:path'
+import { getUsageSummary } from './LLMUsage.mjs'; // overleaf-lab (usage meter)
 import { z } from 'zod'
 import { expressify } from '@overleaf/promise-utils'
 import { encryptSecret, decryptSecret } from './LLMCrypto.mjs' // overleaf-lab: at-rest encryption of admin API key
@@ -418,11 +419,17 @@ export function validateComplianceRubrics(list) {
       const sep = line.indexOf('::')
       const body = (sep === -1 ? line : line.slice(sep + 2)).trim()
       if (!body) continue
+      // overleaf-lab (harden): cap each pattern — these are compiled as regexes
+      // per review run (admin AND user supplied); a few-kilobyte pattern is
+      // already pathological and a ReDoS candidate.
+      if (body.length > 200) {
+        return `Scan pattern in rubric "${(r && r.name) || '?'}" is too long (max 200 characters)`
+      }
       try {
         // eslint-disable-next-line no-new
         new RegExp(body, 'i')
       } catch (err) {
-        return `Invalid scan pattern regex in rubric "${(r && r.name) || '?'}": ${body}`
+        return `Invalid scan pattern regex in rubric "${(r && r.name) || '?'}": ${body.slice(0, 80)}`
       }
     }
   }
@@ -531,10 +538,25 @@ async function scanAdminModels(req, res) {
   }
 }
 
+
+// overleaf-lab (usage meter): whole-site token accounting for the admin page.
+async function usageSummary(req, res) {
+  const days = parseInt(req.query.days, 10)
+  const summary = await getUsageSummary({ userId: null, days: Number.isFinite(days) ? days : 30 })
+  if (summary) {
+    res.json({ ok: true, ...summary })
+  }
+  else {
+    // the meter is non-fatal for the whole module — a missing store is a muted
+    // "unavailable" on the UI, never a 500.
+    res.json({ ok: false, error: 'unavailable' })
+  }
+}
 export default {
   adminSettingsPage: expressify(adminSettingsPage),
   getAdminSettings: expressify(getAdminSettings),
   saveAdminSettings: expressify(saveAdminSettings),
   checkAdminLLMConnection: expressify(checkAdminLLMConnection),
-  scanAdminModels: expressify(scanAdminModels),
+  scanAdminModels: expressify(scanAdminModels),  usageSummary: expressify(usageSummary),
+
 }
