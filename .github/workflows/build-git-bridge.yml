@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'overleaf/overleaf tag/branch/commit to build git-bridge from (e.g. v6.2.0)'
+        description: 'jj-sm/overleaf-cep tag/branch/commit to build git-bridge from (e.g. v6.2.0-ext-v5.0)'
         required: true
-        default: 'main'
+        default: 'ext-ce'
       tag:
         description: 'Output image tag (e.g. 6.2.0-arm64)'
         required: true
@@ -21,10 +21,9 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Checkout overleaf/overleaf at requested ref
+      - name: Checkout overleaf-cep at requested ref
         uses: actions/checkout@v4
         with:
-          repository: overleaf/overleaf
           ref: ${{ inputs.ref }}
           sparse-checkout: |
             services/git-bridge
