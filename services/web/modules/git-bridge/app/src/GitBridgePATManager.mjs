@@ -118,7 +118,7 @@ const GitBridgePATManager = {
       logger.error({ err }, 'Failed to update lastUsedAt')
     )
 
-    return objToken.user_id
+    return new ObjectId(objToken.user_id)
   },
 }
 
