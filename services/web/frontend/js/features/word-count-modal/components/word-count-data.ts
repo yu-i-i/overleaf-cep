@@ -23,3 +23,26 @@ export type WordCountData = ServerWordCountData & {
   otherWords: number
   otherCharacters: number
 }
+
+export const createEmptyWordCountData = (): WordCountData => ({
+  encode: 'ascii',
+  textWords: 0,
+  textCharacters: 0,
+  headWords: 0,
+  headCharacters: 0,
+  abstractWords: 0,
+  abstractCharacters: 0,
+  captionWords: 0,
+  captionCharacters: 0,
+  footnoteWords: 0,
+  footnoteCharacters: 0,
+  outside: 0,
+  otherWords: 0,
+  otherCharacters: 0,
+  headers: 0,
+  elements: 0,
+  mathInline: 0,
+  mathDisplay: 0,
+  errors: 0,
+  messages: '',
+})

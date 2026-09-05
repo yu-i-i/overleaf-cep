@@ -1088,6 +1088,10 @@ module.exports = {
         __dirname,
         '../modules/reference-picker/frontend/components/reference-picker-controller.tsx'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/selected-word-count/frontend/components/selected-word-count-controller.tsx'
+      ),
     ],
     mainEditorLayoutPanels: [],
     pythonRunner: [],
@@ -1190,7 +1194,18 @@ module.exports = {
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],
     settingsModalSpellcheckSections: [],
-    editorFloatingMenuActions: [],
+    editorFloatingMenuActions: [
+      Path.resolve(
+        __dirname,
+        '../modules/selected-word-count/frontend/components/selected-word-count-action.tsx'
+      ),
+    ],
+    reviewTooltipMenuActions: [
+      Path.resolve(
+        __dirname,
+        '../modules/selected-word-count/frontend/components/selected-word-count-legacy-action.tsx'
+      ),
+    ],
     errorLogsComponents: [],
     referenceIndices: [
       Path.resolve(

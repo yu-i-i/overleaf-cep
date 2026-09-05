@@ -5,6 +5,7 @@ import { TestContainer } from '../source-editor/helpers/test-container'
 import { docId } from '../source-editor/helpers/mock-doc'
 import { useUserSettingsContext } from '@/shared/context/user-settings-context'
 import type { PermissionsLevel } from '@/features/ide-react/types/permissions'
+import type { SelectedWordCountRequest } from '../../../../modules/selected-word-count/frontend/selected-word-count-events'
 
 function FloatingMenuToggle() {
   const { setUserSettings } = useUserSettingsContext()
@@ -127,6 +128,7 @@ describe('<EditorFloatingMenu />', function () {
 
       cy.get('.editor-floating-menu').within(() => {
         cy.findByLabelText('Add comment').should('exist')
+        cy.findByLabelText('Word count — selected text').should('exist')
       })
       // Legacy tooltip is replaced.
       cy.get('.review-tooltip-menu').should('not.exist')
@@ -148,14 +150,72 @@ describe('<EditorFloatingMenu />', function () {
 
       cy.get('@addComment').should('have.been.called')
     })
+
+    it('captures the CodeMirror document and selected range for word count', function () {
+      mountEditor({ migrationEnabled: true })
+
+      let request: SelectedWordCountRequest | undefined
+
+      cy.window().then(win => {
+        win.addEventListener('selected-word-count:open', event => {
+          request = (event as CustomEvent<SelectedWordCountRequest>).detail
+        })
+      })
+
+      cy.get('.editor-floating-menu').within(() => {
+        cy.findByLabelText('Word count — selected text').click({
+          scrollBehavior: false,
+        })
+      })
+
+      cy.then(() => {
+        expect(request).not.to.be.undefined
+        if (!request) return
+
+        expect(request.from).to.be.lessThan(request.to)
+        expect(request.doc.sliceString(request.from, request.to)).to.have.length(
+          6
+        )
+      })
+    })
   })
 
   describe('when the migration split test is disabled (control)', function () {
     it('keeps the legacy review tooltip and does not render the unified menu', function () {
       mountEditor({ migrationEnabled: false })
 
-      cy.get('.review-tooltip-menu').should('exist')
+      cy.get('.review-tooltip-menu').within(() => {
+        cy.findByLabelText('Word count — selected text').should('exist')
+      })
       cy.get('.editor-floating-menu').should('not.exist')
+    })
+
+    it('captures the selected range from the legacy review tooltip', function () {
+      mountEditor({ migrationEnabled: false })
+
+      let request: SelectedWordCountRequest | undefined
+
+      cy.window().then(win => {
+        win.addEventListener('selected-word-count:open', event => {
+          request = (event as CustomEvent<SelectedWordCountRequest>).detail
+        })
+      })
+
+      cy.get('.review-tooltip-menu').within(() => {
+        cy.findByLabelText('Word count — selected text').click({
+          scrollBehavior: false,
+        })
+      })
+
+      cy.then(() => {
+        expect(request).not.to.be.undefined
+        if (!request) return
+
+        expect(request.from).to.be.lessThan(request.to)
+        expect(request.doc.sliceString(request.from, request.to)).to.have.length(
+          6
+        )
+      })
     })
   })
 
