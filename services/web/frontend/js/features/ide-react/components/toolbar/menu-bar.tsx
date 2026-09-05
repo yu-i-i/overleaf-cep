@@ -68,7 +68,17 @@ export const ToolbarMenuBar = () => {
         type: 'command',
         label: t('word_count_lower'),
         disabled: !wordCountEnabled,
-        handler: () => {
+        handler: ({ location }) => {
+          if (location === 'menu-bar') {
+            const event = new Event('word-count:open-requested', {
+              cancelable: true,
+            })
+
+            if (!window.dispatchEvent(event)) {
+              return
+            }
+          }
+
           setShowWordCountModal(true)
         },
         id: 'word_count',

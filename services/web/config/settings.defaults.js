@@ -1057,6 +1057,10 @@ module.exports = {
         __dirname,
         '../modules/reference-picker/frontend/components/reference-picker-controller.tsx'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/selected-word-count/frontend/components/selected-word-count-controller.tsx'
+      ),
     ],
     mainEditorLayoutPanels: [],
     pythonRunner: [],
