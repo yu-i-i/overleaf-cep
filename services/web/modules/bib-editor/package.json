@@ -1,0 +1,23 @@
+{
+  "name": "@overleaf/bib-editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Visual BibTeX editor for .bib files (Overleaf CEP module).",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit"
+  },
+  "devDependencies": {
+    "jsdom": "^27.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-i18next": "*",
+    "@codemirror/state": "*",
+    "@codemirror/view": "*"
+  }
+}

@@ -1,0 +1,107 @@
+// ---------------------------------------------------------------------------
+// CE fork — CE+ admin shells (N-2 STRUCTURAL REBUILD, 2026-09-01).
+//
+// /admin/panel + /user/mysettings now emit the EXACT /admin/site DOM tree
+// (page div > in-page React navbar + .user-list-sidebar-wrapper-react
+// column + content column inside .user-list-wrapper), so the shared
+// themed styles (modules/admin-tools/frontend/styles/user-list-ds-nav.scss,
+// bundled globally) apply unmodified. This file only adds the pieces the
+// golden page gets from React components that we render as static markup:
+//   * the "Admin Panel" sidebar tab links (the golden uses <button>s, the
+//     panel keeps the upstream bookmarkable-tabset <a data-toggle=tab>),
+//   * the mysettings settings-nav buttons active-state parity.
+// The sidebar account menu (incl. Theme) is now the SHARED React
+// AccountMenuItems/ThemeToggle — styled by the global .theme-toggle*
+// rules; the previous static .theme-selector* styles are deleted.
+// All hard-coded white / forced dark surfaces are GONE — the pages
+// follow ace.overallTheme in both themes like /admin/site.
+// ---------------------------------------------------------------------------
+
+$shell-title: 1.75rem;
+
+// /admin/panel — sidebar tab links (upstream bookmarkable tabset markup:
+// `li > a.nav-link`) styled like the golden sidebar buttons.
+.user-ds-nav-page {
+  // Themed surface behind the right-hand content column. The golden
+  // /admin/site paints its content area with the page theme's primary
+  // background; the shell markup leaves `.user-ds-nav-content` transparent,
+  // which let the white body show through in dark mode — read as "not
+  // theme-aware". Both shell pages (they are the ONLY consumers of these
+  // classes) are covered here.
+  .user-ds-nav-content {
+    background-color: var(--ds-nav-bg-color);
+    color: var(--content-secondary-themed);
+  }
+
+  .user-list-filters > li.admin-panel-nav-item {
+    > a.nav-link {
+      display: block;
+      width: 100%;
+      text-align: left;
+      color: var(--ds-nav-color);
+      background: none;
+      border-radius: var(--border-radius-medium);
+      border: none;
+      padding: var(--spacing-04) var(--spacing-05);
+      font-size: 0.95rem;
+    }
+
+    &:hover > a.nav-link {
+      background-color: var(--ds-nav-hover-bg);
+    }
+
+    &.active > a.nav-link {
+      background-color: var(--ds-nav-active-bg);
+      color: var(--ds-nav-active-color);
+      font-weight: bold;
+    }
+  }
+
+  // /user/mysettings — the upstream settings React app renders its own
+// <h1>Account settings</h1> inside the content card; the shell's h1
+// ("My settings") is the column header, so the app-level duplicate is
+// hidden. `#settings-page-root` only exists on this shell, so the rule
+// is page-scoped and safe.
+#settings-page-root .page-content-card > .page-header {
+  display: none !important;
+}
+
+// (N-2 round 3, 2026-09-01: the `.my-settings-nav-item` overlay is GONE —
+// the sidebar now uses the exact golden markup `ul.user-list-filters >
+// li.active > button` and the shared DS-nav stylesheet provides all the
+// styling, exactly like /admin/site.)
+
+  // Right-column header row (h1 "Admin Panel" / "My settings").
+  .user-list-header-row {
+    margin-bottom: var(--spacing-06);
+  }
+}
+
+// The tab panes on /admin/panel stay plain themed content (no forced white
+// cards — the surface is the themed .user-ds-nav-content column, exactly
+// like the /admin/site panes).
+#admin-panel-tabs {
+  .tab-pane {
+    .form-label,
+    label.form-label {
+      color: var(--content-primary-themed);
+    }
+
+    .form-control {
+      color: var(--content-primary, rgb(27, 34, 44));
+    }
+
+    .row-spaced {
+      margin-bottom: var(--spacing-07);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar Theme control (N-2 structural rebuild, 2026-09-01):
+// the static .theme-selector* markup + styles are DELETED — both shells
+// now use the shared React AccountMenuItems ThemeToggle (`.theme-toggle*
+// classes), styled by the global DS-nav stylesheet exactly like on
+// /admin/site. (The static radios were dead markup on the React layout: no
+// bootstrap JS to open the dropdown, and a second, unshared theme UI.)
+// ---------------------------------------------------------------------------

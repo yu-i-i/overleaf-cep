@@ -1063,7 +1063,12 @@ module.exports = {
       ),
     ],
     contactUsModal: [],
-    sourceEditorExtensions: [],
+    sourceEditorExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/extensions/bib-editor-extension.ts'
+      ),
+    ],
     sourceEditorVisualExtensions: [],
     sourceEditorComponents: [],
     pdfLogEntryHeaderActionComponents: [],
@@ -1082,7 +1087,12 @@ module.exports = {
     sourceEditorToolbarButtonGroups: [],
     sourceEditorToolbarComponents: [],
     sourceEditorToolbarEndButtons: [],
-    rootContextProviders: [],
+    rootContextProviders: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/context/bib-editor-provider.tsx'
+      ),
+    ],
     mainEditorLayoutModals: [
       Path.resolve(
         __dirname,
@@ -1137,7 +1147,12 @@ module.exports = {
     ssoCertificateInfo: [],
     v1ImportDataScreen: [],
     snapshotUtils: [],
-    visualEditorProviders: [],
+    visualEditorProviders: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/bib-editor-visual-provider.ts'
+      ),
+    ],
     usGovBanner: [],
     rollingBuildsUpdatedAlert: [],
     offlineModeToolbarButtons: [],
@@ -1221,6 +1236,9 @@ module.exports = {
     'git-bridge',
     'github-sync',
     'zotero',
+    'bib-editor',
+    'orcid-picker',
+    'ce-ui',
   ],
   viewIncludes: {},
 

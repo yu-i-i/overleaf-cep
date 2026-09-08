@@ -1,0 +1,102 @@
+// ---------------------------------------------------------------------------
+// CE-style admin tabs (Manage Site: SSO + E-mail + R9 sections) — 2026-08-30.
+//
+// The page surface of the admin area is a LIGHT surface in BOTH themes (the
+// dark theme is applied to the navbar/editor chrome, not to these cards —
+// matches /admin/user and /admin/projects). Theme-variable tokens that flip
+// with data-theme (e.g. .form-label color) made labels nearly invisible in
+// dark mode (user report 2026-08-30, "font color too pale"). Pin the tab
+// text to the light token palette + one clean type scale (16/14/18px) in
+// both themes so the CE+ vocabulary reads consistently everywhere.
+// ---------------------------------------------------------------------------
+.ce-admin-card {
+  font-size: 1rem;
+  // R11-1 (UI round 11, items 13): the card SURFACE itself must be pinned
+  // to the light palette in both themes — in dark mode the theme body
+  // color was leaking in (measured: card bg rgb(244,245,246), input
+  // VALUE text rgb(244,245,246) on a white field = unreadable).
+  background-color: #fff;
+  color: rgb(27, 34, 44);
+
+  label,
+  .form-label,
+  .form-check-label {
+    font-size: 0.875rem;
+    color: rgb(27, 34, 44) !important;
+  }
+
+  .form-text,
+  .text-muted {
+    color: rgb(73, 83, 101) !important;
+    font-size: 0.875rem;
+  }
+
+  .card-header {
+    font-size: 1rem;
+    color: rgb(73, 83, 101);
+  }
+
+  h6 {
+    font-size: 1.125rem;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 1rem;
+    // R11-1: !important — the dark-theme input color rule otherwise wins
+    // on later tabs (Sandboxed compiles / E-mail / Pandoc: value text
+    // measured rgb(244,245,246) on white = unreadable, user report
+    // 2026-08-30 round 11 item 13).
+    color: rgb(27, 34, 44) !important;
+    // The card surface is a pinned LIGHT surface in both themes; the
+    // data-theme UA form-control styling (color-scheme: dark) otherwise
+    // gives inputs a dark background — invisible dark text on the white
+    // card (user report: External URL "font color in the box is not
+    // readable"). Pin the surface explicitly (2026-08-30, W6).
+    background-color: var(--white) !important;
+    border-color: var(--neutral-30);
+    color-scheme: light;
+
+    &::placeholder {
+      color: rgb(133, 140, 154);
+      opacity: 1;
+    }
+  }
+
+  .form-check-input {
+    color: rgb(27, 34, 44);
+  }
+
+  .table {
+    font-size: 0.875rem;
+    color: rgb(27, 34, 44);
+
+    th {
+      color: rgb(73, 83, 101);
+    }
+  }
+
+  code {
+    font-size: 0.8125rem;
+    color: rgb(73, 83, 101);
+  }
+}
+
+.ce-admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ce-admin-modal {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+}
+
+.ce-admin-desc {
+  max-width: 320px;
+}
