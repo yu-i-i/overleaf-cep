@@ -75,6 +75,46 @@ describe('selected-text word count', function () {
     ).to.equal(2)
   })
 
+  it('joins word fragments separated only by formatting markup', function () {
+    const content = 'inter\\textbf{nal}formatting'
+
+    expect(countSelection(content, 0, content.length)).to.equal(1)
+  })
+
+  it('joins fragments across adjacent formatting commands', function () {
+    const content = 'inter\\textbf{n}\\emph{al}formatting'
+
+    expect(countSelection(content, 0, content.length)).to.equal(1)
+  })
+
+  it('keeps real whitespace around formatting as a word boundary', function () {
+    const content = 'one \\textbf{two}'
+
+    expect(countSelection(content, 0, content.length)).to.equal(2)
+  })
+
+  it('keeps excluded math inside formatting as a word boundary', function () {
+    const content = 'before\\textbf{$x$}after'
+
+    expect(countSelectionResult(content, 0, content.length)).to.deep.equal({
+      totalWords: 2,
+      headers: 0,
+      mathInline: 1,
+      mathDisplay: 0,
+    })
+  })
+
+  it('keeps an excluded citation inside formatting as a boundary', function () {
+    const content = 'before\\textbf{\\cite{key}}after'
+
+    expect(countSelectionResult(content, 0, content.length)).to.deep.equal({
+      totalWords: 2,
+      headers: 0,
+      mathInline: 0,
+      mathDisplay: 0,
+    })
+  })
+
   it('does not count a citation key selected inside a citation', function () {
     expect(
       countSelectedText(
@@ -146,6 +186,67 @@ describe('selected-text word count', function () {
       mathInline: 0,
       mathDisplay: 0,
     })
+  })
+
+  it('honors TeXcount directives inside manually traversed nodes', function () {
+    const cases = [
+      {
+        content:
+          '\\section{visible\n' +
+          '%TC:ignore\n' +
+          'hidden words\n' +
+          '%TC:endignore\n' +
+          'again}',
+        headers: 1,
+      },
+      {
+        content:
+          '\\caption{visible\n' +
+          '%TC:ignore\n' +
+          'hidden words\n' +
+          '%TC:endignore\n' +
+          'again}',
+        headers: 0,
+      },
+      {
+        content:
+          '\\footnote{visible\n' +
+          '%TC:ignore\n' +
+          'hidden words\n' +
+          '%TC:endignore\n' +
+          'again}',
+        headers: 0,
+      },
+      {
+        content:
+          '\\begin{abstract}\n' +
+          'visible\n' +
+          '%TC:ignore\n' +
+          'hidden words\n' +
+          '%TC:endignore\n' +
+          'again\n' +
+          '\\end{abstract}',
+        headers: 1,
+      },
+      {
+        content:
+          '\\cite[visible\n' +
+          '%TC:ignore\n' +
+          'hidden words\n' +
+          '%TC:endignore\n' +
+          'again]{key}',
+        headers: 0,
+      },
+    ]
+
+    for (const { content, headers } of cases) {
+      expect(countSelectionResult(content, 0, content.length)).to.deep.equal({
+        totalWords: 2,
+        headers,
+        mathInline: 0,
+        mathDisplay: 0,
+      })
+    }
   })
 
   it('does not follow input files or count their paths', function () {

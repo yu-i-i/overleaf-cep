@@ -19,6 +19,24 @@ export type SelectedWordCountResult = {
   mathDisplay: number
 }
 
+const mergeRanges = (ranges: SourceRange[]): SourceRange[] => {
+  const merged: SourceRange[] = []
+  const sorted = [...ranges].sort(
+    (left, right) => left.from - right.from || left.to - right.to
+  )
+
+  for (const span of sorted) {
+    const previous = merged[merged.length - 1]
+    if (previous && span.from <= previous.to) {
+      previous.to = Math.max(previous.to, span.to)
+    } else {
+      merged.push({ ...span })
+    }
+  }
+
+  return merged
+}
+
 const replacementsMap = new Map<string, string>([
   ['aa', 'å'],
   ['AA', 'Å'],
@@ -93,12 +111,29 @@ export const countWordsInSelection = (
 
   const tree = LaTeXLanguage.parser.parse(content)
   const textNodes: TextNode[] = []
+  const transparentRanges: SourceRange[] = []
+  const boundaryRanges: SourceRange[] = []
 
   const intersectsRange = (span: SourceRange) =>
     span.to > range.from && span.from < range.to
 
+  const rangesOverlap = (left: SourceRange, right: SourceRange) =>
+    left.to > right.from && left.from < right.to
+
   const isContainedInRange = (span: SourceRange) =>
     span.from >= range.from && span.to <= range.to
+
+  const addBoundaryRange = (span: SourceRange) => {
+    if (intersectsRange(span)) {
+      boundaryRanges.push(span)
+    }
+  }
+
+  const addTransparentRange = (span: SourceRange) => {
+    if (intersectsRange(span)) {
+      transparentRanges.push(span)
+    }
+  }
 
   const addSourceTextNode = (nodeRef: SyntaxNodeRef) => {
     if (!intersectsRange(nodeRef)) {
@@ -131,19 +166,28 @@ export const countWordsInSelection = (
     })
   }
 
-  const iterateNode = (nodeRef: SyntaxNodeRef) => {
-    nodeRef.node.cursor().iterate(childNodeRef => {
-      if (childNodeRef.node !== nodeRef.node) {
-        return bodyMatcher(childNodeRef.type)?.(childNodeRef)
-      }
-    })
-  }
-
   const state = {
     skipping: false,
   }
 
+  const visitBodyNode = (nodeRef: SyntaxNodeRef): boolean | void => {
+    if (state.skipping && !nodeRef.type.is('Comment')) {
+      return
+    }
+    return bodyMatcher(nodeRef.type)?.(nodeRef)
+  }
+
+  const iterateNode = (nodeRef: SyntaxNodeRef) => {
+    nodeRef.node.cursor().iterate(childNodeRef => {
+      if (childNodeRef.node !== nodeRef.node) {
+        return visitBodyNode(childNodeRef)
+      }
+    })
+  }
+
   const handleComment = (nodeRef: SyntaxNodeRef) => {
+    addBoundaryRange(nodeRef)
+
     const comment = content.slice(nodeRef.from, nodeRef.to)
     const match = /^%+TC:\s*(\w+)\s*/i.exec(comment)
 
@@ -223,6 +267,7 @@ export const countWordsInSelection = (
       addSourceTextNode(nodeRef)
     },
     Cite(nodeRef) {
+      addBoundaryRange(nodeRef)
       const optionalArgs = nodeRef.node.getChildren('OptionalArgument')
       for (const arg of optionalArgs) {
         const child = arg.getChild('ShortOptionalArg')
@@ -260,6 +305,9 @@ export const countWordsInSelection = (
     $Environment(nodeRef) {
       return handleEnvironment(nodeRef)
     },
+    '$ToggleTextFormattingCommand $OtherTextFormattingCommand'(nodeRef) {
+      addTransparentRange(nodeRef)
+    },
     BeginEnv() {
       return false
     },
@@ -267,6 +315,8 @@ export const countWordsInSelection = (
       if (!intersectsRange(nodeRef)) {
         return false
       }
+
+      addBoundaryRange(nodeRef)
 
       const parent = nodeRef.node.parent
       if (parent?.type.is('InlineMath') || parent?.type.is('ParenMath')) {
@@ -277,7 +327,8 @@ export const countWordsInSelection = (
 
       return false
     },
-    'ShortTextArgument ShortOptionalArg'() {
+    'ShortTextArgument ShortOptionalArg'(nodeRef) {
+      addBoundaryRange(nodeRef)
       return false
     },
     SectioningArgument(nodeRef) {
@@ -295,7 +346,8 @@ export const countWordsInSelection = (
       iterateNode(nodeRef)
       return false
     },
-    'IncludeArgument InputArgument SubfileArgument'() {
+    'IncludeArgument InputArgument SubfileArgument'(nodeRef) {
+      addBoundaryRange(nodeRef)
       return false
     },
     'BlankLine LineBreak'(nodeRef) {
@@ -319,18 +371,28 @@ export const countWordsInSelection = (
   tree.iterate({
     from: preambleExtent.to,
     enter(nodeRef: SyntaxNodeRef) {
-      if (state.skipping && !nodeRef.type.is('Comment')) {
-        return
-      }
-      return bodyMatcher(nodeRef.type)?.(nodeRef)
+      return visitBodyNode(nodeRef)
     },
   })
 
   let text = ''
-  let position = 0
+  let position = range.from
+  const mergedTransparentRanges = mergeRanges(transparentRanges)
 
   for (const textNode of textNodes) {
-    if (textNode.from !== position) {
+    const gap = {
+      from: position,
+      to: textNode.from,
+    }
+    const isTransparentGap =
+      gap.from < gap.to &&
+      !/\s/u.test(content.substring(gap.from, gap.to)) &&
+      mergedTransparentRanges.some(
+        span => span.from <= gap.from && span.to >= gap.to
+      ) &&
+      !boundaryRanges.some(span => rangesOverlap(span, gap))
+
+    if (gap.from < gap.to && !isTransparentGap) {
       text += ' '
     }
     text += textNode.text
