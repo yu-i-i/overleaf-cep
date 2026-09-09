@@ -23,7 +23,8 @@ const OIDCAuthenticationManager = {
       if (attAdmin === 'email') {
         isAdmin = (email === valAdmin)
       } else {
-        isAdmin = (profile[attAdmin] === valAdmin)
+        const adminClaim = profile[attAdmin] || profile._json?.[attAdmin]
+        isAdmin = (adminClaim === valAdmin)
       }
     }
     const oidcUserData = null // Possibly it can be used later
