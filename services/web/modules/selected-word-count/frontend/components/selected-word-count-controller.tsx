@@ -1,23 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjectSettingsContext } from '@/features/editor-left-menu/context/project-settings-context'
-import {
-  createEmptyWordCountData,
-  type WordCountData,
-} from '@/features/word-count-modal/components/word-count-data'
-import { countWordsInLatexContent } from '@/features/word-count-modal/utils/count-words-in-file'
 import { createSegmenters } from '@/features/word-count-modal/utils/segmenters'
 import { debugConsole } from '@/utils/debugging'
 import {
   SELECTED_WORD_COUNT_OPEN_EVENT,
   type SelectedWordCountRequest,
 } from '../selected-word-count-events'
+import { countWordsInSelection } from '../utils/count-words-in-selection'
 import SelectedWordCountModal from './selected-word-count-modal'
 
 export default function SelectedWordCountController() {
   const { spellCheckLanguage } = useProjectSettingsContext()
   const [open, setOpen] = useState(false)
   const [request, setRequest] = useState<SelectedWordCountRequest | null>(null)
-  const [data, setData] = useState<WordCountData | null>(null)
+  const [wordCount, setWordCount] = useState<number | null>(null)
   const [error, setError] = useState(false)
 
   const segmenters = useMemo(() => {
@@ -38,7 +34,7 @@ export default function SelectedWordCountController() {
       }
 
       setRequest(detail)
-      setData(null)
+      setWordCount(null)
       setError(false)
       setOpen(true)
     }
@@ -55,11 +51,12 @@ export default function SelectedWordCountController() {
     }
 
     try {
-      const nextData = createEmptyWordCountData()
-      countWordsInLatexContent(nextData, request.doc.toString(), segmenters, {
-        range: { from: request.from, to: request.to },
-      })
-      setData(nextData)
+      const nextWordCount = countWordsInSelection(
+        request.doc.toString(),
+        { from: request.from, to: request.to },
+        segmenters
+      )
+      setWordCount(nextWordCount)
     } catch (error) {
       debugConsole.error(error)
       setError(true)
@@ -70,7 +67,7 @@ export default function SelectedWordCountController() {
     <SelectedWordCountModal
       show={open}
       onClose={onClose}
-      data={data}
+      wordCount={wordCount}
       error={error}
     />
   )

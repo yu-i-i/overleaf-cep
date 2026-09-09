@@ -107,16 +107,6 @@ type TextNode = {
   context: Context
 }
 
-type SourceRange = {
-  from: number
-  to: number
-}
-
-type CountWordsInLatexContentOptions = {
-  range?: SourceRange
-  onInclude?: (path: string) => void
-}
-
 export const countWordsInFile = (
   data: WordCountData,
   projectSnapshot: ProjectSnapshot,
@@ -138,83 +128,12 @@ export const countWordsInFile = (
 
   debugConsole.log(`Counting words in ${docPath}`)
 
-  countWordsInLatexContent(data, content, segmenters, {
-    onInclude(path) {
-      countWordsInFile(data, projectSnapshot, path, docPath, segmenters)
-    },
-  })
-}
-
-export const countWordsInLatexContent = (
-  data: WordCountData,
-  content: string,
-  segmenters: Segmenters,
-  options: CountWordsInLatexContentOptions = {}
-) => {
-  const range = options.range
-    ? {
-        from: Math.max(0, Math.min(options.range.from, content.length)),
-        to: Math.max(0, Math.min(options.range.to, content.length)),
-      }
-    : undefined
-
-  if (range && range.from >= range.to) {
-    return
-  }
-
   // TODO: language from file extension
   const tree = LaTeXLanguage.parser.parse(content)
 
   let currentContext: Context = 'text'
 
   const textNodes: TextNode[] = []
-
-  const intersectsRange = (sourceSpan: SourceRange) => {
-    return !range || (sourceSpan.to > range.from && sourceSpan.from < range.to)
-  }
-
-  const isContainedInRange = (sourceSpan: SourceRange) => {
-    return !range || (sourceSpan.from >= range.from && sourceSpan.to <= range.to)
-  }
-
-  const addSourceTextNode = (
-    nodeRef: SyntaxNodeRef,
-    context: Context = currentContext
-  ) => {
-    if (!intersectsRange(nodeRef)) {
-      return
-    }
-
-    const from = range ? Math.max(nodeRef.from, range.from) : nodeRef.from
-    const to = range ? Math.min(nodeRef.to, range.to) : nodeRef.to
-
-    textNodes.push({
-      from,
-      to,
-      text: content.substring(from, to),
-      context,
-    })
-  }
-
-  const addSyntheticTextNode = (
-    sourceSpan: SourceRange,
-    text: string,
-    context: Context = currentContext,
-    textNodeSpan: SourceRange = sourceSpan
-  ) => {
-    // Synthetic replacements such as `\\LaTeX` do not map character-for-
-    // character to their source. Treat them as atomic in range-counting mode.
-    if (!isContainedInRange(sourceSpan)) {
-      return
-    }
-
-    textNodes.push({
-      from: textNodeSpan.from,
-      to: textNodeSpan.to,
-      text,
-      context,
-    })
-  }
 
   const iterateNode = (nodeRef: SyntaxNodeRef, context: Context = 'text') => {
     const previousContext = currentContext
@@ -236,9 +155,7 @@ export const countWordsInLatexContent = (
       return false
     },
     Title(nodeRef) {
-      if (intersectsRange(nodeRef)) {
-        data.headers++
-      }
+      data.headers++
       iterateNode(nodeRef, 'header')
       return false
     },
@@ -255,7 +172,12 @@ export const countWordsInLatexContent = (
       return false
     },
     Normal(nodeRef) {
-      addSourceTextNode(nodeRef)
+      textNodes.push({
+        from: nodeRef.from,
+        to: nodeRef.to,
+        text: content.substring(nodeRef.from, nodeRef.to),
+        context: currentContext,
+      })
     },
     Cite(nodeRef) {
       // Count as \cite[text]{citation}
@@ -291,7 +213,12 @@ export const countWordsInLatexContent = (
 
       const text = replacementsMap.get(commandName)!
 
-      addSyntheticTextNode(macro, text, currentContext, nodeRef)
+      textNodes.push({
+        from: nodeRef.from,
+        to: nodeRef.to,
+        text,
+        context: currentContext,
+      })
 
       return false
     },
@@ -302,13 +229,11 @@ export const countWordsInLatexContent = (
       return false // ignore text in \begin arguments
     },
     Math(nodeRef) {
-      if (intersectsRange(nodeRef)) {
-        const parent = nodeRef.node.parent
-        if (parent?.type.is('InlineMath') || parent?.type.is('ParenMath')) {
-          data.mathInline++
-        } else {
-          data.mathDisplay++
-        }
+      const parent = nodeRef.node.parent
+      if (parent?.type.is('InlineMath') || parent?.type.is('ParenMath')) {
+        data.mathInline++
+      } else {
+        data.mathDisplay++
       }
 
       return false // TODO: count \text in math nodes?
@@ -317,9 +242,7 @@ export const countWordsInLatexContent = (
       return false
     },
     SectioningArgument(nodeRef) {
-      if (intersectsRange(nodeRef)) {
-        data.headers++
-      }
+      data.headers++
       iterateNode(nodeRef, 'header')
       return false
     },
@@ -333,14 +256,18 @@ export const countWordsInLatexContent = (
     },
     'IncludeArgument InputArgument SubfileArgument'(nodeRef) {
       const path = content.substring(nodeRef.from + 1, nodeRef.to - 1)
-      if (!range && path && options.onInclude) {
-        debugConsole.log(path)
-        options.onInclude(path)
+      debugConsole.log(path)
+      if (path) {
+        countWordsInFile(data, projectSnapshot, path, docPath, segmenters)
       }
-      return false
     },
     'BlankLine LineBreak'(nodeRef) {
-      addSyntheticTextNode(nodeRef, '\n')
+      textNodes.push({
+        from: nodeRef.from,
+        to: nodeRef.to,
+        text: '\n',
+        context: currentContext,
+      })
     },
   })
 
@@ -383,9 +310,7 @@ export const countWordsInLatexContent = (
         .replace(/\*$/, '')
 
       if (envName === 'abstract') {
-        if (intersectsRange(nodeRef)) {
-          data.headers++
-        }
+        data.headers++
 
         const contentNode = nodeRef.node.getChild('Content')
         if (contentNode) {

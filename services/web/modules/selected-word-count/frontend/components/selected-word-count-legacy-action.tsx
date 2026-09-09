@@ -1,6 +1,6 @@
 import MaterialIcon from '@/shared/components/material-icon'
 import OLTooltip from '@/shared/components/ol/ol-tooltip'
-import useSelectedWordCountAction from './use-selected-word-count-action'
+import useSelectedWordCountAction from '../js/hooks/use-selected-word-count-action'
 
 export default function SelectedWordCountLegacyAction() {
   const { isSelectionEmpty, handleClick, label } = useSelectedWordCountAction()
@@ -18,11 +18,12 @@ export default function SelectedWordCountLegacyAction() {
       >
         <button
           type="button"
-          className="review-tooltip-menu-button"
+          className="review-tooltip-menu-button text-nowrap"
           onClick={handleClick}
           aria-label={label}
         >
           <MaterialIcon type="123" />
+          <span>{label}</span>
         </button>
       </OLTooltip>
     </>

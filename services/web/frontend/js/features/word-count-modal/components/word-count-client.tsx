@@ -1,8 +1,5 @@
 import { FC, useEffect, useMemo, useState } from 'react'
-import {
-  createEmptyWordCountData,
-  WordCountData,
-} from '@/features/word-count-modal/components/word-count-data'
+import { WordCountData } from '@/features/word-count-modal/components/word-count-data'
 import { WordCountError } from '@/features/word-count-modal/components/word-count-error'
 import { useProjectContext } from '@/shared/context/project-context'
 import useAbortController from '@/shared/hooks/use-abort-controller'
@@ -52,7 +49,28 @@ export const WordCountClient: FC = () => {
         const currentRootDocPath = pathInFolder(currentRootDocId)
         if (!currentRootDocPath) return null
 
-        const data = createEmptyWordCountData()
+        const data: WordCountData = {
+          encode: 'ascii',
+          textWords: 0,
+          textCharacters: 0,
+          headWords: 0,
+          headCharacters: 0,
+          abstractWords: 0,
+          abstractCharacters: 0,
+          captionWords: 0,
+          captionCharacters: 0,
+          footnoteWords: 0,
+          footnoteCharacters: 0,
+          outside: 0,
+          otherWords: 0,
+          otherCharacters: 0,
+          headers: 0,
+          elements: 0,
+          mathInline: 0,
+          mathDisplay: 0,
+          errors: 0,
+          messages: '',
+        }
 
         countWordsInFile(
           data,

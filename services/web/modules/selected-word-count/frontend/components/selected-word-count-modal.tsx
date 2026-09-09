@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import type { WordCountData } from '@/features/word-count-modal/components/word-count-data'
 import { WordCountError } from '@/features/word-count-modal/components/word-count-error'
 import LoadingSpinner from '@/shared/components/loading-spinner'
 import OLButton from '@/shared/components/ol/ol-button'
@@ -13,28 +12,17 @@ import {
 
 const numberFormat = new Intl.NumberFormat()
 
-const selectedWordTotal = (data: WordCountData) => {
-  return (
-    data.textWords +
-    data.headWords +
-    data.abstractWords +
-    data.captionWords +
-    data.footnoteWords +
-    data.otherWords
-  )
-}
-
 type SelectedWordCountModalProps = {
   show: boolean
   onClose: () => void
-  data: WordCountData | null
+  wordCount: number | null
   error: boolean
 }
 
 export default function SelectedWordCountModal({
   show,
   onClose,
-  data,
+  wordCount,
   error,
 }: SelectedWordCountModalProps) {
   const { t } = useTranslation()
@@ -49,17 +37,17 @@ export default function SelectedWordCountModal({
       size="sm"
     >
       <OLModalHeader>
-        <OLModalTitle>{t('word_count_selected_text')}</OLModalTitle>
+        <OLModalTitle>{t('word_count')}</OLModalTitle>
       </OLModalHeader>
 
       <OLModalBody>
-        {!data && !error && <LoadingSpinner />}
+        {wordCount === null && !error && <LoadingSpinner />}
         {error && <WordCountError />}
-        {data && (
+        {wordCount !== null && (
           <div className="d-flex align-items-baseline justify-content-between">
-            <span>{t('words')}</span>
+            <span>{t('total_words')}</span>
             <strong className="h2 mb-0" data-testid="selected-word-count-total">
-              {numberFormat.format(selectedWordTotal(data))}
+              {numberFormat.format(wordCount)}
             </strong>
           </div>
         )}

@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCodeMirrorViewContext } from '@/features/source-editor/components/codemirror-context'
-import { openSelectedWordCount } from '../selected-word-count-events'
+import { openSelectedWordCount } from '../../selected-word-count-events'
 
 export default function useSelectedWordCountAction() {
   const { t } = useTranslation()
@@ -21,6 +21,6 @@ export default function useSelectedWordCountAction() {
   return {
     isSelectionEmpty: view.state.selection.main.empty,
     handleClick,
-    label: t('word_count_selected_text'),
+    label: t('word_count'),
   }
 }
