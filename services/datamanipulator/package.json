@@ -1,0 +1,21 @@
+{
+  "name": "@overleaf/datamanipulator",
+  "version": "1.0.0",
+  "description": "Microservice for file tree operations with binary detection and sync-ready metadata",
+  "main": "app/src/index.mjs",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit/",
+    "lint": "eslint app/ test/",
+    "lint:fix": "eslint app/ test/ --fix"
+  },
+  "dependencies": {
+    "@overleaf/logger": "*"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "supertest": "^6.3.0"
+  }
+}

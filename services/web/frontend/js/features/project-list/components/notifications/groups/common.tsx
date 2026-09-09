@@ -293,6 +293,21 @@ function CommonNotification({ notification }: CommonNotificationProps) {
           onDismiss={() => id && handleDismiss(id)}
           content={html}
         />
+      ) : templateKey === 'notification_webdav_sync' ? (
+        <Notification
+          type={notification.messageOpts.event === 'recovered' ? 'info' : 'warning'}
+          onDismiss={() => id && handleDismiss(id)}
+          title="WebDAV sync"
+          content={
+            notification.messageOpts.event === 'conflict'
+              ? `A conflict was detected${notification.messageOpts.path ? ` for ${notification.messageOpts.path}` : ''}. Choose which version to keep in WebDAV settings.`
+              : notification.messageOpts.event === 'deleted'
+                ? 'A project or file was deleted remotely and removed from Overleaf.'
+                : notification.messageOpts.event === 'recovered'
+                  ? 'WebDAV synchronization has recovered.'
+                  : 'WebDAV synchronization is failing repeatedly.'
+          }
+        />
       ) : (
         <Notification
           type="info"

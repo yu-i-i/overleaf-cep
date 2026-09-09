@@ -44,6 +44,9 @@ const ProjectGetter = {
     try {
       project = await db.projects.findOne(query, { projection })
     } catch (error) {
+      const safeErrorInfo = {}
+      if (error.message) safeErrorInfo.message = error.message
+      if (error.name) safeErrorInfo.name = error.name
       OError.tag(error, 'error getting project', {
         query,
         projection,

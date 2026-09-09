@@ -20,6 +20,7 @@ import SplitTestHandler from '../SplitTests/SplitTestHandler.mjs'
 import SplitTestUserGetter from '../SplitTests/SplitTestUserGetter.mjs'
 import ClsiCacheManager from '../Compile/ClsiCacheManager.mjs'
 import crypto from 'node:crypto'
+import Modules from '../../infrastructure/Modules.mjs'
 
 const { ObjectId } = mongodb
 
@@ -297,6 +298,7 @@ async function _createBlankProject(
       userId: ownerId,
     })
   }
+  await Modules.promises.hooks.fire('projectCreated', project._id)
   timer.done()
   return project
 }

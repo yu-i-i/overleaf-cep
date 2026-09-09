@@ -20,7 +20,12 @@ async function newUpdate(
   updateRequest,
   source
 ) {
-  const project = await getOrCreateProject(userId, projectId, projectName)
+  const project = await getOrCreateProject(
+    userId,
+    projectId,
+    projectName,
+    source
+  )
   if (project == null) {
     return null
   }
@@ -76,7 +81,7 @@ async function deleteUpdate(userId, projectId, projectName, path, source) {
   if (projects.length > 1) {
     // There is more than one project with that name, and one of them is
     // active (previous condition)
-    await handleDuplicateProjects(userId, projectName)
+      await handleDuplicateProjects(userId, projectName, source)
     return
   }
 
@@ -92,11 +97,16 @@ async function deleteUpdate(userId, projectId, projectName, path, source) {
   }
 }
 
-async function getOrCreateProject(userId, projectId, projectName) {
+async function getOrCreateProject(
+  userId,
+  projectId,
+  projectName,
+  source = 'dropbox'
+) {
   if (projectId) {
     return findProjectByIdWithRWAccess(userId, projectId)
   } else {
-    return getOrCreateProjectByName(userId, projectName)
+    return getOrCreateProjectByName(userId, projectName, source)
   }
 }
 
@@ -118,7 +128,11 @@ async function findProjectByIdWithRWAccess(userId, projectId) {
   }
 }
 
-async function getOrCreateProjectByName(userId, projectName) {
+async function getOrCreateProjectByName(
+  userId,
+  projectName,
+  source = 'dropbox'
+) {
   const projects = await ProjectGetter.promises.findUsersProjectsByName(
     userId,
     projectName
@@ -150,22 +164,35 @@ async function getOrCreateProjectByName(userId, projectName) {
   if (projects.length > 1) {
     // There is more than one project with that name, and one of them is
     // active (previous condition)
-    await handleDuplicateProjects(userId, projectName)
+    await handleDuplicateProjects(userId, projectName, source)
     return null
   }
 
   return activeProjects[0]
 }
 
-async function handleDuplicateProjects(userId, projectName) {
-  await Modules.promises.hooks.fire(
-    'removeDropbox',
+async function handleDuplicateProjects(
+  userId,
+  projectName,
+  source = 'dropbox'
+) {
+  if (source === 'dropbox') {
+    await Modules.promises.hooks.fire(
+      'removeDropbox',
+      userId,
+      'duplicate-projects'
+    )
+    await NotificationsBuilder.promises
+      .dropboxDuplicateProjectNames(userId)
+      .create(projectName)
+    return
+  }
+
+  await Modules.promises.hooks.fire('tpdsDuplicateProjectNames', {
     userId,
-    'duplicate-projects'
-  )
-  await NotificationsBuilder.promises
-    .dropboxDuplicateProjectNames(userId)
-    .create(projectName)
+    projectName,
+    source,
+  })
 }
 
 async function createFolder(userId, projectId, projectName, path) {

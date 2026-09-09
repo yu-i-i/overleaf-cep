@@ -1,15 +1,7 @@
-import AbortError from 'node-fetch'
 import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
 
-import {
-  fetchJson,
-  fetchJsonWithResponse,
-  fetchStreamWithResponse,
-  fetchNothing,
-  fetchStream,
-  RequestFailedError,
-} from '@overleaf/fetch-utils'
+import { fetchJson, fetchJsonWithResponse, fetchNothing, fetchStream, RequestFailedError,  } from '@overleaf/fetch-utils'
 
 import {
   InvalidTokenError,
@@ -23,13 +15,43 @@ import {
 
 const GITHUB_URL = 'https://github.com'
 const GITHUB_API_BASE = 'https://api.github.com'
+
+// GS-03: the REST merge engine can be pointed at a GitHub Enterprise
+// instance; setApiBaseForServer() is called with the linked server URL
+// before a merge (github.com keeps the default base).
+let currentApiBase = process.env.GITHUB_API_BASE_URL || GITHUB_API_BASE
+
+function apiBase() {
+  return currentApiBase
+}
+
+function setApiBaseForServer(serverUrl) {
+  if (!serverUrl) {
+    currentApiBase = GITHUB_API_BASE
+    return
+  }
+  try {
+    const u = new URL(serverUrl)
+    if (u.host === 'github.com') {
+      currentApiBase = GITHUB_API_BASE
+    } else {
+      currentApiBase = `${u.origin}/api/v3`
+    }
+  } catch {
+    currentApiBase = GITHUB_API_BASE
+  }
+}
 const GITHUB_GRAPHQL = 'https://api.github.com/graphql'
 const MAX_PER_PAGE = 100  // GitHub REST API limit
 
 const REQUEST_TIMEOUT_MS = 60 * 1000
 const REQUEST_LONG_TIMEOUT_MS = 600 * 1000
 
-const maxConcurrency = process.env.GITHUB_API_MAX_CONCURRENCY || 5
+// GS-08: GITHUB_API_MAX_CONCURRENCY may be a string — coerce it
+const maxConcurrencyRaw = Number.parseInt(process.env.GITHUB_API_MAX_CONCURRENCY, 10)
+const maxConcurrency = Number.isInteger(maxConcurrencyRaw) && maxConcurrencyRaw > 0
+  ? maxConcurrencyRaw
+  : 5
 
 function buildHeaders(token) {
   return {
@@ -99,7 +121,8 @@ function normalizeGitHubError(err, operation) {
     throw new NotFoundError('Not found', { status }, err)
   }
 
-  if (status === 409) {
+  if (status === 405 || status === 409) {
+    // GS-04: GitHub answers merge conflicts with 405 (also 409 in some cases)
     throw new GitConflictError()
   }
 
@@ -126,12 +149,6 @@ function fetchGitHubJson(url, options, operation) {
 
 function fetchGitHubJsonWithResponse(url, options, operation) {
   return fetchJsonWithResponse(url, options).catch(err => {
-    normalizeGitHubError(err, operation)
-  })
-}
-
-function fetchGitHubStreamWithResponse(url, options, operation) {
-  return fetchStreamWithResponse(url, options).catch(err => {
     normalizeGitHubError(err, operation)
   })
 }
@@ -175,7 +192,7 @@ function exchangeCodeForToken(code) {
 
 function revokeToken(token) {
   const { clientID, clientSecret } = Settings.githubSync
-  return fetchGitHubNothing(`${GITHUB_API_BASE}/applications/${clientID}/token`, {
+  return fetchGitHubNothing(`${apiBase()}/applications/${clientID}/token`, {
     method: 'DELETE',
     headers: buildHeaders(),
     basicAuth: {
@@ -189,7 +206,7 @@ function revokeToken(token) {
 
 // user, orgs, permissions
 function getUser(token) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/user`, {
+  return fetchGitHubJson(`${apiBase()}/user`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getUser').then(({ id, login, name }) => ({ id, login, name }))
@@ -197,7 +214,7 @@ function getUser(token) {
 
 /*
 async function getUserAndOrgsREST(token) {
-  const user = await fetchGitHubJson(`${GITHUB_API_BASE}/user`, {
+  const user = await fetchGitHubJson(`${apiBase()}/user`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'getUserAndOrgs:user')
@@ -207,7 +224,7 @@ async function getUserAndOrgsREST(token) {
     page: page.toString(),
     per_page: MAX_PER_PAGE.toString(),
   })
-  const orgs = await fetchGitHubJson(`${GITHUB_API_BASE}/user/orgs?${params}`, {
+  const orgs = await fetchGitHubJson(`${apiBase()}/user/orgs?${params}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'getUserAndOrgs:orgs')
@@ -249,7 +266,7 @@ async function getUserAndOrgs(token) {
 }
 
 function getPushPermission(token, repoFullName) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getPushPrmission').then(repo => (repo.permissions?.push === true))
@@ -257,7 +274,7 @@ function getPushPermission(token, repoFullName) {
 
 // repos
 function createRepo(token, { name, description, isPublic, org }) {
-  const url = org ? `${GITHUB_API_BASE}/orgs/${org}/repos` : `${GITHUB_API_BASE}/user/repos`
+  const url = org ? `${apiBase()}/orgs/${org}/repos` : `${apiBase()}/user/repos`
   return fetchGitHubJson(url, {
     method: 'POST',
     headers: buildHeaders(token),
@@ -277,7 +294,7 @@ async function _listUserReposPage(token, page) {
     per_page: MAX_PER_PAGE.toString(),
   })
 
-  const { json, response } = await fetchGitHubJsonWithResponse(`${GITHUB_API_BASE}/user/repos?${params}`, {
+  const { json, response } = await fetchGitHubJsonWithResponse(`${apiBase()}/user/repos?${params}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, '_listUserReposPage')
@@ -311,7 +328,7 @@ async function listUserRepos(token) {
 
 // Git (blobs / trees / commits)
 function uploadBlob(token, repoFullName, buffer) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/blobs`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/blobs`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -325,7 +342,7 @@ function uploadBlob(token, repoFullName, buffer) {
 function getBlobStream(token, repoFullName, ref, path) {
   const encodedPath = encodeURIComponent(path).replace(/%2F/g, '/')
 
-  return fetchGitHubStream(`${GITHUB_API_BASE}/repos/${repoFullName}/contents/${encodedPath}?ref=${ref}`, {
+  return fetchGitHubStream(`${apiBase()}/repos/${repoFullName}/contents/${encodedPath}?ref=${ref}`, {
     headers: {
       ...buildHeaders(token),
       Accept: 'application/vnd.github.raw',
@@ -335,7 +352,7 @@ function getBlobStream(token, repoFullName, ref, path) {
 }
 
 function createTree(token, repoFullName, entries, base_tree) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/trees`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/trees`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -352,7 +369,7 @@ function createTree(token, repoFullName, entries, base_tree) {
 }
 
 function createCommit(token, repoFullName, { tree, message, parents = [] }) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/commits`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/commits`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -365,29 +382,30 @@ function createCommit(token, repoFullName, { tree, message, parents = [] }) {
 }
 
 function getCommitTree(token, repoFullName, commit) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/commits/${commit}`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/commits/${commit}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'getCommitTree').then(r => r.tree.sha)
 }
 
 function listBlobsAtCommit(token, repoFullName, commit) {
-// can use commit sha here instead of tree sha
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/trees/${commit}?recursive=1`, {
-    headers: buildHeaders(token),
-    signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS)
-  }, 'listBlobsAtCommit').then(r =>
-    (r.tree || [])
-      .filter(entry => entry.type === 'blob')
-      .map(entry => ({
+  // GS-02: /git/trees requires a TREE sha — resolve commit → tree first
+  return getCommitTree(token, repoFullName, commit).then(treeSha =>
+    fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/trees/${treeSha}?recursive=1`, {
+      headers: buildHeaders(token),
+      signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS)
+    }, 'listBlobsAtCommit').then(r =>
+      (r.tree || [])
+        .filter(entry => entry.type === 'blob')
+        .map(entry => ({
         sha: entry.sha,
         path: entry.path
-      }))
+      })))
   )
 }
 
 async function listNewCommitsWithStatus(token, fullName, branchName, fromCommit) {
-  const url = `${GITHUB_API_BASE}/repos/${fullName}/compare/${fromCommit}...${encodeURIComponent(branchName)}`
+  const url = `${apiBase()}/repos/${fullName}/compare/${fromCommit}...${encodeURIComponent(branchName)}`
   const data = await fetchGitHubJson(url, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS)
@@ -408,14 +426,14 @@ async function listNewCommitsWithStatus(token, fullName, branchName, fromCommit)
 
 // branches
 function getBranchHead(token, repoFullName, branchName) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/ref/heads/${encodeURIComponent(branchName)}`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/ref/heads/${encodeURIComponent(branchName)}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'getBranchHead').then(r => r.object.sha)
 }
 
 function createBranch(token, repoFullName, branchName, sha) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/refs`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/refs`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -427,7 +445,7 @@ function createBranch(token, repoFullName, branchName, sha) {
 }
 
 function updateBranch(token, repoFullName, branchName, sha, force = false) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
     method: 'PATCH',
     headers: buildHeaders(token),
     json: { sha, force },
@@ -436,7 +454,7 @@ function updateBranch(token, repoFullName, branchName, sha, force = false) {
 }
 
 function deleteBranch(token, repoFullName, branchName) {
-  return fetchGitHubNothing(`${GITHUB_API_BASE}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
+  return fetchGitHubNothing(`${apiBase()}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
     method: 'DELETE',
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
@@ -445,7 +463,7 @@ function deleteBranch(token, repoFullName, branchName) {
 
 // merge / compare
 function mergeBranch(token, repoFullName, base, head) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/merges`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/merges`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: { base, head },
@@ -454,15 +472,15 @@ function mergeBranch(token, repoFullName, base, head) {
 }
 
 function compareCommits(token, repoFullName, from, to) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/compare/${from}...${to}`, {
+  return fetchGitHubJson(`${apiBase()}/repos/${repoFullName}/compare/${from}...${to}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-  }, 'compareCommits').then(r => { r.files || [] })
+  }, 'compareCommits').then(r => (r?.files || []))
 }
 
 // zip
 function getRepoZipball(token, repoFullName, sha) {
-  return fetchGitHubStream(`${GITHUB_API_BASE}/repos/${repoFullName}/zipball/${sha}`, {
+  return fetchGitHubStream(`${apiBase()}/repos/${repoFullName}/zipball/${sha}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS),
   }, 'getRepoZipball')
@@ -470,6 +488,7 @@ function getRepoZipball(token, repoFullName, sha) {
 
 export default {
   maxConcurrency,
+  setApiBaseForServer,
   getOAuth2Url,
   exchangeCodeForToken,
   revokeToken,

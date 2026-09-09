@@ -12,7 +12,7 @@ type GitSyncNeedPermissionModalProps = {
   handleHide: () => void
 }
 
-const GitSyncNeedPermissionModal = ({ projectSyncState, handleHide }: GitSyncConflictModalProps) => {
+const GitSyncNeedPermissionModal = ({ projectSyncState, handleHide }: GitSyncNeedPermissionModalProps) => {
   const { t } = useTranslation()
   return (
     <>
@@ -22,6 +22,8 @@ const GitSyncNeedPermissionModal = ({ projectSyncState, handleHide }: GitSyncCon
           content={(
             <Trans
               i18nKey="ask_proj_owner_to_add_you_as_github_collaborator"
+              shouldUnescape
+              tOptions={{ interpolation: { escapeValue: true } }}
               values={{
                 repoFullName: projectSyncState.repoFullName ?? '?',
                 projectOwnerEmail: projectSyncState.ownerEmail ?? '?',
@@ -32,11 +34,14 @@ const GitSyncNeedPermissionModal = ({ projectSyncState, handleHide }: GitSyncCon
                     href={`https://github.com/${projectSyncState.repoFullName}`}
                     target="_blank"
                     rel="noreferrer noopener"
+                    aria-label={projectSyncState.repoFullName}
                   />
                 ) : (
                   <></>
                 ),
-                projectSyncState.ownerEmail ? <a href={`mailto:${projectSyncState.ownerEmail}`} /> : <></>
+                projectSyncState.ownerEmail
+                  ? <a href={`mailto:${projectSyncState.ownerEmail}`} aria-label={projectSyncState.ownerEmail} />
+                  : <></>
               ]}
             />
           )}

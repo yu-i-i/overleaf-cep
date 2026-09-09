@@ -118,6 +118,9 @@ ENV KILL_PROCESS_TIMEOUT=55
 ENV KILL_ALL_PROCESSES_TIMEOUT=55
 ENV GRACEFUL_SHUTDOWN_DELAY_SECONDS=1
 
+# DataManipulator runs as www-data and needs a writable project-tree root.
+RUN install -d -o www-data -g www-data -m 700 /projects
+
 ENV NODE_ENV="production"
 ENV LOG_LEVEL="info"
 

@@ -249,6 +249,12 @@ export const UserSchema = new Schema(
       us: { type: String },
       uk: { type: String },
     },
+    // LLM module: per-user AI assistant settings
+    useOwnLLMSettings: { type: Boolean, default: false },
+    llmApiKey: { type: String, default: '' },
+    llmModelName: { type: String, default: '' },
+    llmApiUrl: { type: String, default: '' },
+    llmCompletionModel: { type: String, default: '' },
   },
   { minimize: false }
 )

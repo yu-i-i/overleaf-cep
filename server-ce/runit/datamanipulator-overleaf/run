@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source /etc/overleaf/env.sh
+
+exec /sbin/setuser www-data /usr/bin/node /overleaf/services/datamanipulator/app/src/server.mjs >> /var/log/overleaf/datamanipulator.log 2>&1

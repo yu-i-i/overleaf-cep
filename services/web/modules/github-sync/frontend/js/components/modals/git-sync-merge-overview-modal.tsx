@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import useAsync from '@/shared/hooks/use-async'
 import { getJSON } from '@/infrastructure/fetch-json'
@@ -60,7 +60,7 @@ const GitSyncMergeOverviewModal = ({
     runAsync,
   } = useAsync<UnmergedCommitsResponse | null>()
 
-  const loadUnmergedCommits = () => {
+  const loadUnmergedCommits = useCallback(() => {
     setData({})
 
     runAsync(getJSON(`/project/${projectId}/github-sync/merge/overview`))
@@ -72,11 +72,11 @@ const GitSyncMergeOverviewModal = ({
             err?.info?.statusCode === 401
         ) setModalStatus('loading')
       })
-  }
+  }, [projectId, runAsync, setModalStatus, setData])
 
   useEffect(() => {
     loadUnmergedCommits()
-  }, [projectId, runAsync])
+  }, [projectId, runAsync, loadUnmergedCommits])
 
   return (
     <>

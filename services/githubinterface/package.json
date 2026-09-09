@@ -1,0 +1,23 @@
+{
+  "name": "@overleaf/githubinterface",
+  "version": "1.0.0",
+  "description": "Microservice for Git server interactions (GitHub, Gitea, Forgejo, GitLab)",
+  "main": "app/src/server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node app/src/server.mjs",
+    "test": "vitest run",
+    "lint": "eslint app/",
+    "lint:fix": "eslint app/ --fix"
+  },
+  "dependencies": {
+    "@overleaf/logger": "*",
+    "isomorphic-git": "^1.25.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "supertest": "^6.3.0"
+  }
+}

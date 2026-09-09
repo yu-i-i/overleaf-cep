@@ -1,0 +1,16 @@
+{
+  "name": "@overleaf/dropbox-module",
+  "version": "1.0.0",
+  "description": "Dropbox integration module for Overleaf Community Edition",
+  "main": "index.mjs",
+  "type": "module",
+  "dependencies": {
+    "@overleaf/logger": "*",
+    "@overleaf/mongoose-wrapper": "*",
+    "@overleaf/o-error": "*",
+    "@overleaf/settings": "*",
+    "react": "*",
+    "react-i18next": "*",
+    "vitest": "^4.1.10"
+  }
+}

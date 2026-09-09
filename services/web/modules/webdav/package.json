@@ -1,0 +1,17 @@
+{
+  "name": "@overleaf/webdav",
+  "version": "1.0.0",
+  "dependencies": {
+    "@overleaf/access-token-encryptor": "*",
+    "@overleaf/fetch-utils": "*",
+    "@overleaf/logger": "*",
+    "@overleaf/mongoose-wrapper": "*",
+    "@overleaf/o-error": "*",
+    "@overleaf/promise-utils": "*",
+    "@overleaf/settings": "*",
+    "react": "*",
+    "react-i18next": "*",
+    "vitest": "^4.1.10",
+    "webdav": "*"
+  }
+}

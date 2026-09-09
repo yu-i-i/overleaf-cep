@@ -1,3 +1,10 @@
+export const GitServerTypes = {
+  GITHUB: 'github',
+  GITLAB: 'gitlab',
+  GITEA: 'gitea',
+  FORGEJO: 'forgejo'
+}
+
 export type GitSyncModalStatus =
     'loading'
   | 'need-export'
@@ -16,4 +23,6 @@ export type ProjectSyncState = {
   repoFullName: string
   unmergedBranchName: string | null
   ownerEmail?: string
+  syncServerUrl?: string
+  syncUsername?: string
 }

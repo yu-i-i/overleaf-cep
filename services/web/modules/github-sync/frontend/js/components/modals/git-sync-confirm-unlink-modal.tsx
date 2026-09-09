@@ -19,7 +19,7 @@ const GitSyncUnlinkModal = ({
   setModalStatus,
   projectSyncState,
   projectId,
-}: GitSyncInitModalProps) => {
+}: GitSyncUnlinkModalProps) => {
   const { t } = useTranslation()
 
   const {
@@ -62,9 +62,13 @@ const GitSyncUnlinkModal = ({
               error.info?.statusCode === 403 ? (
                 <Trans
                   i18nKey="ask_proj_owner_to_unlink_from_current_github"
+                  shouldUnescape
+                  tOptions={{ interpolation: { escapeValue: true } }}
                   values={{ projectOwnerEmail: error?.data?.ownerEmail ?? '?' }}
                   components={[
-                    error?.data?.ownerEmail ? <a href={`mailto:${error.data.ownerEmail}`} /> : <></>
+                    error?.data?.ownerEmail
+                      ? <a href={`mailto:${error.data.ownerEmail}`} aria-label={error.data.ownerEmail} />
+                      : <></>
                   ]}
                 />
               ) : (

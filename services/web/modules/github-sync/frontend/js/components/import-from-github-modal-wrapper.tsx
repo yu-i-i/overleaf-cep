@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import useAsync from '@/shared/hooks/use-async'
 import { debugConsole } from '@/utils/debugging'
@@ -17,6 +17,12 @@ import {
 import OLButton from '@/shared/components/ol/ol-button'
 import OLSpinner from '@/shared/components/ol/ol-spinner'
 import OLNotification from '@/shared/components/ol/ol-notification'
+import OLFormLabel from '@/shared/components/ol/ol-form-label'
+import OLFormSelect from '@/shared/components/ol/ol-form-select'
+import OLRow from '@/shared/components/ol/ol-row'
+import OLCol from '@/shared/components/ol/ol-col'
+import OLFormGroup from '@/shared/components/ol/ol-form-group'
+import { GitServer } from './git-servers-list'
 
 type GitSyncRepo = {
   name: string
@@ -32,6 +38,28 @@ function ImportFromGitHubModalContent({ handleHide }: { handleHide: () => void }
   const { t } = useTranslation()
   const { appName } = getMeta('ol-ExposedSettings')
 
+  // Linked providers (PAT accounts + the GitHub OAuth slot) — the user picks
+  // WHICH account's repositories to import from.
+  const [providers, setProviders] = useState<GitServer[]>([])
+  const [providerId, setProviderId] = useState('')
+  const selectedProvider = providers.find(p => p.id === providerId) || null
+
+  useEffect(() => {
+    getJSON<{ providers?: GitServer[] }>('/user/github-sync/status')
+      .then(res => {
+        setProviders(Array.isArray(res?.providers) ? res.providers : [])
+      })
+      .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
+  }, [])
+
+  // Keep a selection once providers are known (prefer the first entry)
+  useEffect(() => {
+    if (providers.length && !providers.some(p => p.id === providerId)) {
+      setProviderId(providers[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [providers])
+
   const {
     isLoading,
     isSuccess,
@@ -41,9 +69,16 @@ function ImportFromGitHubModalContent({ handleHide }: { handleHide: () => void }
   } = useAsync<GitSyncReposResponse>()
 
   useEffect(() => {
-    runAsync(getJSON('/user/github-sync/repos'))
+    const url = selectedProvider
+      ? `/user/github-sync/repos?provider=${encodeURIComponent(selectedProvider.provider)}` +
+        `&serverUrl=${encodeURIComponent(selectedProvider.url)}` +
+        (selectedProvider.username
+          ? `&username=${encodeURIComponent(selectedProvider.username)}`
+          : '')
+      : '/user/github-sync/repos'
+    runAsync(getJSON(url))
       .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
-  }, [runAsync])
+  }, [runAsync, providerId, selectedProvider])
 
   const reposExist = data?.repos != null
   const repos = reposExist ? data.repos : []
@@ -68,7 +103,12 @@ function ImportFromGitHubModalContent({ handleHide }: { handleHide: () => void }
 
     runAsyncImport(
       postJSON('/project/new/github-sync', {
-        body: repo
+        body: {
+          ...repo,
+          provider: selectedProvider?.provider,
+          serverUrl: selectedProvider?.url,
+          username: selectedProvider?.username,
+        },
       })
     )
       .then(data => {
@@ -84,6 +124,30 @@ function ImportFromGitHubModalContent({ handleHide }: { handleHide: () => void }
       </OLModalHeader>
 
       <OLModalBody>
+        {providers.length > 0 && (
+          <OLRow>
+            <OLCol xs={12}>
+              <OLFormGroup>
+                <OLFormLabel htmlFor="github-import-provider">
+                  {t('import_from')}
+                </OLFormLabel>
+                <OLFormSelect
+                  id="github-import-provider"
+                  value={providerId}
+                  onChange={e => setProviderId(e.target.value)}
+                >
+                  {providers.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {t(p.provider)}{p.username ? ` (${p.username})` : ''}
+                      {p.source === 'oauth' ? ' — OAuth' : ''} — {p.url}
+                    </option>
+                  ))}
+                </OLFormSelect>
+              </OLFormGroup>
+            </OLCol>
+          </OLRow>
+        )}
+
         {isLoading && (
           <span>
             <OLSpinner size="sm" className="me-2"/>

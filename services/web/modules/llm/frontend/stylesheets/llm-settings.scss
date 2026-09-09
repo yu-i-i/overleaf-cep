@@ -1,0 +1,107 @@
+.llm-settings {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.llm-settings-header {
+  margin-bottom: 2rem;
+
+  &-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &-desc {
+    color: var(--content-secondary, #6c757d);
+    margin: 0;
+  }
+}
+
+.llm-settings-section {
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color-01, #dee2e6);
+  background-color: var(--bg-light-primary, #fff);
+  margin-bottom: 1.25rem;
+
+  &-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+
+    .llm-settings-section-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background-color: var(--bg-accent-01);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+  }
+
+  &-desc {
+    color: var(--content-secondary, #6c757d);
+    font-size: 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  &-body {
+    border: 1px solid var(--border-color-01, #dee2e6);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .dropdown {
+    width: 100%;
+  }
+  .dropdown-toggle {
+    width: 100%;
+    font-size: var(--font-size-03);
+    font-weight: 100;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--bs-border-radius);
+    padding: 0.4rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+
+    &::after {
+      margin-left: auto;
+    }
+  }
+  .dropdown-menu {
+    width: 100%;
+    .dropdown-item {
+      font-size: var(--font-size-03);
+    }
+  }
+  &-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+
+    &-success {
+      color: var(--green-60, #198754);
+    }
+
+    &-error {
+      color: var(--red-60, #dc3545);
+    }
+  }
+
+  &-status-icon {
+    font-size: 1rem;
+  }
+}

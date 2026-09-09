@@ -275,6 +275,12 @@ async function deleteProject(projectId, options = {}) {
 
     await Project.deleteOne({ _id: projectId }).exec()
 
+    await Modules.promises.hooks.fire('projectDeleted', {
+      projectId,
+      projectName: project.name,
+      userIds: memberIds,
+    })
+
     logger.info(
       { projectId, userId: project.owner_ref },
       'successfully deleted project'

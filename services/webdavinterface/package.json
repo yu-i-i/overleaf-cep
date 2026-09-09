@@ -1,0 +1,22 @@
+{
+  "name": "@overleaf/webdavinterface",
+  "version": "1.0.0",
+  "description": "WebDAV interface microservice for protocol abstractions",
+  "main": "app/src/index.mjs",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit/",
+    "lint": "eslint app/ test/",
+    "start": "node app/src/server.mjs"
+  },
+  "dependencies": {
+    "@overleaf/logger": "*"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "supertest": "^6.3.0",
+    "express": "^4.18.2"
+  }
+}

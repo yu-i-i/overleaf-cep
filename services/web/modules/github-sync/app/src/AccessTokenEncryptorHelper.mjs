@@ -1,5 +1,4 @@
 import logger from '@overleaf/logger'
-import Settings from '@overleaf/settings'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import Path from 'node:path'

@@ -245,6 +245,31 @@ describe('TpdsUpdateHandler', function () {
       expectDropboxUnlinked()
     })
 
+    describe('with duplicate projects from WebDAV', function () {
+      setupMatchingProjects(['active1', 'active2'])
+      beforeEach(function (ctx) {
+        ctx.source = 'webdav'
+      })
+      receiveUpdate()
+
+      it('does not unlink Dropbox', function (ctx) {
+        expect(ctx.Modules.promises.hooks.fire).not.to.have.been.calledWith(
+          'removeDropbox'
+        )
+      })
+
+      it('fires a provider-specific duplicate hook', function (ctx) {
+        expect(ctx.Modules.promises.hooks.fire).to.have.been.calledWith(
+          'tpdsDuplicateProjectNames',
+          {
+            userId: ctx.userId,
+            projectName: ctx.projectName,
+            source: 'webdav',
+          }
+        )
+      })
+    })
+
     describe('update to a file that should be ignored', async function () {
       setupMatchingProjects(['active1'])
       beforeEach(function (ctx) {

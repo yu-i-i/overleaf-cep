@@ -35,3 +35,5 @@ frontend/js/features/source-editor/lezer-bibtex/bibtex.terms.mjs
 !**/fixtures/**/*.log
 
 debug-storybook.log
+
+.cache

@@ -1,0 +1,16 @@
+{
+    "name": "@overleaf/mongoose-wrapper",
+    "version": "1.0.0",
+    "description": "Mongoose wrapper for Overleaf projects",
+    "type": "module",
+    "main": "index.js",
+    "files": [
+        "index.js"
+    ],
+    "scripts": {
+        "test": "echo \"No tests yet\" && exit 0"
+    },
+    "dependencies": {
+        "mongoose": "^8.0.0"
+    }
+}

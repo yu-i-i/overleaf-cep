@@ -195,6 +195,30 @@ function tpdsFileLimit(userId) {
   }
 }
 
+function webdavSync(userId) {
+  return {
+    async create(event, { projectName, projectId, path: filePath } = {}) {
+      const key = [
+        'webdav-sync',
+        event,
+        projectId || 'account',
+        filePath || 'project',
+      ].join('-')
+      return await NotificationsHandler.promises.createNotification(
+        userId,
+        key,
+        'notification_webdav_sync',
+        { event, projectName, projectId, path: filePath },
+        null,
+        false
+      )
+    },
+    async read() {
+      return undefined
+    },
+  }
+}
+
 function groupInvitation(userId, subscriptionId, managedUsersEnabled) {
   return {
     key: `groupInvitation-${subscriptionId}-${userId}`,
@@ -284,6 +308,9 @@ const NotificationsBuilder = {
   tpdsFileLimit(userId) {
     return callbackifyAll(tpdsFileLimit(userId))
   },
+  webdavSync(userId) {
+    return callbackifyAll(webdavSync(userId))
+  },
   groupInvitation(userId, groupId, managedUsersEnabled) {
     return callbackifyAll(groupInvitation(userId, groupId, managedUsersEnabled))
   },
@@ -303,6 +330,7 @@ NotificationsBuilder.promises = {
   projectInvite,
   personalAndGroupSubscriptions,
   tpdsFileLimit,
+  webdavSync,
   oldDebugProjects,
 }
 

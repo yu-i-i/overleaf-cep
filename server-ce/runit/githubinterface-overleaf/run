@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source /etc/overleaf/env.sh
+
+exec /sbin/setuser www-data /usr/bin/node -e "import('/overleaf/services/githubinterface/app/src/server.mjs')" >> /var/log/overleaf/githubinterface.log 2>&1

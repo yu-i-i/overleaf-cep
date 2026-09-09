@@ -29,8 +29,10 @@ const GitSyncConflictModal = ({ projectSyncState, handleHide, setModalStatus }: 
         <p className="mt-2">
           <Trans
             i18nKey="github_manual_merge_user_prompt"
+            shouldUnescape
+            tOptions={{ interpolation: { escapeValue: true } }}
             values={{sharelatex_branch: projectSyncState.unmergedBranchName }}
-            components={[<b />]}
+            components={[<b key="sharelatex_branch" />]}
           />
         </p>
       </OLModalBody>

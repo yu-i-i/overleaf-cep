@@ -4,3 +4,12 @@
 # user defined files
 .env
 docker-compose.override.yml
+# pi agent config
+.pi/
+.yarn
+node_modules
+.pi-subagents
+AGENTS.md
+references
+.cache
+test-overleaf-login.js

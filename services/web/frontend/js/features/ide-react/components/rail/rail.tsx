@@ -70,8 +70,6 @@ export const RailLayout = () => {
     useRailContext()
   const { features } = useProjectContext()
   const { isRestrictedTokenMember } = useEditorContext()
-  const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
-  const { isOverleaf, githubSyncEnabled, zoteroEnabled } = getMeta('ol-ExposedSettings')
 
   const { view, setSettingsShown, focusMode } = useLayoutContext()
 
@@ -119,7 +117,12 @@ export const RailLayout = () => {
         icon: 'integration_instructions',
         title: t('integrations'),
         component: <IntegrationsPanel />,
-        hide: !isOverleaf && !gitBridgeEnabled && !githubSyncEnabled && !zoteroEnabled,
+        // Custom build: the integrations panel always includes the PAT-based
+        // Git Provider card (GitHub/GitLab/Gitea/Forgejo, no server-side
+        // OAuth needed), so the section is always available. Previously it
+        // hid unless SaaS/GitBridge/GitHub-OAuth/Zotero was configured,
+        // which dropped it entirely on PAT-only instances.
+        hide: false,
       },
       {
         key: 'review-panel',
@@ -146,10 +149,6 @@ export const RailLayout = () => {
       features.trackChangesVisible,
       view,
       isRestrictedTokenMember,
-      isOverleaf,
-      gitBridgeEnabled,
-      githubSyncEnabled,
-      zoteroEnabled,
     ]
   )
 

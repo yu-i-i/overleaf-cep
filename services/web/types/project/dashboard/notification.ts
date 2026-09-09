@@ -7,6 +7,7 @@ type TemplateKey =
   | 'notification_dropbox_unlinked_due_to_lapsed_reconfirmation'
   | 'notification_group_invitation'
   | 'notification_personal_and_group_subscriptions'
+  | 'notification_webdav_sync'
 
 type NotificationBase = {
   _id?: number
@@ -56,6 +57,16 @@ export interface NotificationDropboxDuplicateProjectNames extends NotificationBa
   }
 }
 
+export interface NotificationWebdavSync extends NotificationBase {
+  templateKey: Extract<TemplateKey, 'notification_webdav_sync'>
+  messageOpts: {
+    event: 'failure' | 'conflict' | 'deleted' | 'recovered'
+    projectName?: string
+    projectId?: string
+    path?: string
+  }
+}
+
 interface NotificationDropboxUnlinkedDueToLapsedReconfirmation extends NotificationBase {
   templateKey: Extract<
     TemplateKey,
@@ -80,6 +91,7 @@ export type Notification =
   | NotificationDropboxDuplicateProjectNames
   | NotificationDropboxUnlinkedDueToLapsedReconfirmation
   | NotificationGroupInvitation
+  | NotificationWebdavSync
 
 export type Institution = {
   _id?: number

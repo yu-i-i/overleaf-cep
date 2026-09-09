@@ -6,6 +6,7 @@ import ProjectEntityHandler from '../Project/ProjectEntityHandler.mjs'
 import { Project } from '../../models/Project.mjs'
 import TpdsUpdateSender from './TpdsUpdateSender.mjs'
 import OError from '@overleaf/o-error'
+import Modules from '../../infrastructure/Modules.mjs'
 
 export default {
   flushProjectToTpds: callbackify(flushProjectToTpds),
@@ -79,6 +80,7 @@ async function _flushProjectToTpds(project) {
     })
   }
   await _resetDeferredTpdsFlushCounter(project)
+  await Modules.promises.hooks.fire('projectFlushed', project._id)
 }
 
 /**

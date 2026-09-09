@@ -20,10 +20,13 @@ const availableLangFeedbackLinkingWidgets = importOverleafModules(
 const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
 const githubSyncEnabled = getMeta('ol-ExposedSettings').githubSyncEnabled
 const zoteroEnabled = getMeta('ol-ExposedSettings').zoteroEnabled
+const webdavEnabled = getMeta('ol-ExposedSettings').webdavEnabled
 
 const availableIntegrationLinkingWidgets = allAvailableIntegrationLinkingWidgets.filter(
-  ({ path }) =>
-    (githubSyncEnabled || !path.includes('github-sync'))
+  // Custom build: the Git Provider widget is PAT-based (per-user token for
+  // GitHub/GitLab/Gitea/Forgejo) and needs no server-side OAuth, so it is
+  // always available — no longer gated on githubSyncEnabled.
+  ({ path }) => (webdavEnabled || !path.includes('webdav'))
 )
 
 function LinkingSection() {
@@ -51,7 +54,7 @@ function LinkingSection() {
   }[]
 
   const renderSyncSection =
-    getMeta('ol-isSaas') || gitBridgeEnabled || githubSyncEnabled
+    getMeta('ol-isSaas') || gitBridgeEnabled || githubSyncEnabled || webdavEnabled
 
   const allIntegrationLinkingWidgets = integrationLinkingWidgets.concat(
     oauth2ServerComponents

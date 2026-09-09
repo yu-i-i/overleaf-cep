@@ -26,6 +26,12 @@ chown www-data:www-data /var/lib/overleaf/tmp/projectHistories
 mkdir -p /var/lib/overleaf/tmp/dumpFolder
 chown www-data:www-data /var/lib/overleaf/tmp/dumpFolder
 
+# DataManipulator stores temporary project trees here. The service runs as
+# www-data, so this directory must be writable in every container start.
+mkdir -p /projects
+chown www-data:www-data /projects
+chmod 700 /projects
+
 mkdir -p /var/lib/overleaf/tmp
 chown www-data:www-data /var/lib/overleaf/tmp
 

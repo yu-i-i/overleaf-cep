@@ -1,0 +1,23 @@
+{
+  "name": "@overleaf/dropboxinterface",
+  "version": "1.0.0",
+  "description": "Dropbox API V2 interface microservice for protocol abstractions",
+  "main": "app/src/index.mjs",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit/",
+    "lint": "eslint app/ test/",
+    "start": "node app/src/index.mjs"
+  },
+  "dependencies": {
+    "@overleaf/logger": "*",
+    "dropbox": "^10.44.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "supertest": "^6.3.0",
+    "express": "^4.18.2"
+  }
+}

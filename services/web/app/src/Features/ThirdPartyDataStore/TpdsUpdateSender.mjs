@@ -8,6 +8,7 @@ import { fetchNothing } from '@overleaf/fetch-utils'
 import settings from '@overleaf/settings'
 import CollaboratorsGetterModule from '../Collaborators/CollaboratorsGetter.mjs'
 import UserGetterModule from '../User/UserGetter.mjs'
+import Modules from '../../infrastructure/Modules.mjs'
 
 const { promises: UserGetter } = UserGetterModule
 const { promises: CollaboratorsGetter } = CollaboratorsGetterModule
@@ -69,6 +70,10 @@ async function addEntity(params) {
 
     await enqueue(userId, 'pipeStreamFrom', job)
   }
+  await Modules.promises.hooks.fire('projectModified', {
+    projectId,
+    timestamp: Date.now(),
+  })
 }
 
 async function addFile(params) {
@@ -146,6 +151,10 @@ async function deleteEntity(params) {
 
     await enqueue(userId, 'standardHttpRequest', job)
   }
+  await Modules.promises.hooks.fire('projectModified', {
+    projectId,
+    timestamp: Date.now(),
+  })
 }
 
 async function createProject(params) {
@@ -243,6 +252,7 @@ async function moveEntity(params) {
 
     await enqueue(userId, 'standardHttpRequest', job)
   }
+  await Modules.promises.hooks.fire('projectEntityMoved', params)
 }
 
 async function pollDropboxForUser(userId) {

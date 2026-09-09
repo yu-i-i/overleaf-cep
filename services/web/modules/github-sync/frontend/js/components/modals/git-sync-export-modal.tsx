@@ -21,57 +21,74 @@ import OLFormSelect from '@/shared/components/ol/ol-form-select'
 import OLRow from '@/shared/components/ol/ol-row'
 import OLCol from '@/shared/components/ol/ol-col'
 import { GitSyncModalStatus } from '../../types/git-sync-types'
-
-type OrgsResponse = {
-  user: string
-  orgs: string[]
-}
+import { GitServer } from '../git-servers-list'
 
 type GitSyncExportModalProps = {
   projectId: string
   projectName: string
   handleHide: () => void
   setModalStatus: (modalStatus: GitSyncModalStatus) => void
+  server?: GitServer | null
 }
 
 const GitSyncExportModal = ({
   projectId,
   projectName,
   handleHide,
-  setModalStatus
+  setModalStatus,
+  server
 }: GitSyncExportModalProps) => {
   const { t } = useTranslation()
 
-  const [selectedOwner, setSelectedOwner] = useState('')
-  const [errorMessage, setErrorMessage] = useState('')
+  const [servers, setServers] = useState<GitServer[]>([])
+  const [providerId, setProviderId] = useState('')
   const [repoName, setRepoName] = useState(projectName)
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState<'public' | 'private'>('private')
 
-  const {
-    runAsync: runAsyncUserAndOrgs,
-    data: userAndOrgs,
-    error: errorUserAndOrgs
-  } = useAsync<OrgsResponse>()
-
+  // Linked providers the user can export to (same endpoint as the settings list)
   useEffect(() => {
-    runAsyncUserAndOrgs(getJSON('/user/github-sync/orgs'))
-      .then(userAndOrgs => setSelectedOwner(userAndOrgs?.user))
+    getJSON<GitServer[]>('/user/git-servers')
+      .then(data => setServers(Array.isArray(data) ? data : []))
       .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
   }, [])
+
+  // Candidates: the preselected server (e.g. arriving from the auth flow) first,
+  // then the user's linked providers; dedupe by id.
+  const candidates: GitServer[] = (() => {
+    if (!servers.length) return server ? [server] : []
+    if (server && !servers.some(s => s.id === server.id)) return [server, ...servers]
+    return servers
+  })()
+
+  // Preselect: the incoming server when available, otherwise the first linked provider
+  useEffect(() => {
+    if (!candidates.length) return
+    if (candidates.some(s => s.id === providerId)) return
+    const preferred = server?.id && candidates.find(s => s.id === server.id)
+    setProviderId((preferred || candidates[0]).id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates])
+
+  const active: GitServer | null =
+    candidates.find(s => s.id === providerId) || candidates[0] || server || null
 
   const { isLoading, error, setError, runAsync } = useAsync<void>()
 
   const createRepo = () => {
     const isPublic = visibility === 'public'
-    const org = selectedOwner === userAndOrgs?.user ? undefined : selectedOwner
 
+    // The repository is always created in the linked account's personal space
+    // (the account the provider's token belongs to); the owner is shown on the
+    // provider option instead of being selectable per export.
     runAsync(postJSON(`/project/${projectId}/github-sync/export`, {
       body: {
         name: repoName,
         description,
         isPublic,
-        org,
+        provider: active?.provider,
+        serverUrl: active?.url,
+        username: active?.username,
       },
     }))
       .then(() => setModalStatus('loading'))
@@ -95,41 +112,34 @@ const GitSyncExportModal = ({
           />
         )}
 
-        {errorUserAndOrgs && (
-          <OLNotification
-            type="error"
-            content={t('something_went_wrong_server')}
-          />
-        )}
-
         <OLForm onSubmit={createRepo}>
-          <OLRow>
-            <OLCol xs={4}>
-              <OLFormGroup>
-                <OLFormLabel htmlFor="github-sync-owner">
-                  {selectedOwner === userAndOrgs?.user
-                    ? t('owner')
-                    : t('organization')}
-                </OLFormLabel>
-                <OLFormSelect
-                  id="github-sync-owner"
-                  name="org"
-                  value={selectedOwner}
-                  onChange={e => setSelectedOwner(e.target.value)}
-                >
-                  <option key={userAndOrgs?.user} value={userAndOrgs?.user}>
-                    {userAndOrgs?.user}
-                  </option>
-                  {userAndOrgs?.orgs.map(org => (
-                    <option key={org} value={org}>
-                      {org}
-                    </option>
-                  ))}
-                </OLFormSelect>
-              </OLFormGroup>
-            </OLCol>
+          {candidates.length >= 1 && (
+            <OLRow>
+              <OLCol xs={12}>
+                <OLFormGroup>
+                  <OLFormLabel htmlFor="github-sync-provider">
+                    {t('provider')}
+                  </OLFormLabel>
+                  <OLFormSelect
+                    id="github-sync-provider"
+                    name="provider"
+                    value={active?.id || ''}
+                    onChange={e => setProviderId(e.target.value)}
+                  >
+                    {candidates.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {t(s.provider)}{s.username ? ` (${s.username})` : ''}
+                        {s.source === 'oauth' ? ` — OAuth` : ''} — {s.url}
+                      </option>
+                    ))}
+                  </OLFormSelect>
+                </OLFormGroup>
+              </OLCol>
+            </OLRow>
+          )}
 
-            <OLCol xs={5}>
+          <OLRow>
+            <OLCol xs={12}>
               <OLFormGroup>
                 <OLFormLabel htmlFor="github-sync-name">
                   {t('repository_name')}
@@ -218,6 +228,7 @@ const GitSyncExportModal = ({
           onClick={createRepo}
           disabled={!repoName.trim() || isLoading}
           isLoading={isLoading}
+          loadingLabel={t('creating')}
         >
           {t('create_project_in_github')}
         </OLButton>

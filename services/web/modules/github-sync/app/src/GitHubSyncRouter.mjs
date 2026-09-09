@@ -7,6 +7,7 @@ import AuthorizationMiddleware from '../../../../app/src/Features/Authorization/
 export default {
   apply(webRouter) {
     logger.debug({}, 'Init github-sync router')
+
     // start the GitHub OAuth flow by redirecting to GitHub authorization page
     webRouter.get(
       '/user/github-sync/oauth2',
@@ -33,6 +34,41 @@ export default {
       '/user/github-sync/status',
       AuthenticationController.requireLogin(),
       GitHubSyncController.getConnectionStatus
+    )
+
+    // Get user's configured Git servers (list)
+    webRouter.get(
+      '/user/git-servers',
+      AuthenticationController.requireLogin(),
+      GitHubSyncController.getUserServers
+    )
+
+    // Add new Git server configuration
+    webRouter.post(
+      '/user/git-servers',
+      AuthenticationController.requireLogin(),
+      GitHubSyncController.addServerConfig
+    )
+
+    // Remove a Git server configuration
+    webRouter.delete(
+      '/user/git-servers/:id',
+      AuthenticationController.requireLogin(),
+      GitHubSyncController.removeServerConfig
+    )
+
+    // PAT link endpoint (direct PAT input)
+    webRouter.post(
+      '/user/git-pat/link',
+      AuthenticationController.requireLogin(),
+      GitHubSyncController.linkPAT
+    )
+
+    // Test a saved git server connection
+    webRouter.post(
+      '/user/git-servers/test',
+      AuthenticationController.requireLogin(),
+      GitHubSyncController.testServer
     )
 
     // get git user name and user's organizations

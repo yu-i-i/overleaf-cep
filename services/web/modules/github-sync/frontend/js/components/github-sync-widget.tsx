@@ -9,51 +9,77 @@ import {
   OLModal,
   OLModalBody,
   OLModalFooter,
-  OLModalHeader,
-  OLModalTitle,
 } from '@/shared/components/ol/ol-modal'
-import OLNotification from '@/shared/components/ol/ol-notification'
 import GithubLogo from '@/shared/svgs/github-logo'
+import GitServersList, { GitServer } from './git-servers-list'
+import GitProviderModal from './git-provider-modal'
 
 export const GitHubSyncWidget = function GitHubSyncWidget() {
   const { t } = useTranslation()
-  const { appName } = getMeta('ol-ExposedSettings')
+  const { appName, githubSyncEnabled } = getMeta('ol-ExposedSettings')
 
   const {
     isLoading: isCheckingConn,
-    isError: isErrorConnCheck,
     runAsync: runAsyncConnCheck,
-    data: isConnected,
-    setData: setConnState,
-  } = useAsync<boolean>()
+    data: status,
+  } = useAsync<{
+    connected?: boolean
+    providers?: GitServer[]
+    oauth?: { linked?: boolean; username?: string }
+  }>()
+
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false)
+  const [listKey, setListKey] = useState(0)
 
   const {
-    isLoading: isUnlinking,
-    isError: isErrorUnlink,
+    isLoading: unlinking,
     runAsync: runAsyncUnlink,
   } = useAsync<void>()
 
-  const [showUnlinkModal, setShowUnlinkModal] = useState(false)
+  const statusData = status || {}
+  const isConnected =
+    !!statusData.connected ||
+    (statusData.providers || []).some(p => !p.source || p.source === 'pat') ||
+    !!statusData.oauth?.linked
 
-  const handleConnCheck = useCallback(() => {
+  // The widget's Unlink button manages the GitHub OAUTH account (the
+  // dedicated OAuth slot). PAT accounts are managed per row in the table
+  // below — the two never touch the same credential.
+  const oauthLinked = !!statusData.oauth?.linked
+
+  const handleStatusCheck = useCallback(() => {
     runAsyncConnCheck(getJSON('/user/github-sync/status')).catch(err =>
       debugConsole.error(err?.data?.message || err?.message || err),
     )
   }, [runAsyncConnCheck])
 
   useEffect(() => {
-    handleConnCheck()
-  }, [handleConnCheck])
+    handleStatusCheck()
+  }, [handleStatusCheck])
 
-  const handleUnlink = useCallback(() => {
+  const handleAdded = (_server: GitServer) => {
+    // Refresh the connection status (provider count) and remount the list
+    setListKey(key => key + 1)
+    handleStatusCheck()
+  }
+
+  const unlinkGithub = () => {
     runAsyncUnlink(postJSON('/user/github-sync/unlink'))
-      .then(() => setConnState(false))
-      .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
-      .finally(() => setShowUnlinkModal(false))
-  }, [runAsyncUnlink])
+      .then(() => {
+        setShowUnlinkConfirm(false)
+        // Refresh the provider list so the button reverts to "Link"
+        setListKey(key => key + 1)
+        handleStatusCheck()
+      })
+      .catch(err => {
+        debugConsole.error(err?.data?.message || err?.message || err)
+        setShowUnlinkConfirm(false)
+      })
+  }
 
-  if (isCheckingConn) {
-    return (
+  return (
+    <>
       <div className="settings-widget-container">
         <div>
           <GithubLogo />
@@ -61,114 +87,90 @@ export const GitHubSyncWidget = function GitHubSyncWidget() {
 
         <div className="description-container">
           <div className="title-row">
-            <h4>GitHub</h4>
+            <h4 id="github-sync">{t('git_sync')}</h4>
           </div>
 
           <p className="small">
-            <span>{t('loading')}…</span>
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <div className="settings-widget-container">
-        <div>
-          <GithubLogo size={40} />
-        </div>
-
-        <div className="description-container">
-          <div className="title-row">
-            <h4 id="github-sync">GitHub</h4>
-          </div>
-
-          <p className="small">
-            {t('github_sync_description', { appName })}
+            {t('git_sync_widget_description', { appName })}
           </p>
 
-          {isErrorConnCheck && (
-            <OLNotification
-              type="error"
-              content={t('github_sync_error')}
-            />
-          )}
-
-          {isErrorUnlink && (
-            <OLNotification
-              type="error"
-              content={t('generic_something_went_wrong')}
-            />
-          )}
-        </div>
-
-        <div>
+          {isCheckingConn ? <p className="small">{t('loading')}…</p> : null}
           {isConnected ? (
-            <OLButton
-              variant="danger-ghost"
-              onClick={() => setShowUnlinkModal(true)}
-              disabled={isUnlinking}
-            >
-              {isUnlinking ? t('unlinking') : t('unlink')}
+            <p className="small text-success">
+              {t('git_providers_linked')}
+            </p>
+          ) : null}
+
+          <GitServersList
+            key={listKey}
+            serversFilter={s => !s.source || s.source === 'pat'}
+          />
+
+          {/* Buttons live inside the description column (not the grid's
+              actions column) so they stay inside the widget box instead of
+              overflowing its right edge. The OAuth button ("Sign in with
+              GitHub" flow) is only offered when the instance is configured
+              with GitHub OAuth credentials (clientID + clientSecret). */}
+          <div className="d-flex flex-column gap-2 mt-2">
+            {githubSyncEnabled &&
+              (oauthLinked ? (
+                <OLButton
+                  variant="danger-ghost"
+                  disabled={unlinking}
+                  loadingLabel={t('unlinking')}
+                  onClick={() => setShowUnlinkConfirm(true)}
+                >
+                  {t('unlink_github_account')}
+                </OLButton>
+              ) : (
+                <OLButton variant="secondary" href="/user/github-sync/oauth2">
+                  {t('link_to_github')}
+                </OLButton>
+              ))}
+            <OLButton variant="secondary" onClick={() => setShowAddModal(true)}>
+              {t('add_new_provider')}
             </OLButton>
-          ) : isErrorConnCheck ? (
-            <OLButton
-              variant="secondary"
-              onClick={handleConnCheck}
-            >
-              {t('reconnect')}
-            </OLButton>
-          ) : (
-            <OLButton
-              variant="secondary"
-              href="/user/github-sync/oauth2"
-            >
-              {t('link')}
-            </OLButton>
-          )}
+          </div>
         </div>
       </div>
+
+      {showAddModal && (
+        <GitProviderModal
+          show
+          title={t('add_new_provider')}
+          onSuccess={handleAdded}
+          onHide={() => setShowAddModal(false)}
+        />
+      )}
 
       <OLModal
-        id="git-sync-modal"
-        show={showUnlinkModal}
-        onHide={() => setShowUnlinkModal(false)}
-        backdrop="static"
+        show={showUnlinkConfirm}
+        header={t('unlink_github_account')}
+        onHide={() => setShowUnlinkConfirm(false)}
       >
-        <OLModalHeader>
-          <OLModalTitle>
-            {t('unlink_provider_account_title', {
-              provider: 'GitHub',
-            })}
-          </OLModalTitle>
-        </OLModalHeader>
-
         <OLModalBody>
-          <p>
-            {t('unlink_github_warning', {
-              provider: 'GitHub',
-            })}
-          </p>
+          {t('unlink_github_warning')}
         </OLModalBody>
-
         <OLModalFooter>
           <OLButton
             variant="secondary"
-            onClick={() => setShowUnlinkModal(false)}
+            disabled={unlinking}
+            onClick={() => setShowUnlinkConfirm(false)}
           >
             {t('cancel')}
           </OLButton>
-
           <OLButton
-            variant="danger-ghost"
-            onClick={handleUnlink}
-            disabled={isUnlinking}
+            variant="danger"
+            disabled={unlinking}
+            loadingLabel={t('unlinking')}
+            onClick={unlinkGithub}
           >
-            {isUnlinking ? t('unlinking') : t('unlink')}
+            {t('unlink')}
           </OLButton>
         </OLModalFooter>
       </OLModal>
     </>
   )
 }
+
+export default GitHubSyncWidget

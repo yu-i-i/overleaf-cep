@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { debugConsole } from '@/utils/debugging'
 import { postJSON } from '@/infrastructure/fetch-json'
 import useAsync from '@/shared/hooks/use-async'
-import clientId from '@/utils/client-id'
 import {
   OLModalBody,
   OLModalFooter,
@@ -67,11 +66,12 @@ const GitSyncMergeModal = ({
             setModalStatus('show-conflict')
             break
 
-          default:
+          default: {
             const message = `Unexpected merge status received: ${data.mergeStatus}`
             const msError = new Error(message)
             setError(msError)
             throw msError
+          }
         }
         setProjectSyncState(data)
         setCommitMessage('')
@@ -86,6 +86,11 @@ const GitSyncMergeModal = ({
     projectId,
     commitMessage,
     runAsync,
+    setModalStatus,
+    setProjectSyncState,
+    setCommitMessage,
+    setError,
+    indexAllReferences,
   ])
 
   if (!isLoading && !isError) return

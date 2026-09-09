@@ -7,10 +7,19 @@ function getProjectState(projectId, projection = {}) {
 }
 
 function createProjectState(projectId, data) {
-  return GitHubSyncProjectStates.create({
-    projectId: normalizeQuery(projectId),
-    ...data
-  })
+  // GS-12: upsert instead of create() so re-linking an already-linked project
+  // (duplicate unique projectId) updates instead of throwing E11000.
+  const doc = { projectId: normalizeQuery(projectId), ...data }
+  return GitHubSyncProjectStates.updateOne(
+    { projectId: normalizeQuery(projectId) },
+    { $set: doc },
+    { upsert: true }
+  ).then(() => GitHubSyncProjectStates.findOne(normalizeQuery({ projectId }), {}).lean())
+}
+
+// GS-16: remove every project state created by a user (used on user deletion)
+function removeProjectStatesByOwnerId(ownerId) {
+  return GitHubSyncProjectStates.deleteMany({ ownerId: normalizeQuery(ownerId) })
 }
 
 function updateProjectState(projectId, data) {
@@ -29,4 +38,5 @@ export default {
   createProjectState,
   updateProjectState,
   removeProjectState,
+  removeProjectStatesByOwnerId,
 }
