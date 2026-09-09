@@ -65,7 +65,8 @@ ADD server-ce/config/crontab-history /etc/cron.d/crontab-history
 RUN chmod 600 /etc/cron.d/crontab-history
 ADD server-ce/config/crontab-deletion /etc/cron.d/crontab-deletion
 RUN chmod 600 /etc/cron.d/crontab-deletion
-
+ADD server-ce/config/crontab-instance-stats /etc/cron.d/crontab-instance-stats
+RUN chmod 600 /etc/cron.d/crontab-instance-stats
 # Copy Phusion Image startup and shutdown scripts to their locations
 # ------------------------------------------------------------------
 COPY server-ce/init_scripts/ /etc/my_init.d/
@@ -124,6 +125,14 @@ ENV LOG_LEVEL="info"
 ENV GIT_BRIDGE_HOST=git-bridge
 ENV GIT_BRIDGE_PORT=8000
 ENV GIT_BRIDGE_REPOSTORE_MAX_FILE_SIZE=52428800
+
+# tex-autoformatter module: tex-fmt binary (vendored static x86_64 build,
+# v0.5.7; see server-ce/static/bin/README.md for the SHA256 provenance).
+# Installed after the app copy so it persists regardless of node_modules
+# reinstalls.
+COPY server-ce/static/bin/tex-fmt /usr/local/bin/tex-fmt
+RUN chmod 755 /usr/local/bin/tex-fmt
+
 EXPOSE 80
 
 ENTRYPOINT ["/sbin/my_init"]

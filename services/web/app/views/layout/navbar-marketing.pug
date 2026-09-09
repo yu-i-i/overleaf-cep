@@ -34,6 +34,18 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 		- var canDisplaySplitTestMenu = hasFeature('saas') && hasNonAdminDomainCapability('view-split-test')
 		- var canDisplaySurveyMenu = hasFeature('saas') && canDisplayAdminMenu && hasAdminCapability('manage-survey', false)
 		- var canDisplayScriptLogMenu = hasFeature('saas') && hasAdminCapability('view-script-log', false) && canDisplayAdminMenu
+		// N-2 (2026-08-31): /admin/panel opts out of the Admin dropdown so its
+		// navbar matches /admin/site (Library / Templates / Projects / Account
+		// only). Guarded: every other page keeps the exact previous behavior.
+		- var suppressAdminNavMenu = (typeof suppressAdminNavMenu === 'boolean') && suppressAdminNavMenu
+		// 2026-08-31 (user re-report, /register + /login): a LOGGED-IN visitor on
+		// an auth page must not see the full site cluster (Admin dropdown,
+		// Projects, Account menu) — those pages always present the minimal
+		// authenticated navigation (Library / Templates / Log in, like the
+		// anonymous view), so account switching stays possible. Guarded to
+		// these two pages only.
+		- var isAuthPageMinimalNav = (typeof currentUrl === 'string') && (currentUrl === '/login' || currentUrl === '/register') && !!getSessionUser()
+		- var suppressAdminNavMenu = suppressAdminNavMenu || isAuthPageMinimalNav
 
 		if typeof suppressNavbarRight === 'undefined'
 			button#navbar-toggle-btn.navbar-toggler.collapsed(
@@ -48,7 +60,7 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 
 			#navbar-main-collapse.navbar-collapse.collapse
 				ul.nav.navbar-nav.navbar-right.ms-auto(role='menubar')
-					if canDisplayAdminMenu || canDisplayAdminRedirect || canDisplayProjectUrlLookup || canDisplaySplitTestMenu
+					if !suppressAdminNavMenu && (canDisplayAdminMenu || canDisplayAdminRedirect || canDisplayProjectUrlLookup || canDisplaySplitTestMenu)
 						+nav-item.dropdown.subdued
 							button.dropdown-toggle(
 								aria-haspopup='true'
@@ -77,12 +89,18 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 									+dropdown-menu-link-item(href='/admin/script-logs') View Script Logs
 
 					// loop over header_extras
+					// N-B2 (2026-09-01): the minimal branch below renders its own
+					// Templates link when settings.templates; the dedupe clause keeps
+					// the signed-out / auth-page-minimal nav at exactly Library,
+					// Templates, Log in (builds 47-49b shipped Templates twice).
 					each item in nav.header_extras
 						-
 							if ((item.only_when_logged_in && getSessionUser())
 											|| (item.only_when_logged_out && (!getSessionUser()))
 											|| (!item.only_when_logged_out && !item.only_when_logged_in && !item.only_content_pages)
 											|| (item.only_content_pages && (typeof suppressNavContentLinks === "undefined" || !suppressNavContentLinks))
+							
+											&& !(item.url === '/templates' && settings.templates && (!getSessionUser() || isAuthPageMinimalNav))
 							){
 								var showNavItem = true
 							} else {
@@ -149,8 +167,9 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 									else
 										| !{translate(item.text)}
 
-					// logged out
-					if !getSessionUser()
+					// logged out (OR logged in on an auth page — see
+					// isAuthPageMinimalNav above)
+					if !getSessionUser() || isAuthPageMinimalNav
 						// templates link
 						if settings.templates
 							+nav-item
@@ -163,8 +182,8 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 									event-segmentation={ page: currentUrl, item: 'templates', location: 'top-menu' }
 								) #{translate('templates')}
 
-						// register link
-						if hasFeature('registration-page')
+						// register link (hidden on /register itself)
+						if hasFeature('registration-page') && currentUrl !== '/register'
 							+nav-item.primary
 								+nav-link(
 									href='/register'
@@ -186,8 +205,9 @@ nav.navbar.navbar-default.navbar-main.navbar-expand-lg(
 								event-segmentation={page: currentUrl, item: 'login', location: 'top-menu'}
 							) #{translate('log_in')}
 
-					// projects link and account menu
-					if getSessionUser()
+					// projects link and account menu (never on auth pages for a
+					// logged-in visitor — see isAuthPageMinimalNav)
+					if getSessionUser() && !isAuthPageMinimalNav
 						+nav-item
 							+nav-link(href='/project') #{translate('Projects')}
 						+nav-item.dropdown

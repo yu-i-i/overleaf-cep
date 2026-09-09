@@ -1,10 +1,9 @@
 import logger from '@overleaf/logger'
 import OError from '@overleaf/o-error'
-import AbortError from 'node-fetch'
 import {
   fetchNothing,
   fetchJson,
-  fetchString,
+  fetchJsonWithResponse,
   fetchStringWithResponse,
   RequestFailedError,
 } from '@overleaf/fetch-utils'
@@ -129,6 +128,134 @@ async function _fetchBibtex(apiKey, basePath, format) {
 }
 
 /**
+ * P4 (2026-08-28): picker helpers — libraries, collections, items and
+ * combined BibTeX export for a selection of item keys. `scope` =
+ * { kind: 'user' (main library) | 'group', id } (id ignored for 'user').
+ */
+/** The user's libraries: main library first, then groups. */
+async function getLibrariesForPicker(userId) {
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) return null
+  const libraries = [{ id: '', kind: 'user', name: 'My Library' }]
+  try {
+    const groups = (await getGroupsForUser(userId)) || []
+    libraries.push(...groups.map(g => ({ id: g.id, kind: 'group', name: g.name })))
+  } catch (err) {
+    // groups are optional; keep main library
+  }
+  return libraries
+}
+
+/** Top-level collections of one library. */
+async function getCollectionsForPicker(userId, scope) {
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) return null
+  const base =
+    scope.kind === 'group'
+      ? `/groups/${scope.id}/collections`
+      : `/users/${credentials.zoteroUserId}/collections`
+  try {
+    const cols = await fetchJson(`${ZOTERO_API_URL}${base}?limit=200`, {
+      headers: buildHeaders(credentials.apiKey),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    })
+    return cols.map(c => ({ key: c.key, name: c.data?.name || c.key }))
+  } catch (err) {
+    normalizeApiError(err, 'getCollectionsForPicker')
+  }
+  return []
+}
+
+/** Items of a library (or one of its collections), newest first. */
+async function getItemsForPicker(userId, scope, collectionKey, limit, start) {
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) return null
+  const basePath =
+    scope.kind === 'group'
+      ? `/groups/${scope.id}`
+      : `/users/${credentials.zoteroUserId}`
+  const itemsPath = collectionKey
+    ? `${basePath}/_collections/${collectionKey}/items`
+    : `${basePath}/items`
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500)
+  const safeStart = Math.max(parseInt(start, 10) || 0, 0)
+  try {
+    const { json: items, response } = await fetchJsonWithResponse(
+      `${ZOTERO_API_URL}${itemsPath}?limit=${safeLimit}&start=${safeStart}&sort=dateAdded&direction=desc`,
+      {
+        headers: buildHeaders(credentials.apiKey),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      }
+    )
+    const total = parseInt(response.headers.get('Total-Results') || String(Array.isArray(items) ? items.length : 0), 10)
+    const list = Array.isArray(items) ? items : []
+    return {
+      items: list.map(item => {
+        const creators = (item.data?.creators || [])
+          .map(c => {
+            if (item.data?.itemType === 'book' || item.data?.itemType === 'bookSection') {
+              const editor = item.data?.creators?.find(x => x.creatorType === 'editor')
+              return editor ? editor.name : (c.firstName || c.name || '')
+            }
+            return c.firstName || c.name || ''
+          })
+        return {
+          key: item.key,
+          title: item.data?.title || '',
+          itemType: item.data?.itemType || '',
+          date: item.data?.date || '',
+          firstCreator: creators[0] || '',
+        }
+      }),
+      total,
+    }
+  } catch (err) {
+    normalizeApiError(err, 'getItemsForPicker')
+  }
+  return { items: [], total: 0 }
+}
+
+/** Combined BibTeX for a list of item keys (one Zotero request). */
+async function getItemsBibtexForPicker(userId, scope, itemKeys) {
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) {
+    throw new ServiceNotConfiguredError({
+      message: 'Zotero account is not linked',
+      info: { userId, status: 404 },
+    })
+  }
+  const keys = (itemKeys || []).slice(0, 200)
+  if (!keys.length) {
+    throw new OError('no items selected', { status: 400 })
+  }
+  const basePath =
+    scope.kind === 'group'
+      ? `/groups/${scope.id}/items`
+      : `/users/${credentials.zoteroUserId}/items`
+  return _fetchBibtexKeys(
+    credentials.apiKey,
+    `${basePath}/${keys.join(',')}`,
+    'bibtex'
+  )
+}
+
+async function _fetchBibtexKeys(apiKey, itemUrlPath, format) {
+  try {
+    const { body } = await fetchStringWithResponse(
+      `${ZOTERO_API_URL}${itemUrlPath}?format=${format}`,
+      {
+        headers: buildHeaders(apiKey),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      }
+    )
+    return body.replace(/^@misc\{noauthor_notitle_nodate(?:-\d+)?,\r?\n\}\r?\n*/gm, '')
+  } catch (err) {
+    normalizeApiError(err, '_fetchBibtexKeys')
+  }
+  return ''
+}
+
+/**
  * Unlink a Zotero account.
  */
 async function unlinkAccount(userId) {
@@ -190,9 +317,20 @@ function normalizeApiError(err, operation) {
   throw new OError('RefProvider request error', { operation, status }).withCause(err)
 }
 
+export {
+  getLibrariesForPicker,
+  getCollectionsForPicker,
+  getItemsForPicker,
+  getItemsBibtexForPicker,
+}
+
 export default {
   getConnectionStatus,
   getGroupsForUser,
   getLibraryBibtex,
   unlinkAccount,
+  getLibrariesForPicker,
+  getCollectionsForPicker,
+  getItemsForPicker,
+  getItemsBibtexForPicker,
 }

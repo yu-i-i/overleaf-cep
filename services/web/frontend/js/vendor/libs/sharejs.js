@@ -37,6 +37,42 @@ export const { Doc } = (() => {
       exports = void 0,
       transformComponent = void 0;
   var WEB = true;
+
+  // Overleaf P1 fix (2026-08-28): recognize a "dup" echo of our own
+  // un-acknowledged op by content equality. The pre-existing own-op test
+  // (`inflightSubmittedIds.includes(msg.meta.source)`) is unreliable after
+  // mid-op socket churn (the ids list is only populated on 'disconnected',
+  // so after a transport abort/reconnect the server-recorded source id is
+  // missing). Such an echo then fell into the remote-op branch below: the
+  // self-xform kept both inserts, the op was applied a SECOND time locally
+  // (duplicate content), the true ack arrived 'outdated' and was discarded,
+  // leaving the op in-flight forever (`pollSavedStatus: assuming not
+  // saved` + resend loop) — the user-visible sequence is: entry duplicated
+  // in the list after a file switch, then "Out of sync" on the next edit,
+  // one entry after reload (server was correct all along).
+  function sameOpJson(a, b) {
+    if (a === b) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return false;
+    }
+    try {
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch (e) {
+      return false;
+    }
+  }
+  function isOwnOpEcho(self, msg) {
+    if (!msg || !msg.op || self.inflightOp == null || msg.v !== self.version) {
+      return false;
+    }
+    if (!sameOpJson(msg.op, self.inflightOp)) {
+      return false;
+    }
+    debugConsole.warn('[sharejs] own-op dup echo recognized by content (v=' + msg.v + ')')
+    return true;
+  }
   window.sharejs = exports = {};
   var types = exports.types = {};
   // These methods let you build a transform function from a transformComponent function
@@ -1091,7 +1127,7 @@ export const { Doc } = (() => {
           // The op will be confirmed normally when we get the op itself was echoed back from the server
           // (handled below).
 
-        } else if (msg.op === undefined && msg.v !== undefined || msg.op && Array.from(this.inflightSubmittedIds).includes(msg.meta.source)) {
+        } else if (msg.op === undefined && msg.v !== undefined || msg.op && (Array.from(this.inflightSubmittedIds).includes(msg.meta.source) || isOwnOpEcho(this, msg))) {
           // Overleaf: avoid clearing inflightOp on repeated acknowledgement of operations on the same version
           if (!msg.error) {
             if (msg.op === undefined && msg.v !== undefined) {

@@ -13,19 +13,54 @@ function hashFunctionSha1(baseString, key) {
     .digest('base64')
 }
 
-function createOAuthClient() {
+/**
+ * R6 (2026-08-29): resolve the Zotero app credentials per request.
+ * P3c moved them into site_settings (clientSecret stored encrypted); the
+ * live server has NO ZOTERO_* env vars, so Settings.zotero is undefined
+ * and the old code (Settings.zotero.clientKey) crashed with a TypeError.
+ * Resolution: site_settings first (secret decrypted by the manager),
+ * env/Settings second (legacy CE setups).
+ */
+async function getCredentials() {
+  try {
+    const SiteSettingsManager = await import(
+      '../../../../app/src/Features/SiteSettings/SiteSettingsManager.mjs'
+    )
+    const section = await SiteSettingsManager.getSection('zotero', Settings)
+    const clientKey = String(section?.clientKey || '').trim()
+    const clientSecret = String(section?.clientSecret || '').trim()
+    if (clientKey && clientSecret) {
+      return { clientKey, clientSecret }
+    }
+  } catch (err) {
+    logger.warn({ err }, 'ZoteroOAuth: site_settings lookup failed; falling back to env')
+  }
+  const clientKey = String(Settings.zotero?.clientKey || process.env.ZOTERO_CLIENT_KEY || '').trim()
+  const clientSecret = String(
+    Settings.zotero?.clientSecret || process.env.ZOTERO_CLIENT_SECRET || ''
+  ).trim()
+  if (!clientKey || !clientSecret) {
+    throw new OError(
+      'Zotero is enabled but its app credentials are not configured (site_settings section "zotero" is missing clientKey/clientSecret) — see Manage Site',
+      { status: 500 }
+    )
+  }
+  return { clientKey, clientSecret }
+}
+
+function createOAuthClient(credentials) {
   return OAuth({
     consumer: {
-      key: Settings.zotero.clientKey,
-      secret: Settings.zotero.clientSecret,
+      key: credentials.clientKey,
+      secret: credentials.clientSecret,
     },
     signature_method: 'HMAC-SHA1',
     hash_function: hashFunctionSha1,
   })
 }
 
-function buildAuthorizationHeader(requestData, tokenData) {
-  const oauth = createOAuthClient()
+function buildAuthorizationHeader(requestData, tokenData, credentials) {
+  const oauth = createOAuthClient(credentials)
   const authData = oauth.authorize(requestData, tokenData)
 
   return oauth.toHeader(authData).Authorization
@@ -50,20 +85,24 @@ function getAuthorizationUrl(oauthToken) {
 }
 */
 
-async function getRequestToken() {
+async function getRequestToken({ credentials, callbackURL }) {
   const url = `${ZOTERO_OAUTH_URL}/request`
 
   try {
     const body = await fetchString(url, {
       method: 'POST',
       headers: {
-        Authorization: buildAuthorizationHeader({
-          url,
-          method: 'POST',
-          data: {
-            oauth_callback: Settings.zotero.callbackURL,
+        Authorization: buildAuthorizationHeader(
+          {
+            url,
+            method: 'POST',
+            data: {
+              oauth_callback: callbackURL,
+            },
           },
-        }),
+          undefined,
+          credentials
+        ),
       },
     })
 
@@ -77,6 +116,7 @@ async function exchangeRequestTokenForAccessToken(
   oauthToken,
   oauthTokenSecret,
   oauthVerifier,
+  credentials,
 ) {
   const url = `${ZOTERO_OAUTH_URL}/access`
 
@@ -95,7 +135,8 @@ async function exchangeRequestTokenForAccessToken(
           {
             key: oauthToken,
             secret: oauthTokenSecret,
-          }
+          },
+          credentials
         ),
       },
     })
@@ -119,6 +160,7 @@ async function exchangeRequestTokenForAccessToken(
 }
 
 export default {
+  getCredentials,
   getAuthorizationUrl,
   getRequestToken,
   exchangeRequestTokenForAccessToken,

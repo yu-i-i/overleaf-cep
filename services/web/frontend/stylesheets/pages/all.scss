@@ -55,6 +55,8 @@
 @import 'onboarding';
 @import 'admin/admin';
 @import 'admin/project-url-lookup';
+@import '../../../modules/ce-ui/frontend/styles/ce-navbar-consistent'; // CE fork (round 10): app navbar = solid user pages / red admin consoles (both themes) // CE fork (round 10): app navbar = admin white/red, both themes
+@import '../../../modules/ce-ui/frontend/styles/ce-admin-shells'; // CE fork (round 11): /admin/panel + /user/mysettings shells + theme selector // CE fork (round 11): /admin/panel + /user/mysettings shells + theme selector
 @import 'add-secondary-email-prompt';
 @import 'bonus';
 @import 'portals';

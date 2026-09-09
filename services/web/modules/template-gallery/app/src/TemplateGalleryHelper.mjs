@@ -12,6 +12,7 @@ import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import { fetchStreamWithResponse } from '@overleaf/fetch-utils'
 import { Template } from './models/Template.mjs'
 import { RecompileRequiredError } from './TemplateErrors.mjs'
+import TemplateAuthorizationHelper from './TemplateAuthorizationHelper.mjs'
 import { cleanHtml }  from './CleanHtml.mjs'
 
 const TIMEOUT = 30000
@@ -65,18 +66,18 @@ export async function canUserOverrideTemplate(template, userId) {
   let templateOwnerId = template.owner
   let templateOwnerName = 'you'
   let userIsOwner = true
-  let userIsAdmin
   if (templateOwnerId != userId) {
     userIsOwner = false
-    try {
-      userIsAdmin = (await UserGetter.promises.getUser(userId, { isAdmin: 1 })).isAdmin
-    } catch (error) {
-      logger.error({ error, userId }, 'Logged in user does not exist, strange...')
-      userIsAdmin = false
-    }
     templateOwnerName = await getUserName(templateOwnerId) || 'unknown'
   }
-  const canOverride = userIsOwner || userIsAdmin || (settings.templates?.user_id === userId)
+  // R6 (2026-08-29): owners, real admins, and template gallery admins
+  // (flag / "all users" setting / legacy OVERLEAF_TEMPLATES_USER_ID)
+  // may override another owner's template on import.
+  const userIsPrivileged = await TemplateAuthorizationHelper.hasTemplateAdminAccess(
+    null,
+    userId
+  ).catch(() => false)
+  const canOverride = userIsOwner || userIsPrivileged
   return { canOverride, templateOwnerName }
 }
 

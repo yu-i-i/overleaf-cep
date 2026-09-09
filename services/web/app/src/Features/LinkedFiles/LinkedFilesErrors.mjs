@@ -26,10 +26,13 @@ class RemoteServiceError extends BackwardCompatibleError {}
 
 class FileCannotRefreshError extends BackwardCompatibleError {}
 
+class UrlPolicyDeniedError extends BackwardCompatibleError {}
+
 export default {
   CompileFailedError,
   UrlFetchFailedError,
   InvalidUrlError,
+  UrlPolicyDeniedError,
   AccessDeniedError,
   BadEntityTypeError,
   BadDataError,

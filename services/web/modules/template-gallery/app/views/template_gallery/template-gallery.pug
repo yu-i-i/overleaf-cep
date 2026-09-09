@@ -10,6 +10,10 @@ block vars
 
 block append meta
 	meta(name="ol-templateCategory" data-type="string" content=category)
+	meta(name="ol-userIsTemplatesManager" data-type="boolean" content=(typeof userIsTemplatesManager !== 'undefined' && userIsTemplatesManager))
+	if typeof userSettings !== 'undefined' && userSettings
+		meta(name="ol-userSettings" data-type="json" content=userSettings)
+	meta(name="ol-overallThemes" data-type="json" content=overallThemes)
 
 block content
 	#template-gallery-root

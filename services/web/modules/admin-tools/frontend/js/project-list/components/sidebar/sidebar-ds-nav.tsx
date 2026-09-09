@@ -133,7 +133,7 @@ function SidebarDsNav() {
           )}
         </nav>
         <div className="ds-nav-ds-name" translate="no">
-          <span>Extended CE</span>
+          <span>CE+</span>
         </div>
       </div>
       <div

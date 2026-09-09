@@ -4,18 +4,14 @@ import NavDropdownLinkItem from '@/shared/components/navbar/nav-dropdown-link-it
 import { useSendProjectListMB } from '@/features/project-list/components/project-list-events'
 
 export default function AdminMenu({
-  canDisplayAdminMenu,
   canDisplayAdminRedirect,
-  canDisplayProjectUrlLookup,
   canDisplaySplitTestMenu,
   canDisplaySurveyMenu,
   canDisplayScriptLogMenu,
   adminUrl,
 }: Pick<
   DefaultNavbarMetadata,
-  | 'canDisplayAdminMenu'
   | 'canDisplayAdminRedirect'
-  | 'canDisplayProjectUrlLookup'
   | 'canDisplaySplitTestMenu'
   | 'canDisplaySurveyMenu'
   | 'canDisplayScriptLogMenu'
@@ -35,19 +31,9 @@ export default function AdminMenu({
         }
       }}
     >
-      {canDisplayAdminMenu ? (
-        <>
-          <NavDropdownLinkItem href="/admin">Manage Site</NavDropdownLinkItem>
-          <NavDropdownLinkItem href="/admin/user">
-            Manage Users
-          </NavDropdownLinkItem>
-        </>
-      ) : null}
-      {canDisplayProjectUrlLookup ? (
-        <NavDropdownLinkItem href="/admin/project">
-          Manage Projects
-        </NavDropdownLinkItem>
-      ) : null}
+      {/* Manage Site / Users / Projects live in the Account menu (user
+          feedback 2026-08-28) — the header Admin dropdown carries no
+          site-management items anymore. */}
       {canDisplayAdminRedirect && adminUrl ? (
         <NavDropdownLinkItem href={adminUrl}>
           Switch to Admin

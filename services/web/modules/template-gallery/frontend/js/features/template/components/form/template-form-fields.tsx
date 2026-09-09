@@ -70,6 +70,7 @@ function TemplateFormFields({
           value={template.descriptionMD ?? ''}
           placeholder={t('description')}
           onChange={e => onChange({ descriptionMD: e.target.value })}
+          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
         />
       </LabeledRowFormGroup>

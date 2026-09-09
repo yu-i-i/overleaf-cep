@@ -5,8 +5,16 @@ import { handleAuthenticateErrors } from '../../../../../app/src/Features/Authen
 import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import LDAPAuthenticationManager from './LDAPAuthenticationManager.mjs'
 
+import { refreshSsoStrategy } from '../../../sso-runtime.mjs'
+
 const LDAPAuthenticationController = {
-  passportLogin(req, res, next) {
+  async passportLogin(req, res, next) {
+    // SSO multi-provider (2026-08-29): re-resolve stored config per attempt.
+    try {
+      await refreshSsoStrategy('ldap')
+    } catch (err) {
+      return next(err)
+    }
     // This function is middleware which wraps the passport.authenticate middleware,
     // so we can send back our custom `{message: {text: "", type: ""}}` responses on failure,
     // and send a `{redir: ""}` response on success

@@ -1,6 +1,11 @@
 // Metrics must be initialized before importing anything else
 import { metricsModuleImportStartTime } from '@overleaf/metrics/initialize.js'
 
+// R9 (2026-08-29): admin-managed site settings hydrate the process env
+// BEFORE any Settings/config consumer module loads (boot-time readers see
+// stored-wins values). Runs once, at import time, top-level awaited.
+import './app/src/Features/SiteSettings/EnvHydrator.mjs'
+
 import Modules from './app/src/infrastructure/Modules.mjs'
 import metrics from '@overleaf/metrics'
 import Settings from '@overleaf/settings'

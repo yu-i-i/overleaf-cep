@@ -4,7 +4,6 @@ block entrypointVar
 	- entrypoint = 'modules/template-gallery/pages/template'
 
 block vars
-	- const suppressNavbar = true
 	- const suppressFooter = true
 	- isWebsiteRedesign = true
 
@@ -13,6 +12,9 @@ block append meta
 	meta(name="ol-languages" data-type="json" content=languages)
 	meta(name="ol-userIsAdmin" data-type="boolean" content=hasAdminAccess())
 	meta(name="ol-userIsTemplatesManager" data-type="boolean" content=userIsTemplatesManager)
+	if typeof userSettings !== 'undefined' && userSettings
+		meta(name="ol-userSettings" data-type="json" content=userSettings)
+	meta(name="ol-overallThemes" data-type="json" content=overallThemes)
 
 block content
 	#template-root

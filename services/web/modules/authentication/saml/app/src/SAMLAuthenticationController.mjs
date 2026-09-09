@@ -8,10 +8,19 @@ import UserSessionsManager from '../../../../../app/src/Features/User/UserSessio
 import { handleAuthenticateErrors } from '../../../../../app/src/Features/Authentication/AuthenticationErrors.mjs'
 import { xmlResponse } from '../../../../../app/src/infrastructure/Response.mjs'
 import { readFilesContentFromEnv } from '../../../utils.mjs'
+import { refreshSsoStrategy } from '../../../sso-runtime.mjs'
 
 const SAMLAuthenticationController = {
-  passportLogin(req, res, next) {
-    if ( passport._strategy('saml')._saml.options.authnRequestBinding === 'HTTP-POST') {
+  async passportLogin(req, res, next) {
+    // SSO multi-provider (2026-08-29): re-resolve the stored config on each
+    // login attempt so admin changes apply without a container restart.
+    try {
+      await refreshSsoStrategy('saml')
+    } catch (err) {
+      return next(err)
+    }
+    const samlStrategy = passport._strategy('saml')
+    if ( samlStrategy?._saml?.options?.authnRequestBinding === 'HTTP-POST') {
       const csp = res.getHeader('Content-Security-Policy')
       if (csp) {
         res.setHeader(
@@ -141,8 +150,8 @@ const SAMLAuthenticationController = {
     res.setHeader('Content-Disposition', `attachment; filename="${samlStratery._saml.options.issuer}-meta.xml"`)
     xmlResponse(res,
       samlStratery.generateServiceProviderMetadata(
-        readFilesContentFromEnv(process.env.OVERLEAF_SAML_DECRYPTION_CERT),
-        readFilesContentFromEnv(process.env.OVERLEAF_SAML_PUBLIC_CERT)
+        Settings._samlDbProvider?.decryptionCert || readFilesContentFromEnv(process.env.OVERLEAF_SAML_DECRYPTION_CERT),
+        Settings._samlDbProvider?.publicCert || readFilesContentFromEnv(process.env.OVERLEAF_SAML_PUBLIC_CERT)
       )
     )
   },

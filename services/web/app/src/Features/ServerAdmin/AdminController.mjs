@@ -7,6 +7,8 @@ import TpdsProjectFlusher from '../ThirdPartyDataStore/TpdsProjectFlusher.mjs'
 import EditorRealTimeController from '../Editor/EditorRealTimeController.mjs'
 import SystemMessageManager from '../SystemMessages/SystemMessageManager.mjs'
 import ProjectGetter from '../Project/ProjectGetter.mjs'
+import UserGetter from '../User/UserGetter.mjs'
+import SessionManager from '../Authentication/SessionManager.mjs'
 import Modules from '../../infrastructure/Modules.mjs'
 import Features from '../../infrastructure/Features.mjs'
 import { expressify } from '@overleaf/promise-utils'
@@ -48,6 +50,18 @@ const AdminController = {
       openSockets,
       systemMessages,
       privilegesMatrix,
+    }
+
+    // Overall theme for the static page (light/dark aware, like the
+    // React-rendered admin pages; applied client-side in admin/index.pug).
+    try {
+      const userId = SessionManager.getLoggedInUserId(req.session)
+      const user = userId
+        ? await UserGetter.promises.getUser(userId)
+        : null
+      toRender.adminOverallTheme = user?.ace?.overallTheme ?? ''
+    } catch {
+      toRender.adminOverallTheme = ''
     }
 
     if (Features.hasFeature('saas')) {

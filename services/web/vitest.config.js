@@ -21,7 +21,7 @@ if (process.env.CI && process.env.JUNIT_ROOT_SUITE_NAME) {
 
 module.exports = defineConfig({
   test: {
-    setupFiles: ['./test/unit/bootstrap.mjs'],
+    setupFiles: ['./test/unit/unit-env.mjs', './test/unit/bootstrap.mjs'],
     globals: true,
     isolate: false,
     passWithNoTests: true, // in case there are no tests from one project or other in a module

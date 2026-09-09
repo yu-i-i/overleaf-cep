@@ -12,6 +12,7 @@ import PackageVersions from './PackageVersions.js'
 import Modules from './Modules.mjs'
 import Errors from '../Features/Errors/Errors.js'
 import AdminAuthorizationHelper from '../Features/Helpers/AdminAuthorizationHelper.mjs'
+import * as SiteSettingsManager from '../Features/SiteSettings/SiteSettingsManager.mjs'
 import { addOptionalCleanupHandlerAfterDrainingConnections } from './GracefulShutdown.mjs'
 import { sanitizeSessionUserForFrontEnd } from './FrontEndUser.mjs'
 import { expressify } from '@overleaf/promise-utils'
@@ -285,13 +286,26 @@ export default async function (webRouter, privateApiRouter, publicApiRouter) {
   webRouter.use(useNonAdminDomainCapabilities)
   webRouter.use(useHasNonAdminDomainCapability)
 
-  webRouter.use(function (req, res, next) {
+  webRouter.use(async function (req, res, next) {
     // Clone the nav settings so they can be modified for each request
     res.locals.nav = {}
     for (const key in Settings.nav) {
       res.locals.nav[key] = _.clone(Settings.nav[key])
     }
     res.locals.templates = Settings.templateLinks
+    // Admin-managed categories (Manage Site → Templates) win over the
+    // env seed; fall back to the seed on read failure.
+    try {
+      const section = await SiteSettingsManager.getSection('templates', Settings)
+      res.locals.templates = (section.categories || []).filter(c => c.enabled).map(c => ({
+        name: c.name,
+        url: `/templates/${c.key}`,
+        description: c.description || '',
+      }))
+      res.locals.templatesEnabled = section.enabled !== false
+    } catch {
+      res.locals.templatesEnabled = true
+    }
     next()
   })
 
@@ -363,8 +377,35 @@ export default async function (webRouter, privateApiRouter, publicApiRouter) {
     next()
   })
 
-  webRouter.use(function (req, res, next) {
+  webRouter.use(async function (req, res, next) {
+    // R9 item 5 (2026-08-29): "Manage template gallery" account-menu entry.
+    // Site admins AND template gallery admins (scoped flag / all-users /
+    // legacy user_id) may manage the gallery — same rule as the gallery
+    // pages (TemplateAuthorizationHelper). Best-effort; never blocks the
+    // request.
+    let canManageTemplatesMenu = false
+    try {
+      const sessionUser = SessionManager.getSessionUser(req.session)
+      // NOTE: passport session users carry `_id` (not `id`) — both shapes
+      // must work, and the admin check inside the helper runs even when
+      // no user id is available (site admins must always get the entry).
+      const userId = sessionUser?.id || sessionUser?._id || req.user?.user?._id
+      const {
+        default: TemplateAuthorizationHelper,
+      } = await import(
+        '../../../modules/template-gallery/app/src/TemplateAuthorizationHelper.mjs'
+      )
+      canManageTemplatesMenu = !!(
+        await TemplateAuthorizationHelper.hasTemplateAdminAccess(
+          sessionUser || req.user?.user,
+          userId || null
+        )
+      )
+    } catch (err) {
+      logger.warn({ err }, 'ExpressLocals: template menu access check failed')
+    }
     res.locals.ExposedSettings = {
+      canManageTemplatesMenu,
       isOverleaf: Settings.overleaf != null,
       appName: Settings.appName,
       adminEmail: Settings.adminEmail,
@@ -418,7 +459,11 @@ export default async function (webRouter, privateApiRouter, publicApiRouter) {
       cioSiteId: Settings.analytics?.cio?.siteId,
       linkedInInsightsPartnerId: Settings.analytics?.linkedIn?.partnerId,
       githubSyncEnabled: !!Settings.githubSync?.clientID && !!Settings.githubSync?.clientSecret,
-      zoteroEnabled: !!Settings.zotero?.clientKey && !!Settings.zotero?.clientSecret,
+      zoteroEnabled: Boolean(
+        !!Settings.zotero?.clientKey && !!Settings.zotero?.clientSecret
+      ) ||
+        (Array.isArray(Settings.enabledLinkedFileTypes) &&
+          Settings.enabledLinkedFileTypes.includes('zotero')),
       enablePandocConversions: Settings.enablePandocConversions,
       mixpanelLabsToken:
         Settings.labs?.enable && Settings.analytics?.mixpanel?.labsToken,

@@ -80,6 +80,7 @@ export const db = {
   splittests: internalDb.collection('splittests'),
   ssoConfigs: internalDb.collection('ssoConfigs'),
   subscriptions: internalDb.collection('subscriptions'),
+  siteSettings: internalDb.collection('site_settings'),
   surveys: internalDb.collection('surveys'),
   systemmessages: internalDb.collection('systemmessages'),
   tags: internalDb.collection('tags'),

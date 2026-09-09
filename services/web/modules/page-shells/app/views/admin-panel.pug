@@ -1,0 +1,148 @@
+extends ../../../../app/views/layout-react.pug
+include ../../../../app/views/_mixins/bookmarkable_tabset
+//- PSH — /admin/panel shell (N-2 STRUCTURAL REBUILD, 2026-09-01).
+//-
+//- Exact /admin/site mirror (manage-site-react.pug + site-settings-page.tsx):
+//-   * layout-react + the four suppress* consts — the PAGE renders its own
+//-     chrome (the layout navbar was removed from this page; that stray
+//-     layout navbar above the page div was the structural defect),
+//-   * the React DefaultNavbar rendered INSIDE the .user-ds-nav-page div —
+//-     the shared CSS only matches there: the red admin gradient
+//-     (.red-nav-bar-for-admins .navbar-default) and the lg+ hiding of the
+//-     account/help navbar items (hidden on /admin/site, hence on us),
+//-   * the .user-list-sidebar-wrapper-react COLUMN wrapper around the
+//-     sidebar (its absence was why the left column was missing / painted
+//-     across the top under the header),
+//-   * .user-ds-nav-content-and-messages INSIDE .user-list-wrapper (the
+//-     content column is now RIGHT of the sidebar, not below it),
+//-   * the sidebar account dropdown is the shared React menu (email,
+//-     Account settings, Theme toggle, Log out — the static data-bs-toggle
+//-     menu was dead on the React layout anyway),
+//-   * footer + cookie banner in the golden's slots (content column).
+//-
+//- The upstream tabset panes, /admin POST endpoints and the #hash
+//- deep-linking are UNCHANGED.
+
+block entrypointVar
+	- entrypoint = 'marketing'
+
+block vars
+	- isWebsiteRedesign = true
+	// Golden parity (manage-site-react.pug): this page renders its own
+	// navbar / footer / cookie banner within the DS-nav page div.
+	- const suppressNavContentLinks = true
+	- const suppressNavbar = true
+	- const suppressFooter = true
+	- const suppressPugCookieBanner = true
+
+block append meta
+	//- Same theme meta as upstream /admin (kept for first-paint + fallback;
+	//- the final theme comes from the shared chrome via ol-userSettings).
+	meta(name='ol-adminOverallTheme' content=adminOverallTheme || '')
+	meta(name='ol-userSettings' data-type='json' content=userSettings)
+	meta(name='ol-overallThemes' data-type='json' content=overallThemes)
+	meta(name='ol-adminShell' content='admin-panel')
+	script(type="text/javascript", nonce=scriptNonce).
+		(function () {
+		  function apply() {
+		    try {
+		      var el = document.querySelector('meta[name^="ol-admin"]');
+		      if (!el) return; // not a themed page state: keep layout default
+		      var v = el.getAttribute('content');
+		      // Mirrors the core resolution: 'system' -> follow the OS;
+		      // 'light-' -> light; '' (unset default) or other -> dark.
+		      var prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		      var dark = v === 'system' ? prefersDark : v !== 'light-';
+		      document.body.dataset.theme = dark ? 'default' : 'light';
+		    } catch (e) {}
+		  }
+		  if (document.body) apply();
+		  else document.addEventListener('DOMContentLoaded', apply);
+		})();
+
+block content
+	ol-admin-shell-marker(style='display:none' data-shell='admin-panel')
+	.user-ds-nav-page.website-redesign.red-nav-bar-for-admins.manage-extensions-page
+		//- Shared React navbar (the SAME DefaultNavbar as /admin/site),
+		//- mounted INSIDE the page div so the DS-nav CSS applies.
+		#admin-panel-navbar-root
+		.user-list-wrapper
+			.user-list-sidebar-wrapper-react.d-none.d-md-flex.manage-extensions-sidebar
+				nav.flex-grow.flex-shrink(role='navigation' aria-label='Admin panel sections')
+					.user-list-sidebar-scroll
+						ul.list-unstyled.user-list-filters
+							li.dropdown-header Admin Panel
+							li.admin-panel-nav-item(data-pane='system-messages')
+								button(type='button') System Messages
+							li.admin-panel-nav-item(data-pane='active-projects')
+								button(type='button') Active Projects
+							li.admin-panel-nav-item(data-pane='open-close-editor')
+								button(type='button') Open/Close Editor
+							//- R12-9 (2026-08-31): Open Sockets, Privileges Matrix, TPDS and
+							//- Debug Projects removed — empty husks in CE (user-requested).
+				.ds-nav-sidebar-lower
+					nav.d-flex.flex-row.gap-3.mb-2(aria-label='Account and help')
+						//- Shared React account menu (email, Account settings,
+						//- Theme toggle, Log out) — same menu as /admin/site.
+						#admin-panel-account-root
+					.ds-nav-ds-name(translate='no')
+						span CE+
+			.user-ds-nav-content-and-messages
+				.user-ds-nav-content
+					.user-ds-nav-main
+						main(aria-labelledby='main-content')
+							.user-list-header-row
+								h1#main-content.user-list-title.text-truncate.d-none.d-md-block(tabindex='-1') Admin Panel
+							.tab-content#admin-panel-tabs
+								.tab-pane.active(role='tabpanel' id='system-messages')
+									each message in systemMessages
+										ul.system-messages
+											li.system-message.row-spaced #{message.content}
+									hr
+									form(method='post' action='/admin/messages')
+										input(name='_csrf' type='hidden' value=csrfToken)
+										.form-group
+											label.form-label(for='system-message') Message
+											input#system-message.form-control(
+												name='content'
+												type='text'
+												required
+											)
+										button.btn.btn-primary(type='submit') Post Message
+									hr
+									form(method='post' action='/admin/messages/clear')
+										input(name='_csrf' type='hidden' value=csrfToken)
+										button.btn.btn-danger(type='submit') Clear all messages
+
+								.tab-pane(role='tabpanel' id='active-projects')
+									.row-spaced
+										include ../../../../modules/admin-tools/app/views/active-projects.pug
+
+								.tab-pane(role='tabpanel' id='open-close-editor')
+									if hasFeature('saas')
+										| The "Open/Close Editor" feature is not available in SAAS.
+									else
+										.row-spaced
+											form(method='post' action='/admin/closeEditor')
+												input(name='_csrf' type='hidden' value=csrfToken)
+												button.btn.btn-danger(type='submit') Close Editor
+											p.small Will stop anyone opening the editor. Will NOT disconnect already connected users.
+
+										.row-spaced
+											form(method='post' action='/admin/disconnectAllUsers')
+												input(name='_csrf' type='hidden' value=csrfToken)
+												button.btn.btn-danger(type='submit') Disconnect all users
+											p.small Will force disconnect all users with the editor open. Make sure to close the editor first to avoid them reconnecting.
+
+										.row-spaced
+											form(method='post' action='/admin/openEditor')
+												input(name='_csrf' type='hidden' value=csrfToken)
+												button.btn.btn-danger(type='submit') Reopen Editor
+											p.small Will reopen the editor after closing.
+					//- Golden footer slot (inside the content column).
+					#admin-panel-footer-root
+				//- Golden cookie-banner slot.
+				#admin-panel-cookie-root
+
+	each file in entrypointScripts('modules/page-shells/pages/panel-shell')
+		script(type='text/javascript' nonce=scriptNonce src=file)

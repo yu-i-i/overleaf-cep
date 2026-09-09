@@ -16,7 +16,9 @@ function FileTreeItemMenuItems() {
     canRename,
     canDelete,
     canCreate,
+    canDuplicate,
     startRenaming,
+    duplicateSelectedFile,
     startDeleting,
     startCreatingFolder,
     startCreatingDocOrFile,
@@ -52,6 +54,13 @@ function FileTreeItemMenuItems() {
       {canRename ? (
         <li role="none">
           <DropdownItem onClick={startRenaming}>{t('rename')}</DropdownItem>
+        </li>
+      ) : null}
+      {canDuplicate ? (
+        <li role="none">
+          <DropdownItem onClick={() => void duplicateSelectedFile()}>
+            {t('duplicate')}
+          </DropdownItem>
         </li>
       ) : null}
       {downloadPath ? (

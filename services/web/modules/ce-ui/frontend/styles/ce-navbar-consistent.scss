@@ -1,0 +1,97 @@
+// ---------------------------------------------------------------------------
+// CE fork — app navbar (UI round 10 → round 12).
+//
+// R12-4 (user, 2026-08-31): the user-page header must FOLLOW the app theme
+// (dark header in dark mode, light in light mode) — round 11's "solid white
+// in both themes" was rejected. Upstream components/navbar.scss already
+// re-applies `navbar-dark` to these routes under [data-theme='default'], and
+// `--navbar-bg` is theme-aware (:root mixin vars), so we only need to:
+//   * kill the red gradient (it is the ADMIN-PAGE warning signal);
+//   * keep the solid neutral surface (--navbar-bg).
+//
+// R12-3 (user, 2026-08-31): every top-nav link (Library / Templates /
+// Projects) uses the same pill style — the `.subdued` de-emphasis variant is
+// removed so non-active links match the active `nav-item-projects` pill.
+//
+// Admin consoles keep the red-gradient tail (/admin/* via admin.scss,
+// /templates/manage via #template-admin-root here).
+// ---------------------------------------------------------------------------
+
+// R12-3: pill parity for ALL top-nav links (both themes).
+.website-redesign-navbar .navbar-nav > .subdued > .nav-link,
+.website-redesign-navbar .navbar-nav > .subdued > .dropdown-toggle,
+.website-redesign .navbar-default .navbar-nav > .subdued > .nav-link,
+.website-redesign .navbar-default .navbar-nav > .subdued > .dropdown-toggle {
+    border: var(--navbar-btn-border-width) solid
+      var(--navbar-link-border-color);
+    color: var(--navbar-link-color);
+    padding: var(--navbar-btn-padding-v) var(--navbar-btn-padding-h);
+    background-color: transparent;
+    margin-left: var(--navbar-item-spacing-horizontal);
+
+    &.show,
+    &:hover,
+    &:focus {
+      color: var(--navbar-link-hover-color);
+      background-color: var(--navbar-link-hover-bg);
+      border-color: var(--navbar-link-hover-border-color);
+    }
+}
+
+// R12 (user, 2026-08-31 re-report): the Projects pill MUST be visible in the
+// top navbar on all of these pages. Upstream context scss hides it
+// (project-list-ds-nav.scss for /project + /library; on the gallery pages
+// it collapses together with the account item) — the user's target markup
+// is <li class="nav-item-projects nav-item"><a class="nav-link" href="/project">
+// Projects</a></li>.
+#project-list-root .navbar-default .nav-item-projects,
+#library-root .navbar-default .nav-item-projects,
+#template-gallery-root .navbar-default .nav-item-projects,
+#template-admin-root .navbar-default .nav-item-projects,
+#template-root .navbar-default .nav-item-projects {
+  display: flex !important;
+}
+
+[data-theme='default'] {  // body attribute key ('default' = dark app theme)
+  // R12-4 (dark): theme-following solid neutral header on user pages
+  // (upstream navbar-dark applies the dark text/controls).
+  #project-list-root,
+  #library-root,
+  #template-root,
+  #template-gallery-root {
+    .website-redesign-navbar,
+    .website-redesign .navbar-default {
+      background-image: none !important;
+      background-color: var(--navbar-bg, var(--bg-dark-primary)) !important;
+    }
+  }
+
+  // admin console: keep the red admin-signal tail in dark theme
+  #template-admin-root {
+    .website-redesign-navbar,
+    .website-redesign .navbar-default {
+      @include navbar-light;
+
+      background: linear-gradient(to right, #fff 10rem, var(--red-50) 40rem);
+    }
+  }
+}
+
+// Light theme.
+#project-list-root,
+#library-root,
+#template-root,
+#template-gallery-root {
+  .website-redesign-navbar,
+  .website-redesign .navbar-default {
+    background-image: none !important;
+    background-color: var(--navbar-bg, #fff) !important;
+  }
+}
+
+#template-admin-root {
+  .website-redesign-navbar,
+  .website-redesign .navbar-default {
+    background: linear-gradient(to right, #fff 10rem, var(--red-50) 40rem);
+  }
+}

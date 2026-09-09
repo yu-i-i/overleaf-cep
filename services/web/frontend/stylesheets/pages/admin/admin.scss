@@ -187,3 +187,10 @@
     }
   }
 }
+
+
+
+// CE+ admin surface styles live in the fork's ce-ui module (module hygiene,
+// R11-12 2026-08-30): one import line is the entire fork footprint in this
+// upstream file.
+@import '../../../../modules/ce-ui/frontend/styles/ce-admin-ui';

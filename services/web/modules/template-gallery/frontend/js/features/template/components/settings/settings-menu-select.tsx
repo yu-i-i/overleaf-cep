@@ -1,6 +1,4 @@
 import { ChangeEventHandler, useCallback, useRef, useEffect } from 'react'
-import OLFormGroup from '@/shared/components/ol/ol-form-group'
-import OLFormLabel from '@/shared/components/ol/ol-form-label'
 import OLFormSelect from '@/shared/components/ol/ol-form-select'
 
 type PossibleValue = string | number | boolean
@@ -31,13 +29,15 @@ export default function SettingsMenuSelect<T extends PossibleValue = string>(
 ) {
 
  const { name, options, optgroup, onChange, value, disabled = false } = props
- const defaultApplied = useRef(false)
 
+  // Only apply the default when no value is set; must not re-run when the
+  // option list identity changes afterwards (would clobber the selection).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (value === undefined || value === null) {
       onChange(options?.[0]?.value || optgroup?.options?.[0]?.value)
     }
-  }, [value, options, onChange])
+  }, [value, options, onChange]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange: ChangeEventHandler<HTMLSelectElement> = useCallback(
     event => {

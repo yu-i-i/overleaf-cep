@@ -1,12 +1,10 @@
 import {
   createContext,
   FC,
-  useCallback,
   useContext,
   useState,
   useMemo,
 } from 'react'
-import useEventListener from '@/shared/hooks/use-event-listener'
 import getMeta from '@/utils/meta'
 import { Template } from '../../../../../types/template'
 
@@ -20,7 +18,7 @@ export const TemplateContext = createContext<TemplateContextType | undefined>(
 )
 
 type TemplateProviderProps = {
-  loadedTemplate: Template
+  children: React.ReactNode
 }
 
 export const TemplateProvider: FC<TemplateProviderProps> = ({ children }) => {

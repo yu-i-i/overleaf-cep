@@ -4,7 +4,7 @@ import { useTemplateContext } from '../context/template-context'
 
 
 function TemplatePreview() {
-  const { template, setTemplate } = useTemplateContext()
+  const { template } = useTemplateContext()
   return (
     <div className="entry">
       <OLRow>

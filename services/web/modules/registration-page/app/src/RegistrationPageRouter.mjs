@@ -1,9 +1,8 @@
 import logger from "@overleaf/logger"
-import Settings from "@overleaf/settings"
 import RegistrationPageController from './RegistrationPageController.mjs'
-import AuthenticationController from '../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import RateLimiterMiddleware from "../../../../app/src/Features/Security/RateLimiterMiddleware.mjs"
 import { RateLimiter } from "../../../../app/src/infrastructure/RateLimiter.mjs"
+import { ensureRegistrationEnabled } from './RegistrationSection.mjs'
 
 // Limit registration attempts to 3 per minute per IP
 const registrationRateLimiters = {
@@ -22,12 +21,13 @@ export default {
       return !(layer.route && layer.route.path === '/register' && layer.route.methods.get)
     })
 
-    webRouter.get('/register', RegistrationPageController.registrationPage)
+    webRouter.get('/register', ensureRegistrationEnabled, RegistrationPageController.registrationPage)
 
     webRouter.post(
       '/register',
-        RateLimiterMiddleware.rateLimit(registrationRateLimiters.postRegister),
-        RegistrationPageController.registerNewUser
+      ensureRegistrationEnabled,
+      RateLimiterMiddleware.rateLimit(registrationRateLimiters.postRegister),
+      RegistrationPageController.registerNewUser
     )
   }
 }

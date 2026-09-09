@@ -1,30 +1,35 @@
 import Settings from '@overleaf/settings'
 import { boolFromEnv } from '../authentication/utils.mjs'
+import RouterModule from './app/src/RegistrationPageRouter.mjs'
 
-let RegistrationPageModule = {}
-
+// if the env var is not set, enable registration page iff the external
+// authentication is not enabled (the SiteSettings seed default)
 let enableRegistrationPage = boolFromEnv(process.env.OVERLEAF_ENABLE_REGISTRATION_PAGE)
-
-// if the env var is not set, enable registration page iff the external authentication is not enabled
 if (enableRegistrationPage === undefined) {
-  enableRegistrationPage = !(Settings.ldap?.enable || Settings.saml?.enable || Settings.oidc?.enable)
+  enableRegistrationPage = !(
+    Settings.ldap?.enable || Settings.saml?.enable || Settings.oidc?.enable
+  )
 }
 
-if (enableRegistrationPage) {
-  const { default: router } = await import('./app/src/RegistrationPageRouter.mjs')
+/**
+ * The registration page is ALWAYS registered: on/off is an
+ * admin-managed SiteSetting (Manage Site → Sign Up, stored in the
+ * `site_settings` Mongo document; per-request checked in
+ * RegistrationRouterModule via ensureRegistrationEnabled). The value
+ * computed above is the SEED (env wins over the SSO default while no
+ * stored value exists).
+ */
+Settings.enableRegistrationPage = enableRegistrationPage
 
-  Settings.enableRegistrationPage = true
+if (process.env.OVERLEAF_ALLOWED_REGISTRATION_EMAIL_DOMAINS) {
+  Settings.allowedRegistrationEmailDomains = process.env.OVERLEAF_ALLOWED_REGISTRATION_EMAIL_DOMAINS
+    .split(/[,\s]+/)
+    .filter(Boolean)
+}
 
-  if (process.env.OVERLEAF_ALLOWED_REGISTRATION_EMAIL_DOMAINS) {
-    Settings.allowedRegistrationEmailDomains = process.env.OVERLEAF_ALLOWED_REGISTRATION_EMAIL_DOMAINS
-      .split(/[,\s]+/)
-      .filter(Boolean)
-  }
-
-  RegistrationPageModule = {
-    name: 'registration-page',
-    router: router,
-  }
+const RegistrationPageModule = {
+  name: 'registration-page',
+  router: RouterModule,
 }
 
 export default RegistrationPageModule

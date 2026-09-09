@@ -74,7 +74,6 @@
     "last 1 year",
     "safari >= 15"
   ],
-
   "dependencies": {
     "@ai-sdk/google-vertex": "^4.0.113",
     "@ai-sdk/mcp": "patch:@ai-sdk/mcp@npm%3A1.0.37#~/.yarn/patches/@ai-sdk-mcp-npm-1.0.37-8cd89b8972.patch",
@@ -115,6 +114,7 @@
     "base-x": "^4.0.1",
     "basic-auth": "^2.0.1",
     "bcrypt": "^6.0.0",
+    "bibtex-tidy": "1.14.0",
     "body-parser": "1.20.4",
     "bowser": "^2.11.0",
     "bull": "^3.18.0",

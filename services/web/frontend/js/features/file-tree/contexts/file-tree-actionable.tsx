@@ -20,6 +20,7 @@ import {
   NewLinkedFileEntity,
   NewEntity,
   syncRootDocId,
+  syncDuplicate,
 } from '../util/sync-mutation'
 import { findInTree, findInTreeOrThrow } from '../util/find-in-tree'
 import { isNameUniqueInFolder } from '../util/is-name-unique-in-folder'
@@ -66,6 +67,7 @@ const FileTreeActionableContext = createContext<
       canBulkDelete: boolean
       canRename: boolean
       canCreate: boolean
+      canDuplicate: boolean
       parentFolderId: string
       selectedFileName: string | null | undefined
       isDuplicate: (parentFolderId: string, name: string) => boolean
@@ -495,7 +497,7 @@ export const FileTreeActionableProvider: FC<React.PropsWithChildren> = ({
           }
         })
     },
-    [finishCreatingDocOrFile]
+    [finishCreatingDocOrFile, indexAllReferences]
   )
 
   const cancel = useCallback(() => {
@@ -562,6 +564,22 @@ export const FileTreeActionableProvider: FC<React.PropsWithChildren> = ({
     updateProject({ rootDocId: selectedEntityId })
   }, [projectId, selectedEntityIds, updateProject])
 
+  // New 2 (2026-08-28): duplicate the single selected file in the same
+  // folder (a.b -> a_copy.b -> a_copy(1).b ...). Text entities (docstore
+  // docs: tex/bib/txt...) copy their content; binary entities share the
+  // filestore blob of the source. File tree refreshes via the
+  // reciveNewDoc / reciveNewFile socket events.
+  const duplicateSelectedFile = useCallback(() => {
+    const [selectedEntityId] = selectedEntityIds
+    const found = findInTreeOrThrow(fileTreeData, selectedEntityId)
+    const { type, entity } = found
+    if (type !== 'doc' && type !== 'fileRef') return undefined
+    void dispatch({ type: ACTION_TYPES.CLEAR })
+    return syncDuplicate(projectId, type, entity._id).catch(error => {
+      dispatch({ type: ACTION_TYPES.ERROR, error })
+    })
+  }, [fileTreeData, projectId, selectedEntityIds])
+
   const value = useMemo(
     () => ({
       canDelete: write && selectedEntityIds.size > 0 && !isRootFolderSelected,
@@ -569,12 +587,15 @@ export const FileTreeActionableProvider: FC<React.PropsWithChildren> = ({
         write && selectedEntityIds.size > 1 && !isRootFolderSelected,
       canRename: write && selectedEntityIds.size === 1 && !isRootFolderSelected,
       canCreate: write && selectedEntityIds.size < 2,
+      canDuplicate: write && selectedEntityIds.size === 1 && !isRootFolderSelected,
       ...state,
       parentFolderId,
       selectedFileName,
       isDuplicate,
+      duplicateSelectedFile,
       startRenaming,
       finishRenaming,
+      duplicateSelectedFile,
       startDeleting,
       finishDeleting,
       finishMoving,
@@ -596,6 +617,7 @@ export const FileTreeActionableProvider: FC<React.PropsWithChildren> = ({
       cancel,
       downloadPath,
       droppedFiles,
+      duplicateSelectedFile,
       finishCreatingDoc,
       finishCreatingFolder,
       finishCreatingLinkedFile,

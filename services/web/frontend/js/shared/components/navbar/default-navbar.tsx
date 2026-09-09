@@ -24,9 +24,11 @@ function DefaultNavbar(
     overleafLogo,
     customLogo,
     title,
-    canDisplayAdminMenu,
+    // Manage Site/Users/Projects links were moved to the Account menu
+    // (2026-08-28); the flags are no longer consumed by the header nav.
+    canDisplayAdminMenu: _canDisplayAdminMenu,
     canDisplayAdminRedirect,
-    canDisplayProjectUrlLookup,
+    canDisplayProjectUrlLookup: _canDisplayProjectUrlLookup,
     canDisplaySplitTestMenu,
     canDisplaySurveyMenu,
     canDisplayScriptLogMenu,
@@ -107,13 +109,10 @@ function DefaultNavbar(
                 className="justify-content-end"
               >
                 <Nav as="ul" className="ms-auto" role="menubar">
-                  {canDisplayAdminMenu ||
-                  canDisplayAdminRedirect ||
+                  {canDisplayAdminRedirect ||
                   canDisplaySplitTestMenu ? (
                     <AdminMenu
-                      canDisplayAdminMenu={canDisplayAdminMenu}
                       canDisplayAdminRedirect={canDisplayAdminRedirect}
-                      canDisplayProjectUrlLookup={canDisplayProjectUrlLookup}
                       canDisplaySplitTestMenu={canDisplaySplitTestMenu}
                       canDisplaySurveyMenu={canDisplaySurveyMenu}
                       canDisplayScriptLogMenu={canDisplayScriptLogMenu}

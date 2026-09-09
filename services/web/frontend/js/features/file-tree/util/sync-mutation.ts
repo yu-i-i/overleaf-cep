@@ -18,6 +18,16 @@ export function syncRename(
   )
 }
 
+export function syncDuplicate(
+  projectId: string,
+  entityType: string,
+  entityId: string
+) {
+  return postJSON(
+    `/project/${projectId}/${getEntityPathName(entityType)}/${entityId}/duplicate`
+  )
+}
+
 export function syncDelete(
   projectId: string,
   entityType: string,

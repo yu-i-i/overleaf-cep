@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import getMeta from '@/utils/meta'
+import OLButton from '@/shared/components/ol/ol-button'
 import OLCol from '@/shared/components/ol/ol-col'
 import OLRow from '@/shared/components/ol/ol-row'
 import OLTooltip from '@/shared/components/ol/ol-tooltip'
@@ -12,7 +13,7 @@ import { licensesMap } from './settings/settings-license'
 
 function TemplateDetails() {
   const { t } = useTranslation()
-  const {template, setTemplate} = useTemplateContext()
+  const {template} = useTemplateContext()
   const lastUpdatedDate = fromNowDate(template.lastUpdated)
   const tooltipText = formatDate(template.lastUpdated)
   const loggedInUserId = getMeta('ol-user_id')
@@ -23,9 +24,12 @@ function TemplateDetails() {
     version: template.version,
     ...(template.brandVariationId && { brandVariationId: template.brandVariationId }),
     name: template.name,
-    compiler: template.compiler,
-    mainFile: template.mainFile,
-    language: template.language,
+    // Guard optional fields: URLSearchParams stringifies undefined as
+    // "undefined", which the project-creation flow would treat as a value
+    // (e.g. a main file literally named "undefined").
+    ...(template.compiler && { compiler: template.compiler }),
+    ...(template.mainFile && { mainFile: template.mainFile }),
+    ...(template.language && { language: template.language }),
     ...(template.imageName && { imageName: template.imageName })
   }).toString()
 
@@ -36,7 +40,7 @@ function TemplateDetails() {
     <>
     <OLRow>
       <OLCol md={12}>
-        <div className={"gallery-item-title"}>
+        <div className="gallery-item-title">
           <h1 className="h2">{template.name}</h1>
         </div>
       </OLCol>
@@ -94,6 +98,15 @@ function TemplateDetails() {
     {loggedInUserId && (loggedInUserId === template.owner || loggedInUserCanManageTemplates) && (
       <OLRow className="cta-links-container">
         <OLCol md={12} className="text-end">
+          {/* 3b (2026-08-29): "save" a template = download its bundle
+              (template.json + source.zip + output.pdf) for backup/restore. */}
+          <OLButton
+            as="a"
+            href={`/template/${template.id}/bundle`}
+            variant="secondary"
+          >
+            {t('Download bundle')}
+          </OLButton>
           <EditTemplateButton />
           <DeleteTemplateButton />
         </OLCol>

@@ -27,6 +27,28 @@ import ChatApiHandler from '../Chat/ChatApiHandler.mjs'
 const TAG_COLOR_RED = '#f04343'
 const DEBUG_TAG_NAME = 'Debug'
 
+/**
+ * New 2 (2026-08-28): compute the duplicate file name.
+ * `a.b` -> `a_copy.b`; if taken -> `a_copy(1).b`, `a_copy(2).b`, ...
+ * Pure function (unit-tested).
+ */
+function generateDuplicateName(name, existingNames) {
+  const names = new Set(Array.isArray(existingNames) ? existingNames : [])
+  const i = String(name).lastIndexOf('.')
+  const hasExt = i > 0
+  const stem = hasExt ? String(name).slice(0, i) : String(name)
+  const ext = hasExt ? String(name).slice(i) : ''
+  let candidate = `${stem}_copy${ext}`
+  let n = 0
+  while (names.has(candidate)) {
+    n += 1
+    candidate = `${stem}_copy(${n})${ext}`
+  }
+  return candidate
+}
+
+export { generateDuplicateName }
+
 export default {
   duplicate: callbackify(duplicate),
   promises: {

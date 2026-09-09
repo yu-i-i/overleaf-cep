@@ -3,7 +3,7 @@ import { cleanHtml } from '../../../../../app/src/CleanHtml.mjs'
 
 function TemplateGalleryEntry({ template }) {
   return (
-    <div className={"gallery-thumbnail col-12 col-md-6 col-lg-4"}>
+    <div className="gallery-thumbnail col-12 col-md-6 col-lg-4">
       <a href={`/template/${template.id}`} className="thumbnail-link">
         <div className="thumbnail">
           <img

@@ -1,0 +1,140 @@
+extends ../../../../app/views/layout-react
+//- N-2 round 3 (2026-09-01): /admin/instance-stats rebuilt to the EXACT
+//- golden /admin/site skeleton (site-settings-page.tsx /
+//- manage-site-react.pug) — user feedback 3A-3E:
+//-   3A red admin gradient  → `.red-nav-bar-for-admins` on the page div
+//-   3C missing left column → `.user-list-sidebar-wrapper-react` column
+//-   3D tabs in left column → sidebar `ul.user-list-filters` buttons
+//-   3E no Admin/Account in the header (the shared React DefaultNavbar
+//-      renders the plain Library/Templates/Projects set, and
+//-      `.user-ds-nav-page .navbar-default .nav-item-account` is hidden at
+//-      lg+ — same CSS as the golden), pill-style buttons (shared DS-nav
+//-      CSS `ul.user-list-filters > li.active > button`)
+//-   3B (frontend part) → alert email becomes a multi-line textarea
+//- The upstream `pages/user/settings`-style entry JS (chart rendering,
+//- settings panel) is UNCHANGED apart from the pane-switching wiring.
+
+block entrypointVar
+	- entrypoint = 'modules/instance-stats/pages/instance-stats'
+
+block vars
+	- isWebsiteRedesign = true
+	// Golden parity (manage-site-react.pug): this page renders its own
+	// navbar / footer / cookie banner within the DS-nav page div.
+	- const suppressNavContentLinks = true
+	- const suppressNavbar = true
+	- const suppressFooter = true
+	- const suppressPugCookieBanner = true
+
+block append meta
+	// Theme wiring — golden /admin/site pattern (UserSettingsProvider reads
+	// ol-userSettings; the shared chrome uses useThemedPage).
+	meta(name='ol-adminOverallTheme' content=(user && user.ace && user.ace.overallTheme) || '')
+	meta(name='ol-userSettings' data-type='json' content=userSettings)
+	meta(name='ol-overallThemes' data-type='json' content=overallThemes)
+	script(type="text/javascript", nonce=scriptNonce).
+		(function () {
+		  function apply() {
+		    try {
+		      var el = document.querySelector('meta[name=ol-adminOverallTheme]');
+		      if (!el) return;
+		      var v = el.getAttribute('content') || '';
+		      var prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		      var dark = v === 'system' ? prefersDark : v !== 'light-';
+		      document.body.dataset.theme = dark ? 'default' : 'light';
+		    } catch (e) {}
+		  }
+		  if (document.body) apply();
+		  else document.addEventListener('DOMContentLoaded', apply);
+		})();
+
+block content
+	.user-ds-nav-page.website-redesign.red-nav-bar-for-admins.manage-extensions-page
+		// Shared React navbar (the SAME DefaultNavbar as /admin/site),
+		// mounted INSIDE the page div so the DS-nav CSS applies.
+		#instance-stats-navbar-root
+		.user-list-wrapper
+			.user-list-sidebar-wrapper-react.d-none.d-md-flex.manage-extensions-sidebar
+				nav.flex-grow.flex-shrink(role='navigation' aria-label='Instance statistics sections')
+					.user-list-sidebar-scroll
+						ul.list-unstyled.user-list-filters
+							li.dropdown-header Instance statistics
+							li.instance-stats-nav-item(data-pane='user')
+								button(type='button') User
+							li.instance-stats-nav-item(data-pane='project')
+								button(type='button') Project
+							li.instance-stats-nav-item(data-pane='storage')
+								button(type='button') Storage
+							li.instance-stats-nav-item(data-pane='system')
+								button(type='button') System
+							li.instance-stats-nav-item(data-pane='settings')
+								button(type='button') Alert settings
+				.ds-nav-sidebar-lower
+					nav.d-flex.flex-row.gap-3.mb-2(aria-label='Account and help')
+						// Shared React account menu (email, Account settings,
+						// Manage accordion, Theme toggle, Log out).
+						#instance-stats-account-root
+					.ds-nav-ds-name(translate='no')
+						span CE+
+			.user-ds-nav-content-and-messages
+				.user-ds-nav-content
+					.user-ds-nav-main
+						main(aria-labelledby='main-content')
+							.user-list-header-row
+								h1#main-content.user-list-title.text-truncate.d-none.d-md-block(tabindex='-1') Instance statistics
+							.row.justify-content-end
+								.col-2
+									label.form-label(for='timeFilter') Show:
+									select#timeFilter.form-select
+										option(value='month' selected) Last 1 month
+										option(value='6m') Last 6 months
+										option(value='year') Last 1 year
+										option(value='all') All
+							hr
+							#instance-stats-root
+								//- Round-3 (2026-09-01): single scrolling dashboard. Every
+								//- section is visible (no hidden tab-panes) so all charts
+								//- render on load at real width, and the left column is
+								//- anchor navigation that scrolls to each H2 (user re-report
+								//- 3/4: "anchors don't connect to content; h2s are not there").
+								section#user.instance-stats-section
+									h2 User
+									.row(style='height:400px')
+										.col-md-4#active-users
+										.col-md-4#new-users
+										.col-md-4#user-count
+								section#project.instance-stats-section
+									h2 Project
+									.row(style='height:400px')
+										.col-md-4#active-projects
+										.col-md-4#project-count
+										.col-md-4#file-count
+									.row(style='height:400px')
+										.col-md-4#shared-projects
+								section#storage.instance-stats-section
+									h2 Storage
+									.row(style='height:400px')
+										.col-md-4#mongodb-storage
+										.col-md-4#overleaf-storage
+										.col-md-4#redis-storage
+								section#system.instance-stats-section
+									h2 System
+									.row(style='height:400px')
+										.col-md-4#disk-usage
+										.col-md-4#ram-usage
+										.col-md-4#cpu-load
+								section#settings.instance-stats-section
+									h2 Alert settings
+									#instance-stats-settings
+					// Golden footer slot (inside the content column).
+					#instance-stats-footer-root
+				// Golden cookie-banner slot.
+				#instance-stats-cookie-root
+
+	each file in entrypointScripts('modules/instance-stats/pages/instance-stats')
+		script(type='text/javascript' nonce=scriptNonce src=file)
+
+block prepend foot-scripts
+	// N-D (2026-09-01): Plotly is VENDORED (services/web/public) — zero
+	// runtime downloads; the file is committed and served by the app at / root.
+	script(src='/plotly-3.0.1.min.js' charset='utf-8' nonce=scriptNonce defer=deferScripts)

@@ -70,6 +70,11 @@ export const UserSchema = new Schema(
       enrolledAt: { type: Date },
     },
     isAdmin: { type: Boolean, default: false },
+    // R6 item 8 (2026-08-29): scoped flags — today only the template
+    // gallery admin role (manage templates without full site admin).
+    flags: {
+      canManageTemplates: { type: Boolean, default: false },
+    },
     adminRoles: { type: Array },
     signUpDate: {
       type: Date,

@@ -46,10 +46,12 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
     lastName: '',
     isAdmin: false,
     isExternal: false,
+    canManageTemplates: false,
   })
 
   const { refreshUsers, addUserToView } = useUserListContext()
-  const [redirecting, setRedirecting] = useState(false)
+  const [redirecting] = useState(false)
+  void refreshUsers
   const { data, isLoading, error, runAsync } = useAsync<CreateUserResult>()
 
   const createAccount = () => {
@@ -61,6 +63,7 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
           last_name: userData.lastName.trim(),
           isAdmin: userData.isAdmin,
           isExternal: userData.isExternal,
+          canManageTemplates: userData.canManageTemplates,
         }
       })
     )
@@ -107,7 +110,7 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
           <div className="notification-list">
             <Notification
               type="warning"
-              content={'The account has been created, but the notification email was not sent to the user. Please check your SMTP configuration.'}
+              content="The account has been created, but the notification email was not sent to the user. Please check your SMTP configuration."
             />
           </div>
         )}
@@ -172,11 +175,26 @@ function ModalContentNewUserForm({ handleCloseModal }: Props) {
                     name="isExternal"
                     label="External authentication"
                     checked={userData.isExternal}
-                    aria-label={"External authentication"}
+                    aria-label="External authentication"
                   />
                 </OLFormGroup>
               </OLCol>
             )}
+          </OLRow>
+          {/* R6 item 8 (2026-08-29): template gallery admin (scoped role). */}
+          <OLRow>
+            <OLCol xs={6}>
+              <OLFormGroup controlId="is-template-admin-checkbox">
+                <OLFormCheckbox
+                  autoComplete="off"
+                  onChange={handleCheckboxChange}
+                  name="canManageTemplates"
+                  label={t('template_gallery_admin')}
+                  checked={Boolean(userData.canManageTemplates)}
+                  aria-label={t('template_gallery_admin')}
+                />
+              </OLFormGroup>
+            </OLCol>
           </OLRow>
         </OLForm>
       </OLModalBody>

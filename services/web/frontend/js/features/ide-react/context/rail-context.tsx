@@ -25,6 +25,7 @@ export type RailTabKey =
   | 'full-project-search'
   | 'dimensions'
   | 'workbench'
+  | 'bib-editor'
 
 export type RailModalKey =
   | 'keyboard-shortcuts'

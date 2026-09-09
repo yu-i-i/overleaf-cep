@@ -26,7 +26,7 @@ function SortBtn({ onClick, text, iconType, screenReaderText }: SortBtnProps) {
 
 const SortByButton = withContent(SortBtn)
 
-export default function GallerySearchSortHeader( { gotoAllLink }: { boolean } ) {
+export default function GallerySearchSortHeader( { gotoAllLink }: { gotoAllLink?: boolean } ) {
   const { t } = useTranslation()
   const {
     searchText,
@@ -45,12 +45,10 @@ export default function GallerySearchSortHeader( { gotoAllLink }: { boolean } ) 
           </a>
         </OLCol>
       ) : (
-      <OLCol className="col-auto">
-          <a className="previous-page-link" href="/templates">
-            <i className="material-symbols material-symbols-rounded" aria-hidden="true">arrow_left_alt</i>
-            {t('template_gallery')}
-          </a>
-        </OLCol>
+        // R6 (2026-08-29): the all-templates page used to link to itself
+        // ("Template Gallery" → /templates) — removed; keep an empty spacer
+        // col so the row layout (sort / search) does not reflow.
+        <OLCol className="col-auto" aria-hidden="true" style={{ width: 0 }} />
       )}
       <OLCol className="d-flex justify-content-center gap-2">
         <SortByButton

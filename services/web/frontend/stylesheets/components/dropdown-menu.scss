@@ -312,3 +312,41 @@ $dropdown-item-min-height: 36px;
     }
   }
 }
+
+// "Manage" sub-folder accordion (account menu; user design 2026-08-28,
+// round 4 — inline unfold, replacing the non-functional flyout).
+.manage-submenu-toggle {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  color: var(--dropdown-text-color);
+  background: transparent;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    background: var(--dropdown-background-hover);
+    color: var(--dropdown-text-hover);
+  }
+
+  .manage-menu-caret {
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .manage-menu-caret.is-open {
+    transform: rotate(90deg);
+  }
+}
+
+.manage-menu-link {
+  padding-left: 2.5rem;
+  color: var(--dropdown-text-secondary);
+
+  &:hover,
+  &:focus {
+    color: var(--dropdown-text-hover);
+  }
+}

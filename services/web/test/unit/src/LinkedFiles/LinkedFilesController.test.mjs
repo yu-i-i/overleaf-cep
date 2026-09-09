@@ -252,10 +252,12 @@ describe('LinkedFilesController', function () {
 
         ctx.LinkedFilesController.refreshLinkedFile(ctx.req, ctx.res, ctx.next)
       })
-    })
-      })
 
-      expect(ctx.Agent.promises.refreshLinkedFile).to.not.have.been.called
+      // the importer check happens inside the agent's refresh call — the
+      // controller surfaces it as a 400 with the mapped message (asserted
+      // in the res.send stub above)
+      expect(ctx.Agent.promises.refreshLinkedFile).to.have.been.calledOnce
     })
   })
+})
 })

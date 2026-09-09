@@ -383,6 +383,48 @@ const addFile = wrapWithLock({
   },
 })
 
+/**
+ * New 2 (2026-08-28): duplicate an EXISTING file blob within the same
+ * project (no re-upload — the filestore blob already exists under the
+ * source hash). Mirrors addFile minus the upload step.
+ */
+const duplicateFile = wrapWithLock({
+  async beforeLock(projectId, folderId, fileRef, source, userId) {
+    if (!SafePath.isCleanFilename(fileRef.name)) {
+      throw new Errors.InvalidNameError('invalid element name')
+    }
+    return { projectId, folderId, fileRef, source, userId }
+  },
+  async withLock({ projectId, folderId, fileRef, source, userId }) {
+    const { result, project } =
+      await ProjectEntityUpdateHandler._addFileAndSendToTpds(
+        projectId,
+        folderId,
+        fileRef,
+        userId
+      )
+    const projectHistoryId = project.overleaf?.history?.id
+    if (!projectHistoryId) {
+      throw new OError('project does not have a history id', { projectId })
+    }
+    const newFiles = [
+      {
+        createdBlob: false,
+        file: fileRef,
+        path: result && result.path && result.path.fileSystem,
+      },
+    ]
+    await DocumentUpdaterHandler.promises.updateProjectStructure(
+      projectId,
+      projectHistoryId,
+      userId,
+      { newFiles, newProject: project },
+      source
+    )
+    return { fileRef, folderId }
+  },
+})
+
 const upsertDoc = wrapWithLock(
   async function (projectId, folderId, docName, docLines, source, userId) {
     if (!SafePath.isCleanFilename(docName)) {
@@ -1183,6 +1225,11 @@ const ProjectEntityUpdateHandler = {
     'createdBlob',
   ]),
 
+  duplicateFile: callbackifyMultiResult(duplicateFile, [
+    'fileRef',
+    'folderId',
+  ]),
+
   addFolder: callbackifyMultiResult(addFolder, ['folder', 'parentFolderId']),
 
   convertDocToFile: callbackify(convertDocToFile),
@@ -1246,6 +1293,7 @@ const ProjectEntityUpdateHandler = {
     addDoc,
     addDocWithRanges,
     addFile,
+    duplicateFile,
     addFolder,
     convertDocToFile,
     deleteEntity,

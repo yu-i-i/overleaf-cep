@@ -11,20 +11,35 @@ export OVERLEAF_BASE_TAG ?= sharelatex/sharelatex-base:$(BRANCH_NAME_TAG_SAFE)-$
 export OVERLEAF_BRANCH ?= sharelatex/sharelatex:$(BRANCH_NAME_TAG_SAFE)
 export OVERLEAF_LATEST ?= sharelatex/sharelatex
 export OVERLEAF_TAG ?= sharelatex/sharelatex:$(BRANCH_NAME_TAG_SAFE)-$(MONOREPO_REVISION)
+export OVERLEAF_PANDOC_BRANCH ?= sharelatex/sharelatex-pandoc:$(BRANCH_NAME_TAG_SAFE)
+export OVERLEAF_PANDOC_LATEST ?= sharelatex/sharelatex-pandoc
+export OVERLEAF_PANDOC_TAG ?= sharelatex/sharelatex-pandoc:$(BRANCH_NAME_TAG_SAFE)-$(MONOREPO_REVISION)
 
-all: build-base build-community
+# Optional extra --cache-from references (overridable). The branch tags only
+# exist LOCALLY (they are never pushed to Docker Hub), so pulling them as cache
+# sources fails with 404/"insufficient_scope" on Docker Hub. The builds rely
+# on the local inline cache (BUILDKIT_INLINE_CACHE=1) + locally tagged images
+# instead. Default: no remote cache-from at all (2026-08-31, build 49 failure).
+CACHE_FROM_BASE ?=
+CACHE_FROM_COMMUNITY ?=
+CACHE_FROM_PANDOC ?=
+
+
+all: build-base build-community build-pandoc
 
 clean:
-	-docker rmi --force $(OVERLEAF_BASE_TAG) $(OVERLEAF_TAG)
+	-docker rmi --force $(OVERLEAF_BASE_TAG) $(OVERLEAF_TAG) $(OVERLEAF_PANDOC_TAG)
 
 refresh-cache: refresh-cache-branch
 refresh-cache-branch:
 	docker inspect $(OVERLEAF_BASE_BRANCH) > /dev/null && docker pull $(OVERLEAF_BASE_BRANCH) || true
 	docker inspect $(OVERLEAF_BRANCH) > /dev/null && docker pull $(OVERLEAF_BRANCH) || true
+	docker inspect $(OVERLEAF_PANDOC_BRANCH) > /dev/null && docker pull $(OVERLEAF_PANDOC_BRANCH) || true
 refresh-cache: refresh-cache-latest
 refresh-cache-latest:
 	docker inspect $(OVERLEAF_BASE_LATEST) > /dev/null && docker pull $(OVERLEAF_BASE_LATEST) || true
 	docker inspect $(OVERLEAF_LATEST) > /dev/null && docker pull $(OVERLEAF_LATEST) || true
+	docker inspect $(OVERLEAF_PANDOC_LATEST) > /dev/null && docker pull $(OVERLEAF_PANDOC_LATEST) || true
 
 build-base:
 	cp .dockerignore $(MONOREPO_ROOT)
@@ -33,8 +48,7 @@ build-base:
 	  --progress=plain \
 	  --file Dockerfile-base \
 	  --pull \
-	  --cache-from $(OVERLEAF_BASE_LATEST) \
-	  --cache-from $(OVERLEAF_BASE_BRANCH) \
+	  $(CACHE_FROM_BASE) \
 	  --tag $(OVERLEAF_BASE_TAG) \
 	  --tag $(OVERLEAF_BASE_BRANCH) \
 	  --network=host \
@@ -48,19 +62,36 @@ build-community:
 	  --progress=plain \
 	  --build-arg OVERLEAF_BASE_TAG \
 	  --label "com.overleaf.ce.revision=$(MONOREPO_REVISION)" \
-	  --cache-from $(OVERLEAF_LATEST) \
-	  --cache-from $(OVERLEAF_BRANCH) \
+	  $(CACHE_FROM_COMMUNITY) \
 	  --file Dockerfile \
 	  --tag $(OVERLEAF_TAG) \
 	  --tag $(OVERLEAF_BRANCH) \
 	  --network=host \
 	  $(MONOREPO_ROOT)
 
+build-pandoc:
+	cp .dockerignore $(MONOREPO_ROOT)
+	docker build \
+	  --build-arg BUILDKIT_INLINE_CACHE=1 \
+	  --progress=plain \
+	  --build-arg OVERLEAF_BASE_TAG \
+	  --label "com.overleaf.ce.revision=$(MONOREPO_REVISION)" \
+	  $(CACHE_FROM_PANDOC) \
+	  --file Dockerfile-pandoc \
+	  --tag $(OVERLEAF_PANDOC_TAG) \
+	  --tag $(OVERLEAF_PANDOC_BRANCH) \
+	  --network=host \
+	  $(MONOREPO_ROOT)
+
+
 push:
 	docker push $(OVERLEAF_BASE_TAG)
 	docker push $(OVERLEAF_BASE_BRANCH)
 	docker push $(OVERLEAF_TAG)
 	docker push $(OVERLEAF_BRANCH)
+	docker push $(OVERLEAF_PANDOC_TAG)
+	docker push $(OVERLEAF_PANDOC_BRANCH)
+
 
 SHELLCHECK_OPTS = \
 	--shell=bash \
@@ -82,5 +113,5 @@ shellcheck_fix:
 	done
 
 .PHONY: all \
-	build-base build-community \
+	build-base build-community build-pandoc \
 	shellcheck shellcheck_fix

@@ -28,10 +28,12 @@ import { expressify } from '@overleaf/promise-utils'
 import ProjectOutputFileAgent from './ProjectOutputFileAgent.mjs'
 import ProjectFileAgent from './ProjectFileAgent.mjs'
 import UrlAgent from './UrlAgent.mjs'
+import * as SiteSettingsManager from '../SiteSettings/SiteSettingsManager.mjs'
 
 const {
   CompileFailedError,
   UrlFetchFailedError,
+  UrlPolicyDeniedError,
   InvalidUrlError,
   AccessDeniedError,
   BadEntityTypeError,
@@ -68,6 +70,22 @@ async function createLinkedFile(req, res, next) {
   const Agent = await LinkedFilesController._getAgent(provider)
   if (Agent == null) {
     return res.sendStatus(400)
+  }
+
+  // Admin on/off for providers that support it (Manage Site): new
+  // linked files are rejected when the provider is disabled; existing
+  // files keep working.
+  if (provider === 'zotero') {
+    try {
+      const section = await SiteSettingsManager.getSection('zotero', Settings)
+      if (section.enabled === false) {
+        return res
+          .status(403)
+          .json({ error: 'Zotero is disabled on this site' })
+      }
+    } catch {
+      // fail open on read errors
+    }
   }
 
   data.provider = provider
@@ -242,6 +260,9 @@ export default LinkedFilesController = {
     } else if (error instanceof OutputFileFetchFailedError) {
       res.status(404)
       plainTextResponse(res, 'Could not get output file')
+    } else if (error instanceof UrlPolicyDeniedError) {
+      res.status(403)
+      plainTextResponse(res, error.message)
     } else if (error instanceof UrlFetchFailedError) {
       res.status(422)
       if (error.cause instanceof FileTooLargeError) {

@@ -48,6 +48,17 @@ export default {
       AuthorizationMiddleware.ensureUserCanWriteProjectContent,
       EditorHttpController.moveEntity
     )
+    // New 2 (2026-08-28): duplicate a file below Rename in the file-tree
+    // context menu (entity_type: doc | file).
+    webRouter.post(
+      '/project/:Project_id/:entity_type/:entity_id/duplicate',
+      AsyncLocalStorage.middleware,
+      AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+      RateLimiterMiddleware.rateLimit(rateLimiters.addFolderToProject, {
+        params: ['Project_id'],
+      }),
+      EditorHttpController.duplicateEntity
+    )
 
     webRouter.delete(
       '/project/:Project_id/file/:entity_id',

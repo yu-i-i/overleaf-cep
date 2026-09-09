@@ -37,6 +37,9 @@ export default function TemplateGallery() {
         setIsSearching(false)
       }
     }
+    // Intentional: page transitions must only react to the search box
+    // changing; the transition states are read for the branch decision.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText])
 
   const startIndex = (currentPage - 1) * templatesPerPage

@@ -1,0 +1,30 @@
+extends ../../../../app/views/layout-react
+
+block entrypointVar
+	- entrypoint = 'modules/admin-tools/pages/manage-site'
+
+block vars
+	- const suppressNavContentLinks = true
+	- const suppressNavbar = true // page renders the DS-nav DefaultNavbar itself (like /admin/user)
+	- const suppressFooter = true
+	- const suppressPugCookieBanner = true
+
+block append meta
+	meta(name='ol-userSettings' data-type='json' content=userSettings)
+	// R11 item 14 (2026-08-30): the Dark/Light/System theme selector (same
+	// fieldset as the project-list sidebar) is rendered in the manage-site
+	// sidebar; 'ol-overallThemes' is a global res.local (ExpressLocals) so
+	// the option list matches the app pages exactly.
+	meta(name='ol-overallThemes' data-type='json' content=overallThemes)
+	if suggestedLanguageSubdomainConfig
+		meta(
+			name='ol-suggestedLanguage'
+			data-type='json'
+			content=Object.assign(suggestedLanguageSubdomainConfig, {
+				lngName: translate(suggestedLanguageSubdomainConfig.lngCode),
+				imgUrl: buildImgPath('flags/24/' + suggestedLanguageSubdomainConfig.lngCode + '.png'),
+			})
+		)
+
+block content
+	#manage-site-root

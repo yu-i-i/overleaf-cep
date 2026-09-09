@@ -1,13 +1,20 @@
 import logger from '@overleaf/logger'
 import passport from 'passport'
 import Settings from '@overleaf/settings'
+import { refreshSsoStrategy } from '../../../sso-runtime.mjs'
 import AuthenticationController from '../../../../../app/src/Features/Authentication/AuthenticationController.mjs'
 import UserController from '../../../../../app/src/Features/User/UserController.mjs'
 import ThirdPartyIdentityManager from '../../../../../app/src/Features/User/ThirdPartyIdentityManager.mjs'
 import OIDCAuthenticationManager from './OIDCAuthenticationManager.mjs'
 
 const OIDCAuthenticationController = {
-  passportLogin(req, res, next) {
+  async passportLogin(req, res, next) {
+    // SSO multi-provider (2026-08-29): re-resolve stored config per attempt.
+    try {
+      await refreshSsoStrategy('oidc')
+    } catch (err) {
+      return next(err)
+    }
     req.session.intent = req.query.intent
     passport.authenticate('openidconnect')(req, res, next)
   },
@@ -23,7 +30,7 @@ const OIDCAuthenticationController = {
           delete req.session.intent
 // After linking, log out from the OIDC provider and redirect back to '/user/settings'.
 // Keycloak supports this; Authentik does not (yet).
-          const logoutUrl = process.env.OVERLEAF_OIDC_LOGOUT_URL
+          const logoutUrl = Settings._oidcDbProvider?.logoutURL || process.env.OVERLEAF_OIDC_LOGOUT_URL
           const redirectUri = `${Settings.siteUrl.replace(/\/+$/, '')}/user/settings`
           return res.redirect(`${logoutUrl}?id_token_hint=${info.idToken}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`)
 	}
@@ -152,7 +159,7 @@ const OIDCAuthenticationController = {
 // TODO: instead of storing idToken in session, use refreshToken to obtain a new idToken?
     const idTokenHint = req.session.idToken
     await UserController.doLogout(req)
-    const logoutUrl = process.env.OVERLEAF_OIDC_LOGOUT_URL
+    const logoutUrl = Settings._oidcDbProvider?.logoutURL || process.env.OVERLEAF_OIDC_LOGOUT_URL
     const redirectUri = Settings.siteUrl
     res.redirect(`${logoutUrl}?id_token_hint=${idTokenHint}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`)
   },

@@ -292,8 +292,20 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   if (Features.hasFeature('registration-page')) {
     webRouter.get('/register', UserPagesController.registerPage)
-    AuthenticationController.addEndpointToLoginWhitelist('/register')
   }
+  // CE fork (user re-report 2026-08-31, item 12 — "/register redirects even
+  // though sign-up is activated"): when SSO is enabled the registration-page
+  // feature flag (computed from the Settings snapshot at boot) is off, and
+  // with allowPublicAccess=false the GLOBAL LOGIN gate above
+  // (requireGlobalLogin) bounces ANY anonymous /register to /login BEFORE
+  // the registration-page module's per-request admin gate
+  // (site_settings.signup.enabled, admin-managed via /admin/site) can
+  // decide. The on/off decision belongs to the stored admin setting, so
+  // whitelist /register unconditionally: the module's
+  // ensureRegistrationEnabled still enforces it (GET →
+  // disabledRedirectUrl||/login, POST → 403 when the admin disables
+  // sign-ups).
+  AuthenticationController.addEndpointToLoginWhitelist('/register')
 
   EditorRouter.apply(webRouter, privateApiRouter)
   CollaboratorsRouter.apply(webRouter, privateApiRouter)

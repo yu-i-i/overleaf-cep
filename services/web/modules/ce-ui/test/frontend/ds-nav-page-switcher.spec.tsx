@@ -1,4 +1,4 @@
-import { DsNavPageSwitcher } from '../../../../../frontend/js/shared/components/sidebar/ds-nav-page-switcher'
+import { DsNavPageSwitcher } from '../frontend/js/ds-nav-page-switcher'
 import { SplitTestProvider } from '@/shared/context/split-test-context'
 import { UserSettingsProvider } from '@/shared/context/user-settings-context'
 

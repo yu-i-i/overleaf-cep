@@ -9,6 +9,7 @@ import SubscriptionLocator from '../Subscription/SubscriptionLocator.mjs'
 import _ from 'lodash'
 import { expressify } from '@overleaf/promise-utils'
 import Features from '../../infrastructure/Features.mjs'
+import { getSection } from '../SiteSettings/SiteSettingsManager.mjs'
 import Modules from '../../infrastructure/Modules.mjs'
 import SplitTestHandler from '../SplitTests/SplitTestHandler.mjs'
 
@@ -270,11 +271,48 @@ const UserPagesController = {
     if (Object.keys(req.query).length !== 0) {
       metadata.robotsNoindexNofollow = true
     }
-    res.render('user/login', {
-      title: Settings.nav?.login_support_title || 'login',
-      login_support_title: Settings.nav?.login_support_title,
-      login_support_text: Settings.nav?.login_support_text,
-      metadata,
+    // SSO multi-provider (2026-08-29): the login view reads
+    // settings.ldap/saml/oidc (buttons, form hints). Those are now
+    // admin-managed (site settings; stored wins over env) — merge the
+    // resolved sections into a REQUEST-LOCAL settings object (never
+    // mutate the global Settings object).
+    return Promise.all([
+      getSection('sso-saml', Settings).catch(() => ({ enabled: false })),
+      getSection('sso-oidc', Settings).catch(() => ({ enabled: false })),
+      getSection('sso-ldap', Settings).catch(() => ({ enabled: false })),
+    ]).then(([saml, oidc, ldap]) => {
+      res.locals.settings = {
+        ...Settings,
+        saml: {
+          enable: saml.enabled === true,
+          identityServiceName:
+            saml.identityServiceName || 'Log in with SAML IdP',
+        },
+        oidc: {
+          enable: oidc.enabled === true,
+          identityServiceName:
+            oidc.identityServiceName || 'Log in with SSO (OIDC)',
+        },
+        ldap: {
+          enable: ldap.enabled === true,
+          placeholder: ldap.placeholder || 'Username',
+        },
+      }
+      res.render('user/login', {
+        title: Settings.nav?.login_support_title || 'login',
+        login_support_title: Settings.nav?.login_support_title,
+        login_support_text: Settings.nav?.login_support_text,
+        metadata,
+      })
+    }).catch((err) => {
+      // SSO resolution must never break the login page.
+      logger.warn({ err }, 'login page: SSO section resolution failed')
+      res.render('user/login', {
+        title: Settings.nav?.login_support_title || 'login',
+        login_support_title: Settings.nav?.login_support_title,
+        login_support_text: Settings.nav?.login_support_text,
+        metadata,
+      })
     })
   },
 

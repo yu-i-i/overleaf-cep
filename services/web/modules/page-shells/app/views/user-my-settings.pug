@@ -1,0 +1,156 @@
+extends ../../../../app/views/layout-react.pug
+//- PSH — /user/mysettings shell (N-2 STRUCTURAL REBUILD, 2026-09-01).
+//- Same architecture as admin-panel.pug — the exact /admin/site mirror
+//- (manage-site-react.pug + site-settings-page.tsx), WITHOUT the red admin
+//- gradient (user page): layout navbar suppressed, shared React DefaultNavbar
+//- INSIDE .user-ds-nav-page, the .user-list-sidebar-wrapper-react COLUMN wrapper
+//- around the sidebar (was missing — the left column), content column INSIDE
+//- .user-list-wrapper (was outside — content below the sidebar), shared React
+//- account menu in .ds-nav-sidebar-lower (the static one was dead on the React
+//- layout), footer + cookie banner in the golden's slots. The upstream
+//- `pages/user/settings` React app (#settings-page-root) is UNCHANGED.
+
+block entrypointVar
+	- entrypoint = 'pages/user/settings'
+
+block vars
+	- isWebsiteRedesign = true
+	// Golden parity (manage-site-react.pug): this page renders its own
+	// navbar / footer / cookie banner within the DS-nav page div.
+	- const suppressNavContentLinks = true
+	- const suppressNavbar = true
+	- const suppressFooter = true
+	- const suppressPugCookieBanner = true
+
+block append meta
+	// N-2 (2026-08-31, user re-report 2a): the whole page follows the SAME
+	// overall theme as /admin/site (ace.overallTheme) — one theme store for
+	// admin + user pages.
+	meta(name='ol-adminOverallTheme' content=(user && user.ace && user.ace.overallTheme) || '')
+	// N-2 structural rebuild (2026-09-01): the shared DS-nav chrome reads
+	// its theme from ol-userSettings (golden /admin/site pattern) and the
+	// theme toggle from ol-overallThemes (res local — same as the golden
+	// manage-users / manage-projects views).
+	meta(name='ol-userSettings' data-type='json' content=userSettings)
+	meta(name='ol-overallThemes' data-type='json' content=overallThemes)
+	script(type="text/javascript", nonce=scriptNonce).
+		(function () {
+		  function apply() {
+		    try {
+		      var el = document.querySelector('meta[name=ol-adminOverallTheme]');
+		      if (!el) return;
+		      var v = el.getAttribute('content') || '';
+		      var prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		      var dark = v === 'system' ? prefersDark : v !== 'light-';
+		      document.body.dataset.theme = dark ? 'default' : 'light';
+		    } catch (e) {}
+		  }
+		  if (document.body) apply();
+		  else document.addEventListener('DOMContentLoaded', apply);
+		})();
+	meta(name='ol-mySettingsShell' content='true')
+	meta(name='ol-hasPassword' data-type='boolean' content=hasPassword)
+	meta(
+		name='ol-shouldAllowEditingDetails'
+		data-type='boolean'
+		content=shouldAllowEditingDetails
+	)
+	meta(name='ol-oauthProviders' data-type='json' content=oauthProviders)
+	meta(name='ol-institutionLinked' data-type='json' content=institutionLinked)
+	meta(name='ol-samlError' data-type='json' content=samlError)
+	meta(
+		name='ol-institutionEmailNonCanonical'
+		content=institutionEmailNonCanonical
+	)
+
+	meta(name='ol-reconfirmedViaSAML' content=reconfirmedViaSAML)
+	meta(name='ol-reconfirmationRemoveEmail' content=reconfirmationRemoveEmail)
+	meta(name='ol-samlBeta' content=samlBeta)
+	meta(name='ol-ssoErrorMessage' content=ssoErrorMessage)
+	meta(name='ol-thirdPartyIds' data-type='json' content=thirdPartyIds || {})
+	meta(
+		name='ol-passwordStrengthOptions'
+		data-type='json'
+		content=settings.passwordStrengthOptions || {}
+	)
+	meta(
+		name='ol-isExternalAuthenticationSystemUsed'
+		data-type='boolean'
+		content=externalAuthenticationSystemUsed()
+	)
+	meta(name='ol-user' data-type='json' content=user)
+	meta(name='ol-showAiFeatures' data-type='boolean' content=showAiFeatures)
+	meta(name='ol-labsExperiments' data-type='json' content=labsExperiments)
+	meta(name='ol-dropbox' data-type='json' content=dropbox)
+	meta(name='ol-github' data-type='json' content=github)
+	meta(name='ol-projectSyncSuccessMessage' content=projectSyncSuccessMessage)
+	meta(
+		name='ol-personalAccessTokens'
+		data-type='json'
+		content=personalAccessTokens
+	)
+	meta(name='ol-emailAddressLimit' data-type='number' content=emailAddressLimit)
+	meta(
+		name='ol-currentManagedUserAdminEmail'
+		data-type='string'
+		content=currentManagedUserAdminEmail
+	)
+	meta(name='ol-gitBridgeEnabled' data-type='boolean' content=gitBridgeEnabled)
+	meta(name='ol-isSaas' data-type='boolean' content=isSaas)
+	meta(
+		name='ol-memberOfSSOEnabledGroups'
+		data-type='json'
+		content=memberOfSSOEnabledGroups
+	)
+	meta(name='ol-capabilities' data-type='json' content=capabilities)
+
+block content
+	ol-admin-shell-marker(style='display:none' data-shell='my-settings')
+	// N-2 (2026-09-01 structural rebuild): EXACT /admin/site tree:
+	// page div > shared React navbar mount + .user-list-wrapper >
+	// [sidebar COLUMN wrapper (nav + ds-nav-sidebar-lower with the shared
+	// React account menu + CE+), content-and-messages column (h1 +
+	// settings app + footer, cookie banner)]. Theme-aware in both themes.
+	.user-ds-nav-page.website-redesign.manage-extensions-page
+		// Shared React navbar (the SAME DefaultNavbar as /admin/site),
+		// mounted INSIDE the page div so the DS-nav CSS applies.
+		#my-settings-navbar-root
+		.user-list-wrapper
+			.user-list-sidebar-wrapper-react.d-none.d-md-flex.manage-extensions-sidebar
+				nav.flex-grow.flex-shrink(role='navigation' aria-label='Settings sections')
+					.user-list-sidebar-scroll
+						ul.list-unstyled.user-list-filters
+							li.dropdown-header My settings
+							li.my-settings-nav-item
+								button(type='button' data-target='#update-account-info') Update account info
+							li.my-settings-nav-item
+								button(type='button' data-target='#password-change-form') Update password
+							li.my-settings-nav-item
+								button(type='button' data-target='#project-sync') Project synchronisation
+							li.my-settings-nav-item
+								button(type='button' data-target='#references') Reference managers
+							li.my-settings-nav-item
+								button(type='button' data-target='#linked-accounts') Linked accounts
+							li.my-settings-nav-item
+								button(type='button' data-target-text='Sessions') Sessions
+				.ds-nav-sidebar-lower
+					nav.d-flex.flex-row.gap-3.mb-2(aria-label='Account and help')
+						// Shared React account menu (email, Account settings,
+						// Theme toggle, Log out) — same menu as /admin/site.
+						#my-settings-account-root
+					.ds-nav-ds-name(translate='no')
+						span CE+
+			.user-ds-nav-content-and-messages
+				.user-ds-nav-content
+					.user-ds-nav-main
+						main(aria-labelledby='main-content')
+							.user-list-header-row
+								h1#main-content.user-list-title.text-truncate.d-none.d-md-block(tabindex='-1') My settings
+							#settings-page-root
+					// Golden footer slot (inside the content column).
+					#my-settings-footer-root
+				// Golden cookie-banner slot.
+				#my-settings-cookie-root
+
+	each file in entrypointScripts('modules/page-shells/pages/my-settings-shell')
+		script(type='text/javascript' nonce=scriptNonce src=file)

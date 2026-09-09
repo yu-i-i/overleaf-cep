@@ -807,6 +807,20 @@ export default defineConfig([
     },
   },
   {
+    files: ['modules/bib-editor/**/*.{js,mjs,cjs,ts,tsx}'],
+    rules: {
+      // The bib-editor module carries its own package.json (dev tooling:
+      // vitest/jsdom), but its app/ and frontend/ code shares the web
+      // app's dependencies — allow both package.json files.
+      'import/no-extraneous-dependencies': [
+        'error',
+        {
+          packageDir: ['.', 'modules/bib-editor'],
+        },
+      ],
+    },
+  },
+  {
     files: ['scripts/learn/checkSanitize/*.js'],
 
     rules: {

@@ -1,5 +1,11 @@
 import ProjectDeleter from '../Project/ProjectDeleter.mjs'
 import EditorController from './EditorController.mjs'
+import { Project } from '../../models/Project.mjs'
+import { File } from '../../models/File.mjs'
+import DocstoreManager from '../Docstore/DocstoreManager.mjs'
+import ProjectEntityUpdateHandler from '../Project/ProjectEntityUpdateHandler.mjs'
+import EditorRealTimeController from './EditorRealTimeController.mjs'
+import { generateDuplicateName } from '../Project/ProjectDuplicator.mjs'
 import ProjectGetter from '../Project/ProjectGetter.mjs'
 import AuthorizationManager from '../Authorization/AuthorizationManager.mjs'
 import ProjectEditorHandler from '../Project/ProjectEditorHandler.mjs'
@@ -15,9 +21,126 @@ import { z, zz, parseReq } from '../../infrastructure/Validation.mjs'
 
 const ProjectAccess = CollaboratorsGetter.ProjectAccess
 
+/**
+ * Walk the project's inline folder tree (project.rootFolder) to locate the
+ * entity with the given id. Entities are stored inline on the project document
+ * (this CE build does not use a separate `folders` collection), so we walk
+ * project.rootFolder directly. Returns { folder, ref, kind: 'doc' | 'file' }|null.
+ */
+function _findEntityInProject(project, targetId) {
+  const walk = (folder) => {
+    for (const d of folder.docs || []) {
+      if (d._id && d._id.toString() === targetId) {
+        return { folder, ref: d, kind: 'doc' }
+      }
+    }
+    for (const f of folder.fileRefs || []) {
+      if (f._id && f._id.toString() === targetId) {
+        return { folder, ref: f, kind: 'file' }
+      }
+    }
+    for (const sub of folder.folders || []) {
+      const found = walk(sub)
+      if (found) return found
+    }
+    return null
+  }
+  for (const root of project.rootFolder || []) {
+    const found = walk(root)
+    if (found) return found
+  }
+  return null
+}
+
+/**
+ * New 2 (2026-08-28): duplicate a single file in the project file tree.
+ * - text entities (doc: tex/bib/txt/...) — their content lives in the
+ *   docstore, so the copy is created with addDoc + the source lines
+ * - binary entities (file: jpg/png/pdf/...) — the filestore blob already
+ *   exists under the source hash, so the copy just references it
+ * Naming: a.b -> a_copy.b -> a_copy(1).b ... (generateDuplicateName).
+ */
+async function duplicateEntity(req, res, next) {
+  const projectId = req.params.Project_id
+  const entityType = req.params.entity_type
+  const entityId = req.params.entity_id
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  if (entityType !== 'doc' && entityType !== 'file') {
+    return res.sendStatus(400)
+  }
+  try {
+    const project = await Project.findById(projectId).exec()
+    const rootFolderId = project?.rootFolder?.[0]?._id
+    if (!project || !rootFolderId) {
+      return res.sendStatus(404)
+    }
+    const found = _findEntityInProject(project, entityId)
+    if (!found || found.kind !== entityType) {
+      return res.sendStatus(404)
+    }
+    const { folder, ref } = found
+    const folderId = folder._id.toString()
+    const siblings = [
+      ...(folder.docs || []).map(d => d.name),
+      ...(folder.fileRefs || []).map(f => f.name),
+    ]
+    const newName = generateDuplicateName(ref.name, siblings)
+
+    if (entityType === 'doc') {
+      let lines = []
+      try {
+        ;({ lines } = await DocstoreManager.promises.getDoc(
+          projectId.toString(),
+          entityId.toString()
+        ))
+      } catch (err) {
+        lines = []
+      }
+      const doc = await EditorController.promises.addDoc(
+        projectId,
+        folderId,
+        newName,
+        lines || [],
+        'editor',
+        userId
+      )
+      return res.json(doc)
+    }
+
+    // The filestore blob already exists under the source hash: build a fresh
+    // File doc (own _id) that shares it — no re-upload (createdBlob: false).
+    const fileRef = new File({
+      name: newName,
+      hash: ref.hash,
+      linkedFileData: ref.linkedFileData,
+    })
+    const { fileRef: created } =
+      await ProjectEntityUpdateHandler.promises.duplicateFile(
+        projectId,
+        folderId,
+        fileRef,
+        'editor',
+        userId
+      )
+    EditorRealTimeController.emitToRoom(
+      projectId,
+      'reciveNewFile',
+      folderId,
+      created,
+      'editor',
+      ref.linkedFileData,
+      userId
+    )
+    return res.json(created)
+  } catch (err) {
+    return next(err)
+  }
+}
+
 export default {
   joinProject: expressify(joinProject),
   addDoc: expressify(addDoc),
+  duplicateEntity: expressify(duplicateEntity),
   addFolder: expressify(addFolder),
   renameEntity: expressify(renameEntity),
   moveEntity: expressify(moveEntity),

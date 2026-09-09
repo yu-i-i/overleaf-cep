@@ -1,0 +1,1 @@
+10 * * * *   root  /overleaf/cron/collect-instance-stats.sh >> /var/log/overleaf/cron-collect-instance-stats.log 2>&1

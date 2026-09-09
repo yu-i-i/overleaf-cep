@@ -1,7 +1,7 @@
 import Path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import _ from 'lodash'
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import Settings from '@overleaf/settings'
 import Metrics from '@overleaf/metrics'
 import logger from '@overleaf/logger'
@@ -103,7 +103,7 @@ async function manageUsersPage(req, res, next) {
 }
 
 async function registerNewUser(req, res, next) {
-  const { email, isExternal, isAdmin } = req.body
+  const { email, isExternal, isAdmin, canManageTemplates } = req.body
   if (email == null || email === '') {
     return HttpErrorHandler.unprocessableEntity(req, res, 'Email address is empty')
   }
@@ -138,7 +138,13 @@ async function registerNewUser(req, res, next) {
       .reverse()
       .join('')
     const update = {
-      $set: { isAdmin, emails: [{ email, reversedHostname, confirmedAt: Date.now() }] },
+      $set: {
+        isAdmin,
+        emails: [{ email, reversedHostname, confirmedAt: Date.now() }],
+        ...(canManageTemplates
+          ? { 'flags.canManageTemplates': true }
+          : {}),
+      },
     }
     if (isExternal) {
       update.$unset = { hashedPassword: "" }
@@ -227,6 +233,7 @@ async function _getUsers(
     signUpDate: 1,
     loginCount: 1,
     isAdmin: 1,
+    flags: 1,
     hashedPassword: 1,
     samlIdentifiers: 1,
     thirdPartyIdentifiers: 1,
@@ -323,6 +330,7 @@ function _formatUserInfo(user, maxDate) {
     firstName: user.first_name,
     lastName: user.last_name,
     isAdmin: user.isAdmin,
+    canManageTemplates: Boolean(user.flags?.canManageTemplates),
     loginCount: user.loginCount,
     signUpDate: user.signUpDate,
     lastActive: user.lastActive,
@@ -401,7 +409,7 @@ async function deleteUser(req, res, next) {
       skipEmail: !sendEmail,
     })
   } catch (err) {
-    logger.warn({ deleterUser, userId }, err.message)
+    logger.warn({ deleterUserId, userId }, err.message)
     if (toUserId) {
       try { // failed to delete user, try to transfer all projects back
         await OwnershipTransferHandler.promises.transferAllProjectsToUser({
@@ -432,7 +440,7 @@ async function purgeDeletedUser(req, res, next) {
   try {
     await UserDeleter.promises.expireDeletedUser(userId)
   } catch (err) {
-    logger.warn({ restorerId, userId }, err.message)
+    logger.warn({ deleterUserId, userId }, err.message)
     const message = 'Something went wrong. The user is already deleted?'
     return HttpErrorHandler.unprocessableEntity(req, res, message)
   }
@@ -551,11 +559,39 @@ async function updateUser(req, res, next) {
 
   for (let [key, value] of Object.entries(updatesInput)) {
     if (key === 'email') continue
+    // R6 (2026-08-29): template gallery admin flag — stored as
+    // flags.canManageTemplates (see the special-case below), not as a top
+    // level field. Skip it in the generic loop.
+    if (key === 'canManageTemplates') continue
 
     const newValue = typeof value === 'string' ? value.trim() : value
     if (newValue === user[key]) continue
 
     update[key] = newValue
+  }
+
+  if ('canManageTemplates' in updatesInput) {
+    // R9 item 3 (2026-08-29): site admins are template gallery admins
+    // implicitly (TemplateAuthorizationHelper), so removing the flag from
+    // them via this table is a conflict — not allowed.
+    if (updatesInput.canManageTemplates === false) {
+      const fullUser = await User.findById(userId)
+        .select('isAdmin')
+        .lean()
+        .exec()
+      if (fullUser && Boolean(fullUser.isAdmin)) {
+        return HttpErrorHandler.conflict(
+          req,
+          res,
+          'Site admins are template gallery admins implicitly and cannot be removed from this role here.',
+          { userId }
+        )
+      }
+    }
+    update.flags = {
+      ...(user.flags ? user.flags.toObject ? user.flags.toObject() : { ...user.flags } : {}),
+      canManageTemplates: Boolean(updatesInput.canManageTemplates),
+    }
   }
 
   Object.assign(user, update)
@@ -586,6 +622,37 @@ async function updateUser(req, res, next) {
   return res.json(update)
 }
 
+// R6 item 7 (2026-08-29): site-admin console → Templates tab table of the
+// users who carry the template gallery admin flag.
+async function templateAdmins(req, res) {
+  // R11 item 12 (2026-08-30): the list was missing site admins — the query
+  // only covered the `flags.canManageTemplates` grant, while admins
+  // created without that flag (incl. the main site admin) never appeared.
+  // Union of both classes; de-duplicated by _id.
+  const users = await User.find(
+    { $or: [{ 'flags.canManageTemplates': true }, { isAdmin: true }] },
+    { _id: 1, email: 1, first_name: 1, last_name: 1, isAdmin: 1, flags: 1 }
+  ).lean().exec()
+  const seen = new Set()
+  const rows = []
+  for (const u of users) {
+    const id = String(u._id)
+    if (seen.has(id)) continue
+    seen.add(id)
+    rows.push({
+      id,
+      email: u.email,
+      firstName: u.first_name || '',
+      lastName: u.last_name || '',
+      isAdmin: Boolean(u.isAdmin),
+      // true only when the template-admin flag itself is set — that is
+      // the only re-voke-able grant (site admin status is not this role).
+      hasTemplateFlag: Boolean(u.flags?.canManageTemplates),
+    })
+  }
+  res.json({ users: rows })
+}
+
 async function _getActivationLink(userId) {
   try {
     const tokenDoc = await db.tokens.findOne({
@@ -608,7 +675,19 @@ async function _getActivationLink(userId) {
 async function getAdditionalUserInfo(req, res, next) {
   const { userId } = req.params
   const activationLink = await _getActivationLink(userId)
-  res.json({ activationLink })
+  // R9 item 7 (2026-08-29): always-fresh scoped roles for the update
+  // account modal (the list rows can be stale after other edits).
+  let canManageTemplates = false
+  try {
+    const dbUser = await User.findById(userId)
+      .select('flags.canManageTemplates')
+      .lean()
+      .exec()
+    canManageTemplates = Boolean(dbUser?.flags?.canManageTemplates)
+  } catch {
+    // leave false — the modal keeps its (possibly stale) value
+  }
+  res.json({ activationLink, canManageTemplates })
 }
 
 export default {
@@ -622,4 +701,5 @@ export default {
   restoreDeletedUser: expressify(restoreDeletedUser),
   purgeDeletedUser: expressify(purgeDeletedUser),
   updateUser: expressify(updateUser),
+  templateAdmins: expressify(templateAdmins),
 }

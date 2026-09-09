@@ -52,6 +52,8 @@ export default function ManageTemplateModalContent({
   // Only the trimmed name gates submission
   const valid = (template.name ?? '').trim()
 
+  // Intentional mount-only fetch: prefill from a template with the same
+  // name; projectName is fixed for the modal's lifetime.
   useEffect(() => {
     const queryParams = new URLSearchParams({ key: 'name', val: projectName })
     getJSON(`/api/template?${queryParams}`)
@@ -66,7 +68,7 @@ export default function ManageTemplateModalContent({
         }))
       })
       .catch(debugConsole.error)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()

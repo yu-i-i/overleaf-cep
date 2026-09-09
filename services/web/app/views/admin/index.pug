@@ -1,6 +1,26 @@
 extends ../layout-marketing
 include ../_mixins/bookmarkable_tabset
 
+block append meta
+	meta(name='ol-adminOverallTheme' content=adminOverallTheme || '')
+	script(type="text/javascript", nonce=scriptNonce).
+		(function () {
+		  function apply() {
+		    try {
+		      var el = document.querySelector('meta[name^="ol-admin"]');
+		      if (!el) return; // not a themed page state: keep layout default
+		      var v = el.getAttribute('content');
+		      // Mirrors the core resolution: 'system' -> follow the OS;
+		      // 'light-' -> light; '' (unset default) or other -> dark.
+		      var prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		      var dark = v === 'system' ? prefersDark : v !== 'light-';
+		      document.body.dataset.theme = dark ? 'default' : 'light';
+		    } catch (e) {}
+		  }
+		  if (document.body) apply();
+		  else document.addEventListener('DOMContentLoaded', apply);
+		})();
+
 block content
 	#main-content.content.content-alt
 		.container

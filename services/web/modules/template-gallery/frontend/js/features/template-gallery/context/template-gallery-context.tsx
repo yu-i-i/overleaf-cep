@@ -52,6 +52,8 @@ export function TemplateGalleryProvider({ children }: TemplateGalleryProviderPro
 
   const category = getMeta('ol-templateCategory') || 'all'
 
+  // Intentional: re-fetch only when runAsync changes identity; the gallery
+  // re-mounts on category/sort changes (page navigation).
   useEffect(() => {
     runAsync(getTemplates(sort, category))
       .then(data => {
@@ -61,7 +63,7 @@ export function TemplateGalleryProvider({ children }: TemplateGalleryProviderPro
       .catch(debugConsole.error)
       .finally(() => {
       })
-  }, [runAsync])
+  }, [runAsync]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let filteredTemplates = [...loadedTemplates]
@@ -69,7 +71,7 @@ export function TemplateGalleryProvider({ children }: TemplateGalleryProviderPro
     if (searchText.length) {
       filteredTemplates = filteredTemplates.filter(template =>
         template.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        template.description.toLowerCase().includes(searchText.toLowerCase())
+        (template.description || '').toLowerCase().includes(searchText.toLowerCase())
       )
     }
 

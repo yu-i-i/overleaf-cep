@@ -2,6 +2,11 @@ extends ../../../../app/views/layout-website-redesign
 
 block vars
 	- isWebsiteRedesign = true
+	// 2026-09-01 (user decision): /register header has NO nav elements
+	// (brand only), in every session state — same as /login. These pages are
+	// not visited by logged-in users anyway; the content already carries
+	// "Login here" links.
+	- suppressNavbarRight = true
 
 block content
 	main#main-content.content

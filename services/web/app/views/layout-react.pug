@@ -30,6 +30,8 @@ block append meta
 			canDisplaySplitTestMenu,
 			canDisplaySurveyMenu,
 			canDisplayScriptLogMenu,
+			canDisplayInstanceStats:
+				!!(settings.instanceStats && settings.instanceStats.enabled),
 			enableUpgradeButton,
 			suppressNavbarRight: !!suppressNavbarRight,
 			suppressNavContentLinks: !!suppressNavContentLinks,

@@ -6,17 +6,72 @@ import UserInfoManager from '../../../../app/src/Features/User/UserInfoManager.m
 import UserInfoController from '../../../../app/src/Features/User/UserInfoController.mjs'
 import DocstoreManager from '../../../../app/src/Features/Docstore/DocstoreManager.mjs'
 import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.mjs'
-import CollaboratorsGetter from '../../../../app/src/Features/Collaborators/CollaboratorsGetter.mjs'
 import { Project } from '../../../../app/src/models/Project.mjs'
+import { OError, NotFoundError, ForbiddenError } from '../../../../app/src/Features/Errors/Errors.js'
 import pLimit from 'p-limit'
+
+function isPlainObject(v) {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+const USER_ID_RE = /^[0-9a-fA-F]{24}$/
+
+// Validate the track-changes state body: only the known keys, with the
+// known types, so user input can never write operator-style garbage into
+// project.track_changes (it is persisted verbatim by updateOne).
+//
+// Stored shape (what the review panel reads back):
+//   true | false | { [userId|'__guests__']: boolean }
+function validateTrackChangesState(body) {
+  const { on, on_for, on_for_guests } = body
+  if (on !== undefined && typeof on !== 'boolean') {
+    throw new OError('"on" must be a boolean', { status: 400 })
+  }
+  if (on_for !== undefined) {
+    if (!isPlainObject(on_for)) {
+      throw new OError('"on_for" must be an object', { status: 400 })
+    }
+    for (const [userId, enabled] of Object.entries(on_for)) {
+      if (userId !== '__guests__' && !USER_ID_RE.test(userId)) {
+        throw new OError('"on_for" keys must be user ids', { status: 400 })
+      }
+      if (enabled !== undefined && typeof enabled !== 'boolean') {
+        throw new OError('"on_for" values must be booleans', { status: 400 })
+      }
+    }
+  }
+  if (on_for_guests !== undefined && typeof on_for_guests !== 'boolean') {
+    throw new OError('"on_for_guests" must be a boolean', { status: 400 })
+  }
+  if (on === undefined && on_for === undefined && on_for_guests === undefined) {
+    throw new OError('No track-changes fields provided', { status: 400 })
+  }
+
+  const state = {}
+  if (isPlainObject(on_for)) {
+    for (const [k, v] of Object.entries(on_for)) state[k] = v
+  }
+  if (on_for_guests !== undefined) state.__guests__ = on_for_guests
+  if (on === true) return true
+  if (on === false && Object.keys(state).length === 0) return false
+  return state
+}
 
 const TrackChangesController = {
   async trackChanges(req, res, next) {
+    let state
+    try {
+      state = validateTrackChangesState(req.body || {})
+    } catch (err) {
+      // Answer 400 directly: CE's generic error pipeline does not map
+      // OError info.status to a 4xx response.
+      res.status(400)
+      res.json({ message: err.message || 'Invalid track-changes payload' })
+      return
+    }
     try {
       const { project_id } = req.params
-      let state = req.body.on || req.body.on_for
-      if (req.body.on_for_guests && !req.body.on) state.__guests__ = true
-      await Project.updateOne({_id: project_id}, {track_changes: state}).exec()  //do not wait?
+      await Project.updateOne({_id: project_id}, {track_changes: state}).exec()
       EditorRealTimeController.emitToRoom(project_id, 'toggle-track-changes', state)
       res.sendStatus(204)
     } catch (err) {
@@ -27,8 +82,10 @@ const TrackChangesController = {
     try {
       const { project_id, doc_id } = req.params
       const change_ids = req.body.change_ids
-      EditorRealTimeController.emitToRoom(project_id, 'accept-changes', doc_id, change_ids)
+      // Apply the change FIRST; only announce it to the room once it has
+      // been applied, so a failure never desynchronises collaborators.
       await DocumentUpdaterHandler.promises.acceptChanges(project_id, doc_id, change_ids)
+      EditorRealTimeController.emitToRoom(project_id, 'accept-changes', doc_id, change_ids)
       res.sendStatus(204)
     } catch (err) {
       next(err)
@@ -96,6 +153,14 @@ const TrackChangesController = {
       const { content } = req.body
       const user_id = SessionManager.getLoggedInUserId(req.session)
       if (!user_id) throw new Error('no logged-in user')
+      // Only the author may edit their own message.
+      const message = await ChatApiHandler.promises.getThreadMessage(project_id, thread_id, message_id)
+      if (!message) {
+        throw new NotFoundError('Message not found')
+      }
+      if (String(message.user_id) !== String(user_id)) {
+        throw new ForbiddenError('Not allowed to edit this message', { user_id })
+      }
       await ChatApiHandler.promises.editMessage(project_id, thread_id, message_id, user_id, content)
       EditorRealTimeController.emitToRoom(project_id, 'edit-message', thread_id, message_id, content)
       res.sendStatus(204)
@@ -106,7 +171,17 @@ const TrackChangesController = {
   async deleteMessage(req, res, next) {
     try {
       const { project_id, thread_id, message_id } = req.params
-      await ChatApiHandler.promises.deleteMessage(project_id, thread_id, message_id)
+      const user_id = SessionManager.getLoggedInUserId(req.session)
+      if (!user_id) throw new Error('no logged-in user')
+      // Only the author may delete their own message.
+      const message = await ChatApiHandler.promises.getThreadMessage(project_id, thread_id, message_id)
+      if (!message) {
+        throw new NotFoundError('Message not found')
+      }
+      if (String(message.user_id) !== String(user_id)) {
+        throw new ForbiddenError('Not allowed to delete this message', { user_id })
+      }
+      await ChatApiHandler.promises.deleteUserMessage(project_id, thread_id, user_id, message_id)
       EditorRealTimeController.emitToRoom(project_id, 'delete-message', thread_id, message_id)
       res.sendStatus(204)
     } catch (err) {

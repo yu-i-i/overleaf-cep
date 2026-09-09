@@ -84,7 +84,11 @@ const parseTextExtensions = function (extensions) {
 const httpPermissionsPolicy = {
   blocked: [
     'accelerometer',
-    'attribution-reporting',
+    // 2026-08-31 (R12-17): 'attribution-reporting' removed — it is no
+    // longer a valid Permissions-Policy directive (replaced by the
+    // Attribution Reporting API). Modern Chrome logs
+    // "Error with Permissions-Policy header: Unrecognized feature:
+    // 'attribution-reporting'" on every page, polluting the console.
     'browsing-topics',
     'camera',
     'display-capture',
@@ -219,18 +223,16 @@ module.exports = {
   // options incase you want to run some services on remote hosts.
   apis: {
     web: {
-      url: `http://${
-        process.env.WEB_API_HOST || process.env.WEB_HOST || '127.0.0.1'
-      }:${process.env.WEB_API_PORT || process.env.WEB_PORT || 3000}`,
+      url: `http://${process.env.WEB_API_HOST || process.env.WEB_HOST || '127.0.0.1'
+        }:${process.env.WEB_API_PORT || process.env.WEB_PORT || 3000}`,
       user: httpAuthUser,
       pass: httpAuthPass,
     },
     documentupdater: {
-      url: `http://${
-        process.env.DOCUPDATER_HOST ||
+      url: `http://${process.env.DOCUPDATER_HOST ||
         process.env.DOCUMENT_UPDATER_HOST ||
         '127.0.0.1'
-      }:3003`,
+        }:3003`,
     },
     geoIpLookup: {
       cacheSize: intFromEnv('GEO_IP_LOOKUP_CACHE_SIZE', 10_000),
@@ -298,8 +300,7 @@ module.exports = {
     v1_history: {
       url:
         process.env.V1_HISTORY_URL ||
-        `http://${process.env.V1_HISTORY_HOST || '127.0.0.1'}:${
-          process.env.V1_HISTORY_PORT || '3100'
+        `http://${process.env.V1_HISTORY_HOST || '127.0.0.1'}:${process.env.V1_HISTORY_PORT || '3100'
         }/api`,
       urlForGitBridge: process.env.V1_HISTORY_URL_FOR_GIT_BRIDGE,
       user: process.env.V1_HISTORY_USER || 'staging',
@@ -844,7 +845,24 @@ module.exports = {
 
     showSubscriptionLink: false,
 
-    header_extras: [],
+    // SaaS layout parity (reference /project + /library captures): Library
+    // and Templates links appear in the top navbar AND in the account menu
+    // (sidebar lower section). Each is independently gated:
+    //  - Library: bib-editor module switch (OVERLEAF_BIB_LIBRARY, default on)
+    //  - Templates: shown only for logged-in users (SaaS behavior)
+    header_extras: [
+      process.env.OVERLEAF_BIB_LIBRARY !== 'false' && {
+        text: 'Library',
+        url: '/library',
+        class: 'subdued',
+      },
+      {
+        text: 'Templates',
+        url: '/templates',
+        class: 'subdued',
+        only_when_logged_in: true,
+      },
+    ].filter(Boolean),
   },
   // Example:
   //   header_extras: [{text: "Some Page", url: "http://example.com/some/page", class: "subdued"}]
@@ -859,7 +877,7 @@ module.exports = {
       .filter(x => x !== ''),
     trustedUsersRegex: process.env.CAPTCHA_TRUSTED_USERS_REGEX
       ? // Enforce matching of the entire input.
-        new RegExp(`^${process.env.CAPTCHA_TRUSTED_USERS_REGEX}$`)
+      new RegExp(`^${process.env.CAPTCHA_TRUSTED_USERS_REGEX}$`)
       : null,
     disabled: {
       invite: true,
@@ -1063,7 +1081,12 @@ module.exports = {
       ),
     ],
     contactUsModal: [],
-    sourceEditorExtensions: [],
+    sourceEditorExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/extensions/bib-editor-extension.ts'
+      ),
+    ],
     sourceEditorVisualExtensions: [],
     sourceEditorComponents: [],
     pdfLogEntryHeaderActionComponents: [],
@@ -1081,8 +1104,22 @@ module.exports = {
     sourceEditorToolbarStartButtons: [],
     sourceEditorToolbarButtonGroups: [],
     sourceEditorToolbarComponents: [],
-    sourceEditorToolbarEndButtons: [],
-    rootContextProviders: [],
+    sourceEditorToolbarEndButtons: [
+      // tex-autoformatter module (ported 2026-08-31 from CE+ autoformat,
+      // commit e5edadaa): toolbar end button that formats the current
+      // document via POST /api/format-tex (tex-fmt for TeX, bibtex-tidy
+      // for .bib).
+      Path.resolve(
+        __dirname,
+        '../modules/tex-autoformatter/frontend/components/autoformat-button'
+      ),
+    ],
+    rootContextProviders: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/context/bib-editor-provider.tsx'
+      ),
+    ],
     mainEditorLayoutModals: [
       Path.resolve(
         __dirname,
@@ -1137,7 +1174,12 @@ module.exports = {
     ssoCertificateInfo: [],
     v1ImportDataScreen: [],
     snapshotUtils: [],
-    visualEditorProviders: [],
+    visualEditorProviders: [
+      Path.resolve(
+        __dirname,
+        '../modules/bib-editor/frontend/js/bib-editor-visual-provider.ts'
+      ),
+    ],
     usGovBanner: [],
     rollingBuildsUpdatedAlert: [],
     offlineModeToolbarButtons: [],
@@ -1221,6 +1263,12 @@ module.exports = {
     'git-bridge',
     'github-sync',
     'zotero',
+    'orcid-picker', // Import-from-ORCID picker (P2, BIB_ORCID_TEMPLATES_PLAN.md)
+    'bib-editor',
+    'tex-autoformatter', // autoformat toolbar button (N-C port, 2026-08-31)
+    'page-shells', // UI-R10 W8: /admin/panel + /user/mysettings shells importing the upstream pages
+    'instance-stats', // N-D (2026-09-01): /admin/instance-stats dashboards (gated by settings.instanceStats.enabled)
+    'ce-ui', // module hygiene (R11-12): fork CSS/components outside upstream directories (see modules/ce-ui)
   ],
   viewIncludes: {},
 
@@ -1245,6 +1293,15 @@ module.exports = {
 
   managedUsers: {
     enabled: false,
+  },
+
+  // N-D (2026-09-01): admin instance-statistics dashboards
+  // (/admin/instance-stats). The module router self-disables when
+  // `enabled` is false; retention prunes InstanceStat docs older than
+  // `retentionDays` on every collector run (see modules/instance-stats).
+  instanceStats: {
+    enabled: process.env.INSTANCE_STATS_ENABLED !== 'false',
+    retentionDays: intFromEnv('INSTANCE_STATS_RETENTION_DAYS', 365),
   },
 
   enablePandocConversions: process.env.ENABLE_PANDOC_CONVERSIONS === 'true',

@@ -8,7 +8,7 @@ import { useScrolled } from '@/features/project-list/components/sidebar/use-scro
 import { SurveyWidgetDsNav } from '@/features/project-list/components/survey-widget-ds-nav'
 import { SidebarLowerSection } from '@/shared/components/sidebar/sidebar-lower-section'
 import { isSplitTestEnabled } from '@/utils/splitTestUtils'
-import { DsNavPageSwitcher } from '@/shared/components/sidebar/ds-nav-page-switcher'
+import { DsNavPageSwitcher } from '../../../../../../modules/ce-ui/frontend/js/ds-nav-page-switcher'
 import { useProjectListContext } from '@/features/project-list/context/project-list-context'
 
 function SidebarDsNav() {
