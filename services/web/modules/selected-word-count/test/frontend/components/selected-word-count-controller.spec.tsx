@@ -24,13 +24,59 @@ describe('<SelectedWordCountController />', function () {
     })
 
     cy.findByRole('dialog').within(() => {
-      cy.findByText('Word Count').should('exist')
+      cy.findByText('Word count').should('exist')
       cy.findByText('Total Words').should('exist')
+      cy.findByText('Headers').should('exist')
+      cy.findByText('Math Inline').should('exist')
+      cy.findByText('Math Display').should('exist')
       cy.findByTestId('selected-word-count-total').should('have.text', '2')
+      cy.findByTestId('selected-word-count-headers').should('have.text', '0')
+      cy.findByTestId('selected-word-count-math-inline').should(
+        'have.text',
+        '0'
+      )
+      cy.findByTestId('selected-word-count-math-display').should(
+        'have.text',
+        '0'
+      )
       cy.findByRole('button', { name: 'Close' }).click()
     })
 
     cy.findByRole('dialog').should('not.exist')
+  })
+
+  it('shows the selected header and math breakdown', function () {
+    const content =
+      '\\section{Heading words}\n' +
+      'Body text $x+y$ and \\[z=1\\]'
+    const doc = Text.of(content.split('\n'))
+
+    cy.mount(
+      <EditorProviders>
+        <SelectedWordCountController />
+      </EditorProviders>
+    )
+
+    cy.then(() => {
+      openSelectedWordCount({
+        doc,
+        from: 0,
+        to: content.length,
+      })
+    })
+
+    cy.findByRole('dialog').within(() => {
+      cy.findByTestId('selected-word-count-total').should('have.text', '5')
+      cy.findByTestId('selected-word-count-headers').should('have.text', '1')
+      cy.findByTestId('selected-word-count-math-inline').should(
+        'have.text',
+        '1'
+      )
+      cy.findByTestId('selected-word-count-math-display').should(
+        'have.text',
+        '1'
+      )
+    })
   })
 
   it('shows zero when the selection has no countable prose', function () {

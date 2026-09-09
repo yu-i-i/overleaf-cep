@@ -12,6 +12,13 @@ type TextNode = SourceRange & {
   text: string
 }
 
+export type SelectedWordCountResult = {
+  totalWords: number
+  headers: number
+  mathInline: number
+  mathDisplay: number
+}
+
 const replacementsMap = new Map<string, string>([
   ['aa', 'å'],
   ['AA', 'Å'],
@@ -67,14 +74,21 @@ export const countWordsInSelection = (
   content: string,
   sourceRange: SourceRange,
   segmenters: Segmenters
-): number => {
+): SelectedWordCountResult => {
+  const result: SelectedWordCountResult = {
+    totalWords: 0,
+    headers: 0,
+    mathInline: 0,
+    mathDisplay: 0,
+  }
+
   const range = {
     from: Math.max(0, Math.min(sourceRange.from, content.length)),
     to: Math.max(0, Math.min(sourceRange.to, content.length)),
   }
 
   if (range.from >= range.to) {
-    return 0
+    return result
   }
 
   const tree = LaTeXLanguage.parser.parse(content)
@@ -167,6 +181,10 @@ export const countWordsInSelection = (
       return
     }
 
+    if (intersectsRange(nodeRef)) {
+      result.headers++
+    }
+
     const contentNode = nodeRef.node.getChild('Content')
     if (contentNode) {
       iterateNode(contentNode)
@@ -183,6 +201,9 @@ export const countWordsInSelection = (
       return false
     },
     Title(nodeRef) {
+      if (intersectsRange(nodeRef)) {
+        result.headers++
+      }
       iterateNode(nodeRef)
       return false
     },
@@ -242,13 +263,27 @@ export const countWordsInSelection = (
     BeginEnv() {
       return false
     },
-    Math() {
+    Math(nodeRef) {
+      if (!intersectsRange(nodeRef)) {
+        return false
+      }
+
+      const parent = nodeRef.node.parent
+      if (parent?.type.is('InlineMath') || parent?.type.is('ParenMath')) {
+        result.mathInline++
+      } else {
+        result.mathDisplay++
+      }
+
       return false
     },
     'ShortTextArgument ShortOptionalArg'() {
       return false
     },
     SectioningArgument(nodeRef) {
+      if (intersectsRange(nodeRef)) {
+        result.headers++
+      }
       iterateNode(nodeRef)
       return false
     },
@@ -302,14 +337,13 @@ export const countWordsInSelection = (
     position = textNode.to
   }
 
-  let words = 0
   for (const value of segmenters.word.segment(
     text.replace(/\w[-_]\w/g, 'aaa')
   )) {
     if (value.isWordLike) {
-      words++
+      result.totalWords++
     }
   }
 
-  return words
+  return result
 }

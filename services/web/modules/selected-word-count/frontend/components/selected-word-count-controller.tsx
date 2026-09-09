@@ -6,14 +6,17 @@ import {
   SELECTED_WORD_COUNT_OPEN_EVENT,
   type SelectedWordCountRequest,
 } from '../selected-word-count-events'
-import { countWordsInSelection } from '../utils/count-words-in-selection'
+import {
+  countWordsInSelection,
+  type SelectedWordCountResult,
+} from '../utils/count-words-in-selection'
 import SelectedWordCountModal from './selected-word-count-modal'
 
 export default function SelectedWordCountController() {
   const { spellCheckLanguage } = useProjectSettingsContext()
   const [open, setOpen] = useState(false)
   const [request, setRequest] = useState<SelectedWordCountRequest | null>(null)
-  const [wordCount, setWordCount] = useState<number | null>(null)
+  const [data, setData] = useState<SelectedWordCountResult | null>(null)
   const [error, setError] = useState(false)
 
   const segmenters = useMemo(() => {
@@ -34,7 +37,7 @@ export default function SelectedWordCountController() {
       }
 
       setRequest(detail)
-      setWordCount(null)
+      setData(null)
       setError(false)
       setOpen(true)
     }
@@ -51,12 +54,12 @@ export default function SelectedWordCountController() {
     }
 
     try {
-      const nextWordCount = countWordsInSelection(
+      const nextData = countWordsInSelection(
         request.doc.toString(),
         { from: request.from, to: request.to },
         segmenters
       )
-      setWordCount(nextWordCount)
+      setData(nextData)
     } catch (error) {
       debugConsole.error(error)
       setError(true)
@@ -67,7 +70,7 @@ export default function SelectedWordCountController() {
     <SelectedWordCountModal
       show={open}
       onClose={onClose}
-      wordCount={wordCount}
+      data={data}
       error={error}
     />
   )
