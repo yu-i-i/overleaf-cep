@@ -53,7 +53,8 @@ const OIDCAuthenticationController = {
       }
     )(req, res, next)
   },
-  async doPassportLogin(req, issuer, profile, context, idToken, accessToken, refreshToken, done) {
+  async doPassportLogin(req, issuer, uiProfile, idProfile, context, idToken, accessToken, refreshToken, params, done) {
+    const profile = uiProfile ?? idProfile //id Profile if _skipUserProfile is true
     let user, info
     try {
       if(req.session.intent === 'link') {
