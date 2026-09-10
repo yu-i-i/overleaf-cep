@@ -21,7 +21,7 @@ export default function SelectedWordCountAction() {
         onClick={handleClick}
         aria-label={label}
       >
-        <MaterialIcon type="123" />
+        <MaterialIcon type="format_list_numbered" />
         <span>{label}</span>
       </button>
     </OLTooltip>
