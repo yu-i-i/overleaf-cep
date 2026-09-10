@@ -1208,6 +1208,7 @@ module.exports = {
     'history-v1',
     'launchpad',
     'server-ce-scripts',
+    'notifications',
     'sandboxed-compiles',
     'symbol-palette',
     'reference-picker',

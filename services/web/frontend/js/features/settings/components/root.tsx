@@ -93,7 +93,15 @@ function SettingsPageContent() {
               <hr />
               <LeaveSection />
             </>
-          ) : null}
+          ) : (
+            // CE: upstream only renders this section for saas (isOverleaf +
+            // split test); the backend exists in CE, so surface the entry
+            // point here. Re-apply after an upstream merge (see README).
+            <>
+              <hr />
+              <NotificationsSection />
+            </>
+          )}
         </div>
       </OLPageContentCard>
     </UserProvider>

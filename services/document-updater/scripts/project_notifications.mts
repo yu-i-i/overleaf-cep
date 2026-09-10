@@ -126,13 +126,17 @@ async function main() {
   let deleteMismatches = 0
   let lastProgressLog = Date.now()
 
-  for (const { projectId, timestamp } of projects) {
+  for (const { projectId, timestamp, userId } of projects) {
     const numericTimestamp = parseInt(timestamp, 10)
     try {
       await projectNotificationQueue.add(
-        { projectId, timestamp: numericTimestamp },
+        { projectId, timestamp: numericTimestamp, userId },
         {
-          jobId: projectId,
+          // One job id per BATCH (project + its timestamp), not per project:
+          // Bull de-dupes by jobId, and a stuck/failing predecessor job with a
+          // plain projectId id would silently swallow every later batch for
+          // that project (observed in production).
+          jobId: `${projectId}:${numericTimestamp}`,
           delay: 1000,
         }
       )
@@ -143,6 +147,10 @@ async function main() {
       )
       if (!deleted) {
         deleteMismatches++
+      } else {
+        // Consume the companion editor key only when the timestamp batch was
+        // actually ours (CAS-checked by the delete script).
+        await redisClient.del(`ProjectNotificationEditor:{${projectId}}`)
       }
 
       queued++
@@ -182,6 +190,29 @@ function extractProjectId(key: string): string | undefined {
 type ProjectNotification = {
   projectId: string
   timestamp: string
+  userId?: string
+}
+
+/**
+ * Does `projectId` have at least one collaborator (any access kind)?
+ * Single-document query; used to double-check a stale "no collaborators"
+ * cache for a project that actually has a pending notification batch.
+ */
+async function projectHasCollaborators(id: string): Promise<boolean> {
+  const doc = await db.projects.findOne(
+    {
+      _id: new ObjectId(id),
+      $or: [
+        { 'collaberator_refs.0': { $exists: true } },
+        { 'readOnly_refs.0': { $exists: true } },
+        { 'reviewer_refs.0': { $exists: true } },
+        { 'tokenAccessReadAndWrite_refs.0': { $exists: true } },
+        { 'tokenAccessReadOnly_refs.0': { $exists: true } },
+      ],
+    },
+    { projection: { _id: 1 } }
+  )
+  return doc != null
 }
 
 /**
@@ -206,7 +237,21 @@ async function getProjectsWithCollaborators(
       stats.collaboratorCacheHitWithCollaborators++
       projectsWithCollaborators.add(id)
     } else if (cached[i] === '0') {
+      // A stale "no collaborators" cache entry (TTL is 1-2 hours) must not
+      // silently kill a REAL notification - e.g. a collaborator was added to
+      // the project minutes ago. Candidates here are the rare projects that
+      // actually have a pending change batch, so double-check this one
+      // project directly in mongo (single doc query) and refresh the cache.
       stats.collaboratorCacheHitNoCollaborators++
+      if (await projectHasCollaborators(id)) {
+        stats.collaboratorCacheMissWithCollaborators++
+        projectsWithCollaborators.add(id)
+        await redisClient.setex(
+          `ProjectHasCollaborators:{${id}}`,
+          3600,
+          '1'
+        )
+      }
     } else {
       projectsNeedingMongoLookup.push(id)
     }
@@ -323,6 +368,13 @@ async function getProjectsToNotify(): Promise<{
         }
 
         const timestamps = await redisClient.mget(keys)
+        // Editor ids sit next to the timestamp keys (same batch semantics),
+        // letting the scheduler exclude the author of the change.
+        const editorKeys = keys.map((key: string) => {
+          const pid = extractProjectId(key)
+          return pid ? `ProjectNotificationEditor:{${pid}}` : key
+        })
+        const editorUserIds = await redisClient.mget(editorKeys)
 
         // Extract valid (projectId, timestamp) pairs from this batch
         const candidates: ProjectNotification[] = []
@@ -352,7 +404,7 @@ async function getProjectsToNotify(): Promise<{
             continue
           }
 
-          candidates.push({ projectId, timestamp })
+          candidates.push({ projectId, timestamp, userId: editorUserIds[index] ?? undefined })
         }
 
         // Bulk-check collaborators for the whole batch

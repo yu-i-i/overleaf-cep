@@ -1,0 +1,46 @@
+extends ../../../../../app/views/layout-website-redesign
+
+block vars
+	- isWebsiteRedesign = true
+
+block content
+	main#main-content.content
+		.container
+			.col-lg-10.offset-lg-1.col-xl-8.offset-xl-2
+				.page-header
+					h1 #{translate("email_preferences")}
+
+				form.notification-settings-container(
+					name='notificationsForm'
+					action='/user/notification-preferences'
+					method='POST'
+					data-ol-async-form
+					data-ol-reload-on-success
+				)
+					input(name='_csrf' type='hidden' value=csrfToken)
+
+					.setting-container
+						input(name='muteAllNotifications' id='muteAllNotifications' type='checkbox' value='notificationsOn' checked=notificationsEnabled)
+						div
+							label.checkbox-label(for='muteAllNotifications')
+								h2.h4.mb-0 #{translate("notifications_on_project_activity")}
+							p #{translate("notifications_on_project_activity_description")}
+
+					.setting-container
+						input(name='notificationDelayMinutes' id='notificationDelayMinutes' type='number' min='1' max='10080' step='1' value=(notificationDelayMinutes != null ? notificationDelayMinutes : ''))
+						div
+							label.checkbox-label(for='notificationDelayMinutes')
+								h2.h4.mb-0 #{translate("notifications_delay_minutes_label")}
+							p #{translate("notifications_delay_description")}
+							p.text-muted #{translate("notifications_delay_server_default")} #{defaultDelayLabel}
+
+					p #{translate("note_still_receives_important_emails")}
+
+					.d-flex.justify-content-end.mt-4
+						button.btn-primary.btn(type='submit' data-ol-disabled-inflight)
+							span #{translate("save")}
+
+				.page-separator
+				.d-flex.gap-3
+					a.btn.btn-secondary(href='/user/settings') #{translate("back_to_account_settings")}
+					a.btn.btn-secondary(href='/project') #{translate("back_to_your_projects")}

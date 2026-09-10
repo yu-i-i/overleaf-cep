@@ -68,6 +68,12 @@ services:
       # OVERLEAF_EMAIL_SMTP_LOGGER: true
       # OVERLEAF_CUSTOM_EMAIL_FOOTER: "This system is run by department x"
 
+      ### Local dev: catch outgoing mail in MailHog (service below, UI on :8025).
+      ### Uncomment these + the mailhog service to verify the notification
+      ### e2e flow (see server-ce/e2e/notifications-smoke.sh).
+      #OVERLEAF_EMAIL_SMTP_HOST: mailhog
+      #OVERLEAF_EMAIL_SMTP_PORT: "1025"
+
       # ENABLE_CRON_RESOURCE_DELETION: true
 
       ################
@@ -150,3 +156,17 @@ services:
   #     volumes:
   #       - /var/run/docker.sock:/tmp/docker.sock:ro
   #       - /home/overleaf/tmp:/etc/nginx/certs
+
+  ### Local dev: MailHog captures every outgoing SMTP message from
+  ### Overleaf when OVERLEAF_EMAIL_SMTP_HOST/PORT (see above) points at
+  ### "mailhog:1025". Web UI on http://localhost:8025, REST API on :8025/api/v2.
+  ### Uncomment "depends_on: mailhog" if you want startup order to be strict.
+  mailhog:
+    restart: always
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    profiles:
+      - dev-mail

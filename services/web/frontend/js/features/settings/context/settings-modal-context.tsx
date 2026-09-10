@@ -289,7 +289,10 @@ export const SettingsModalProvider: FC<React.PropsWithChildren> = ({
             ],
           },
         ],
-        hidden: !hasEmailNotifications,
+        // CE: un-gated (upstream: hidden: !hasEmailNotifications, i.e. the
+        // saas 'email-notifications' split-test flag). Re-apply after an
+        // upstream merge (see module README).
+        hidden: false,
       },
 
       {

@@ -4,3 +4,19 @@
 # user defined files
 .env
 docker-compose.override.yml
+
+# node_modules
+node_modules/
+services/**/*.node_modules/
+**/node_modules/
+
+# yarn local artifacts
+.yarn/cache/
+.yarn/install-state.gz
+
+# NFS/editor artifacts
+.nfs*
+services/web/.cache/
+
+# pi session state (todos) — local only, never commit
+.pi/

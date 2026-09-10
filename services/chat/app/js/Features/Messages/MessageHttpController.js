@@ -4,6 +4,7 @@ import * as MessageFormatter from './MessageFormatter.js'
 import * as ThreadManager from '../Threads/ThreadManager.js'
 import { ObjectId } from '../../mongodb.js'
 import { promiseMapWithLimit } from '@overleaf/promise-utils'
+import * as NotificationsManager from '../Notifications/NotificationsManager.js'
 
 const DEFAULT_MESSAGE_LIMIT = 50
 const MAX_MESSAGE_LENGTH = 10 * 1024 // 10kb, about 1,500 words
@@ -377,6 +378,17 @@ async function _sendMessage(userId, projectId, content, clientThreadId, res) {
     userId,
     content,
     Date.now()
+  )
+  NotificationsManager.createThreadMessageNotifications(
+    projectId,
+    thread,
+    message._id,
+    userId
+  ).catch(error =>
+    logger.err(
+      { error, projectId, threadId: thread._id },
+      'error creating comment notification'
+    )
   )
   message = MessageFormatter.formatMessageForClientSide(message)
   message.room_id = projectId

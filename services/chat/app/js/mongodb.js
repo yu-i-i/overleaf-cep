@@ -16,6 +16,11 @@ const mongoDb = mongoClient.db()
 export const db = {
   messages: mongoDb.collection('messages'),
   rooms: mongoDb.collection('rooms'),
+  users: mongoDb.collection('users'),
+  projects: mongoDb.collection('projects'),
+  notifications: mongoDb.collection('notifications'),
+  notificationsPreferences: mongoDb.collection('notificationsPreferences'),
+  emailNotifications: mongoDb.collection('emailNotifications'),
 }
 
 Metrics.mongodb.monitor(mongoClient)
