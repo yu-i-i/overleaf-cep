@@ -16,6 +16,18 @@ html(
 
 	block vars
 
+	-
+		const headerImageUrlLight =
+			settings.nav.custom_logo_light || settings.nav.custom_logo
+		const headerImageUrlDark =
+			settings.nav.custom_logo_dark ||
+			settings.nav.custom_logo ||
+			headerImageUrlLight
+		const customHeaderLogoStyle = headerImageUrlLight
+			? `--navbar-custom-logo-light-url:url(${JSON.stringify(headerImageUrlLight)});` +
+				`--navbar-custom-logo-dark-url:url(${JSON.stringify(headerImageUrlDark)})`
+			: undefined
+
 	head
 		include ./_metadata.pug
 
@@ -106,6 +118,7 @@ html(
 			'red-nav-bar-for-admins': !settings.isDevEnv && hasFeature('saas') && hasAdminAccess(),
 		}
 		data-theme='light'
+		style=customHeaderLogoStyle
 	)
 		if settings.recaptcha && settings.recaptcha.siteKeyV3
 			script(

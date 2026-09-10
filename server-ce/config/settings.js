@@ -338,8 +338,20 @@ if (process.env.OVERLEAF_RIGHT_FOOTER != null) {
   }
 }
 
-if (process.env.OVERLEAF_HEADER_IMAGE_URL != null) {
-  settings.nav.custom_logo = process.env.OVERLEAF_HEADER_IMAGE_URL
+const legacyHeaderImageUrl = process.env.OVERLEAF_HEADER_IMAGE_URL
+const lightHeaderImageUrl =
+  process.env.OVERLEAF_HEADER_IMAGE_URL_LIGHT ||
+  legacyHeaderImageUrl ||
+  process.env.OVERLEAF_HEADER_IMAGE_URL_DARK
+const darkHeaderImageUrl =
+  process.env.OVERLEAF_HEADER_IMAGE_URL_DARK ||
+  legacyHeaderImageUrl ||
+  lightHeaderImageUrl
+
+if (lightHeaderImageUrl || darkHeaderImageUrl) {
+  settings.nav.custom_logo = lightHeaderImageUrl || darkHeaderImageUrl
+  settings.nav.custom_logo_light = lightHeaderImageUrl || darkHeaderImageUrl
+  settings.nav.custom_logo_dark = darkHeaderImageUrl || lightHeaderImageUrl
 }
 
 if (process.env.OVERLEAF_HEADER_EXTRAS != null) {
