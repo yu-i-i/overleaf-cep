@@ -1,4 +1,5 @@
 import {
+  ComponentType,
   CSSProperties,
   FC,
   memo,
@@ -8,6 +9,7 @@ import {
   useState,
 } from 'react'
 import ReactDOM from 'react-dom'
+import importOverleafModules from '../../../../macros/import-overleaf-module.macro'
 import MaterialIcon from '@/shared/components/material-icon'
 import { useTranslation } from 'react-i18next'
 import {
@@ -43,6 +45,10 @@ import { sendMB } from '@/infrastructure/event-tracking'
 const EDIT_MODE_SWITCH_WIDGET_HEIGHT = 40
 const CM_LINE_RIGHT_PADDING = 8
 const TOOLTIP_SHOW_DELAY = 120
+
+const reviewTooltipMenuActions = importOverleafModules(
+  'reviewTooltipMenuActions'
+) as { import: { default: ComponentType }; path: string }[]
 
 // TODO remove when `writefull-toolbar-migration` fully rolled out
 const ReviewTooltipMenu: FC = () => {
@@ -300,6 +306,11 @@ const ReviewTooltipMenuContent = memo<{ onAddComment: () => void }>(
               </button>
             </OLTooltip>
           </>
+        )}
+        {reviewTooltipMenuActions.map(
+          ({ import: { default: Component }, path }) => (
+            <Component key={path} />
+          )
         )}
       </div>
     )
