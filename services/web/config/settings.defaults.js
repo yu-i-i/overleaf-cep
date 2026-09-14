@@ -1063,7 +1063,12 @@ module.exports = {
       ),
     ],
     contactUsModal: [],
-    sourceEditorExtensions: [],
+    sourceEditorExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/languagetool/frontend/js/languagetool-extension'
+      ),
+    ],
     sourceEditorVisualExtensions: [],
     sourceEditorComponents: [],
     pdfLogEntryHeaderActionComponents: [],
@@ -1189,7 +1194,12 @@ module.exports = {
     ],
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],
-    settingsModalSpellcheckSections: [],
+    settingsModalSpellcheckSections: [
+      Path.resolve(
+        __dirname,
+        '../modules/languagetool/frontend/js/languagetool-section'
+      ),
+    ],
     editorFloatingMenuActions: [],
     errorLogsComponents: [],
     referenceIndices: [
@@ -1212,6 +1222,7 @@ module.exports = {
     'symbol-palette',
     'reference-picker',
     'track-changes',
+    'languagetool',
     'authentication/ldap',
     'authentication/saml',
     'authentication/oidc',
