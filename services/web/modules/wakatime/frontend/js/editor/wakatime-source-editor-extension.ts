@@ -2,7 +2,12 @@ import { ViewPlugin } from '@codemirror/view'
 import type { DocumentContainer } from '@/features/ide-react/editor/document-container'
 import type { EditorFacade, ChangeDescription } from '@/features/source-editor/extensions/realtime'
 import getMeta from '@/utils/meta'
-import { notifyFileOpened, notifyLocalEdit, notifyFileSaved } from './wakatime-tracker'
+import {
+  notifyFileOpened,
+  notifyLocalEdit,
+  notifyFileSaved,
+  wakaTimeLog,
+} from './wakatime-tracker'
 
 /**
  * Registered via overleafModuleImports.sourceEditorExtensions.
@@ -15,7 +20,10 @@ import { notifyFileOpened, notifyLocalEdit, notifyFileSaved } from './wakatime-t
  * OT), `'undo'` or `'reject'`.
  */
 export const extension = (options: Record<string, any>) => {
-  if (!getMeta('ol-ExposedSettings')?.wakaTimeEnabled) return []
+  if (!getMeta('ol-ExposedSettings')?.wakaTimeEnabled) {
+    wakaTimeLog('extension disabled: ol-ExposedSettings.wakaTimeEnabled is falsy')
+    return []
+  }
 
   const currentDoc = options.currentDoc?.currentDoc as
     | DocumentContainer
@@ -23,8 +31,16 @@ export const extension = (options: Record<string, any>) => {
   const docName = options.docName as string
   const projectId = getMeta('ol-project_id') as string
 
-  if (!currentDoc || !docName || !projectId) return []
+  if (!currentDoc || !docName || !projectId) {
+    wakaTimeLog('extension bailing out, missing data:', {
+      hasCurrentDoc: !!currentDoc,
+      docName,
+      projectId,
+    })
+    return []
+  }
 
+  wakaTimeLog('extension attached for', docName, 'in project', projectId)
   notifyFileOpened(projectId, docName)
 
   const handleChange = (_editor: EditorFacade, change: ChangeDescription) => {
@@ -52,6 +68,7 @@ export const extension = (options: Record<string, any>) => {
   }
 
   const attach = () => {
+    wakaTimeLog('cm6 change listeners attached for', docName)
     currentDoc.cm6?.on('change', handleChange)
     currentDoc.cm6?.on('change', markLocalEdit)
   }
@@ -59,6 +76,7 @@ export const extension = (options: Record<string, any>) => {
   if (currentDoc.cm6) {
     attach()
   } else {
+    wakaTimeLog('cm6 not ready yet, waiting for cm6:attach for', docName)
     currentDoc.on('cm6:attach', attach)
   }
 
