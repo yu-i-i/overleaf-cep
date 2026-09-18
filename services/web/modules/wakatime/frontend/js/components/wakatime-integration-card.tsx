@@ -42,7 +42,7 @@ function WakaTimeCard() {
 
   const description = summary?.connected
     ? t('wakatime_time_this_week', {
-        defaultValue: '{{duration}} tracked (last {{days}} days)',
+        defaultValue: '__duration__ tracked (last __days__ days)',
         duration: formatDuration(summary.totalSeconds),
         days: summary.rangeDays,
       })

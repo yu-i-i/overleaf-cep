@@ -24,7 +24,7 @@ function buildHeaders(apiKey, opts = {}) {
   return {
     Authorization: `Basic ${Buffer.from(apiKey).toString('base64')}`,
     'Content-Type': 'application/json',
-    'User-Agent': 'Overleaf-CEP-WakaTime',
+    'User-Agent': 'overleaf/1.0 overleaf-wakatime/1.0',
     ...opts,
   }
 }
