@@ -24,7 +24,11 @@ function buildHeaders(apiKey, opts = {}) {
   return {
     Authorization: `Basic ${Buffer.from(apiKey).toString('base64')}`,
     'Content-Type': 'application/json',
-    'User-Agent': 'overleaf/1.0 overleaf-wakatime/1.0',
+    // Must start with "wakatime/" and have a recognized OS token in
+    // parens next, or WakaTime/Wakapi's user-agent parser bails out and
+    // reports the editor as "unknown" — see wakapi/utils/http.go
+    // ParseUserAgent, which requires this exact shape.
+    'User-Agent': 'wakatime/1.0.0 (linux) overleaf/1.0 overleaf-wakatime/1.0',
     ...opts,
   }
 }

@@ -15,11 +15,12 @@ export function wakaTimeLog(...args: unknown[]) {
 // since the last one for the same file, or the file was switched/saved.
 const HEARTBEAT_THROTTLE_MS = 2 * 60 * 1000
 
-// WakaTime/Wakapi identify the sending editor by parsing this "plugin"
-// string as `editorName/editorVersion editorName-wakatime/pluginVersion`
+// WakaTime/Wakapi identify the sending editor by parsing this string as
+// `wakatime/version (os) editorName/editorVersion editorName-wakatime/pluginVersion`
 // (the same convention every official wakatime-cli-based plugin uses).
-// Without it, the dashboard shows the heartbeat's editor as "unknown".
-const PLUGIN = 'overleaf/1.0 overleaf-wakatime/1.0'
+// Must start with "wakatime/" and have a recognized OS token in parens
+// next, or the parser bails out and reports the editor as "unknown".
+const USER_AGENT = 'wakatime/1.0.0 (linux) overleaf/1.0 overleaf-wakatime/1.0'
 
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   tex: 'LaTeX',
@@ -52,7 +53,7 @@ function buildHeartbeat(docName: string, isWrite: boolean) {
     type: 'file',
     time: Date.now() / 1000,
     is_write: isWrite,
-    plugin: PLUGIN,
+    user_agent: USER_AGENT,
     branch: 'main',
   }
   const language = languageForFile(docName)
