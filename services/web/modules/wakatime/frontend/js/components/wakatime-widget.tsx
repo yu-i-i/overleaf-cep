@@ -5,7 +5,7 @@ import useAsync from '@/shared/hooks/use-async'
 import { debugConsole } from '@/utils/debugging'
 import OLButton from '@/shared/components/ol/ol-button'
 import OLNotification from '@/shared/components/ol/ol-notification'
-import MaterialIcon from '@/shared/components/material-icon'
+import WakaTimeLogo from '@/shared/svgs/wakatime-logo'
 import WakaTimeConnectModal from './wakatime-connect-modal'
 
 type WakaTimeStatus = { connected: boolean; apiUrl?: string; error?: boolean }
@@ -56,7 +56,7 @@ export const WakaTimeWidget = function WakaTimeWidget() {
     return (
       <div className="settings-widget-container">
         <div>
-          <MaterialIcon type="schedule" size="2x" />
+          <WakaTimeLogo size={40} />
         </div>
         <div className="description-container">
           <div className="title-row">
@@ -76,7 +76,7 @@ export const WakaTimeWidget = function WakaTimeWidget() {
     <>
       <div className="settings-widget-container">
         <div>
-          <MaterialIcon type="schedule" size="2x" />
+          <WakaTimeLogo size={40} />
         </div>
 
         <div className="description-container">
