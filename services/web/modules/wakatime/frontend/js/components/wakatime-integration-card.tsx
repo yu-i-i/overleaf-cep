@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useProjectContext } from '@/shared/context/project-context'
 import { getJSON } from '@/infrastructure/fetch-json'
 import { debugConsole } from '@/utils/debugging'
-import MaterialIcon from '@/shared/components/material-icon'
+import WakaTimeLogo from '@/shared/svgs/wakatime-logo'
 import IntegrationCard from '@/features/integrations-panel/integration-card'
 import WakaTimeConnectModal from './wakatime-connect-modal'
 
@@ -55,7 +55,7 @@ function WakaTimeCard() {
       <IntegrationCard
         title="WakaTime"
         description={description}
-        icon={<MaterialIcon type="schedule" size="2x" />}
+        icon={<WakaTimeLogo size={32} />}
         showPaywallBadge={false}
         onClick={
           isConnected

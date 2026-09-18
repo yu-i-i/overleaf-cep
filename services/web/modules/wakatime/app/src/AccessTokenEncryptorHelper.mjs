@@ -5,7 +5,7 @@ import Path from 'node:path'
 import AccessTokenEncryptorClass from '@overleaf/access-token-encryptor'
 
 const TOKEN_CIPHER_FILE = '/var/lib/overleaf/data/.wakatime-token-cipher.json'
-const TOKEN_CIPHER_LABEL = 'OL_CEP-wakatime-v1'
+const TOKEN_CIPHER_LABEL = 'OL_CEP_wakatime-v3'
 
 let encryptorInstance = null
 
