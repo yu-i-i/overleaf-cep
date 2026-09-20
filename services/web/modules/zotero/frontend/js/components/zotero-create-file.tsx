@@ -4,7 +4,7 @@ import useAsync from '@/shared/hooks/use-async'
 import { getJSON } from '@/infrastructure/fetch-json'
 import { debugConsole } from '@/utils/debugging'
 import OLButton from '@/shared/components/ol/ol-button'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import { useFileTreeActionable } from '@/features/file-tree/contexts/file-tree-actionable'
 import FileTreeModalCreateFileMode from '@/features/file-tree/components/file-tree-create/file-tree-modal-create-file-mode'
 import FileTreeCreateNameProvider from '@/features/file-tree/contexts/file-tree-create-name'
@@ -108,7 +108,7 @@ export function CreateFilePane() {
     }
   } else if (isGroupsError) {
     return (
-      <OLNotification
+      <Notification
         type="error"
         content={t('zotero_groups_loading_error', {
           provider: t('zotero'),

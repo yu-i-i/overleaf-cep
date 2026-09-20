@@ -19,14 +19,14 @@ import ZoteroApiClient from './ZoteroApiClient.mjs'
  * linkedFileData shape:
  *   {
  *     provider: 'zotero'
- *     zoteroGroupId?: string
+ *     group_id: string | null
  *     importedAt: Date | string
- *     importedByUserId: string
- *     importedByName: string
- *     bibFormat: 'bibtex' || 'biblatex'
+ *     importer_id: string
+ *     importer_name: string
+ *     format: 'bibtex' || 'biblatex'
  *   }
  *
- *  - If zoteroGroupId is present, export that group's library.
+ *  - If group_id is present, export that group's library.
  *  - Otherwise, export the user's personal library ("My Library").
  */
 async function createLinkedFile(
@@ -37,8 +37,8 @@ async function createLinkedFile(
   userId
 ) {
 
-  linkedFileData.importedByUserId = userId
-  linkedFileData.importedByName = await _getUserName(userId) || 'Unknown'
+  linkedFileData.importer_id = userId
+  linkedFileData.importer_name = await _getUserName(userId) || 'Unknown'
 
   logger.debug(
     { projectId, userId, linkedFileData },
@@ -76,16 +76,16 @@ async function refreshLinkedFile(
 // refresh importer's displayed name
 // if the importer is the owner, name is not displayed, refresh is not needed
 // if the importer is not available, the old name is preserved
-  const userName = await _getUserName(linkedFileData.importedByUserId)
-  if (userName && linkedFileData.importedByUserId != userId) {
-    linkedFileData.importedByName = userName
+  const userName = await _getUserName(linkedFileData.importer_id)
+  if (userName && linkedFileData.importer_id != userId) {
+    linkedFileData.importer_name = userName
     const { element, path } = await ProjectLocator.promises.findElement({
       project_id: projectId,
       element_id: parentFolderId,
       type: 'folders'
     })
     const fileIndex = element.fileRefs.findIndex(file => file.name === name)
-    const updatePath = `${path.mongo}.fileRefs.${fileIndex}.linkedFileData.importedByName`
+    const updatePath = `${path.mongo}.fileRefs.${fileIndex}.linkedFileData.importer_name`
     await Project.updateOne({ _id: projectId }, { $set: { [updatePath]: userName } })
   }
 
@@ -103,12 +103,12 @@ async function refreshLinkedFile(
 }
 
 async function _getBibtex(linkedFileData) {
-  const userId = linkedFileData.importedByUserId
+  const userId = linkedFileData.importer_id
   try {
     return await ZoteroApiClient.getLibraryBibtex(
       userId,
-      linkedFileData.zoteroGroupId,  // == null for main library
-      linkedFileData.bibFormat || 'bibtex'
+      linkedFileData.group_id,  // == null for main library
+      linkedFileData.format || 'bibtex'
     )
   } catch (err) {
 
@@ -117,11 +117,11 @@ async function _getBibtex(linkedFileData) {
       throw new LinkedFilesErrors.AccessDeniedError('Zotero access denied').withCause(err)
     }
     if (err instanceof ServiceNotConfiguredError) {
-      logger.debug({ userId: linkedFileData.importedByUserId, err }, 'Zotero account not linked')
+      logger.debug({ userId: linkedFileData.importer_id, err }, 'Zotero account not linked')
       throw new LinkedFilesErrors.AccessDeniedError('Zotero account not linked').withCause(err)
     }
     if (err instanceof NotFoundError) {
-      logger.debug({ group: linkedFileData.zoteroGroupId, err }, 'Zotero group is not found')
+      logger.debug({ group: linkedFileData.group_id, err }, 'Zotero group is not found')
       throw new LinkedFilesErrors.SourceFileNotFoundError('Zotero group is not found').withCause(err)
     }
     logger.error({ linkedFileData, err }, 'failed to retrieve bib file from Zotero')
@@ -132,15 +132,13 @@ async function _getBibtex(linkedFileData) {
 function _sanitizeData(data) {
   return {
     provider: 'zotero',
-    ...(data.zoteroGroupId && {
-      zoteroGroupId: data.zoteroGroupId,
-    }),
+    group_id: data.group_id ?? null,
     importedAt: data.importedAt,
-    ...(data.importedByUserId && {
-      importedByUserId: data.importedByUserId,
+    ...(data.importer_id && {
+      importer_id: data.importer_id,
     }),
-    importedByName: data.importedByName || 'Unknown',
-    bibFormat: (data.bibFormat === 'biblatex') ? 'biblatex' : 'bibtex'
+    importer_name: data.importer_name || 'Unknown',
+    format: (data.format === 'biblatex') ? 'biblatex' : 'bibtex'
   }
 }
 

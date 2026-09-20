@@ -12,7 +12,7 @@ import {
   OLModalHeader,
   OLModalTitle,
 } from '@/shared/components/ol/ol-modal'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import ZoteroLogo from '@/shared/svgs/zotero-logo'
 
 /**
@@ -97,14 +97,14 @@ export const ZoteroWidget = function ZoteroWidget() {
           </p>
 
           {isErrorConnCheck && (
-            <OLNotification
+            <Notification
               type="error"
               content={t('problem_checking_connection_with_provider', { provider: t('zotero') })}
             />
           )}
 
           {isErrorUnlink && (
-            <OLNotification
+            <Notification
               type="error"
               content={t('generic_something_went_wrong')}
             />

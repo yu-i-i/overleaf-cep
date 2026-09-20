@@ -25,14 +25,14 @@ export function TPRFileViewInfo({ file }: TPRFileViewInfoProps) {
   const formattedDate = formatTime(importedAt)
   const relative = relativeDate(importedAt)
 
-  const importedByUserId = (file.linkedFileData as any)?.importedByUserId
-  const importedByName = (file.linkedFileData as any)?.importedByName || 'Unknown'
+  const importer_id = (file.linkedFileData as any)?.importer_id
+  const importer_name = (file.linkedFileData as any)?.importer_name || 'Unknown'
 
   return (
     <p>
       <LinkedFileIcon />
       &nbsp;
-      {(importedByUserId === getMeta('ol-user_id')) ? (
+      {(importer_id === getMeta('ol-user_id')) ? (
         t('imported_from_zotero_at_date', {
           formattedDate,
           relativeDate: relative,
@@ -41,7 +41,7 @@ export function TPRFileViewInfo({ file }: TPRFileViewInfoProps) {
         t('imported_from_zotero_at_date_by', {
           formattedDate,
           relativeDate: relative,
-          importedByName,
+          importer_name,
         })
       )}
     </p>

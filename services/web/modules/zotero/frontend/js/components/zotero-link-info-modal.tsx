@@ -11,7 +11,7 @@ import {
   OLModalFooter,
 } from '@/shared/components/ol/ol-modal'
 import OLButton from '@/shared/components/ol/ol-button'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 
 import { ProjectSyncState, GitSyncModalStatus } from '../../types/git-sync-types'
 
@@ -51,19 +51,19 @@ const ZoteroLinkInfoModal = ({ show, isError, handleHide }: ZoteroLinkInfoModalP
 
       <OLModalBody>
         {showUnlinkInfo ? (
-          <OLNotification
+          <Notification
             type="warning"
             content={t('unlink_warning_reference', { provider: t('zotero') })}
           />
         ) : isError ? (
-          <OLNotification
+          <Notification
             type="error"
             content={t('problem_checking_connection_with_provider', {
               provider: t('zotero'),
             })}
           />
         ) : (
-          <OLNotification
+          <Notification
             type="info"
             content={
               <Trans

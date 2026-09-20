@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import type { LinkedFile, LinkedFileData } from '@/features/file-view/types/binary-file'
 import { hasProvider } from '@/features/file-view/types/binary-file'
 
@@ -35,7 +35,7 @@ export function TPRFileViewRefreshError({
 
   return (
     <div className="file-view-error">
-      <OLNotification type="error" content={message} />
+      <Notification type="error" content={message} />
     </div>
   )
 }

@@ -140,6 +140,7 @@ const rawLinkedFileData = z.discriminatedUnion('provider', [
     format: z.enum(['bibtex', 'biblatex']).optional(),
     group_id: zz.routeSegment().nullish(),
     importer_id: z.string().optional(),
+    importer_name: z.string().optional(),
     v1_importer_id: z.number().optional(),
     importedAt: z.iso.datetime().optional(),
   }),

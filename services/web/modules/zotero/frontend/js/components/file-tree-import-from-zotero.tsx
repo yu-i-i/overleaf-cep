@@ -9,7 +9,7 @@ import ErrorMessage from '@/features/file-tree/components/file-tree-create/error
 import OLFormGroup from '@/shared/components/ol/ol-form-group'
 import OLFormLabel from '@/shared/components/ol/ol-form-label'
 import OLFormSelect from '@/shared/components/ol/ol-form-select'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 
 type ZoteroGroup = {
   id: string
@@ -23,7 +23,7 @@ export default function FileTreeImportFromZotero({ groups }: FileTreeImportFromZ
   const { name, setName } = useFileTreeCreateName()
   const { setValid } = useFileTreeCreateForm()
   const { finishCreatingLinkedFile, error, inFlight } = useFileTreeActionable()
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("")
   const [selectedFormat, setSelectedFormat] = useState<string>('bibtex')
 
   useEffect(() => {
@@ -40,7 +40,10 @@ export default function FileTreeImportFromZotero({ groups }: FileTreeImportFromZ
     finishCreatingLinkedFile({
       name,
       provider: 'zotero',
-      data: { zoteroGroupId: selectedGroupId, bibFormat: selectedFormat }
+      data: {
+        group_id: selectedGroupId || undefined,
+        format: selectedFormat,
+      }
     })
   }
 

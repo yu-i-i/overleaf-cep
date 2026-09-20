@@ -17,11 +17,11 @@ export type LinkedFileData = {
   }
   zotero: {
     provider: 'zotero'
-    zoteroGroupId?: string
+    group_id: string | null
+    format: 'bibtex' | 'biblatex'
     importedAt: Date | string
-    importedByUserId: string
-    importedByName: string
-    bibFormat: 'bibtex' | 'biblatex'
+    importer_id: string
+    importer_name: string
   }
 }
 
