@@ -187,7 +187,6 @@
     "request": "2.88.2",
     "requestretry": "7.1.0",
     "sanitize-html": "^2.17.4",
-    "strict-url-sanitise": "^0.0.1",
     "stripe": "^18.4.0",
     "tough-cookie": "^4.0.0",
     "tsscmp": "^1.0.6",
