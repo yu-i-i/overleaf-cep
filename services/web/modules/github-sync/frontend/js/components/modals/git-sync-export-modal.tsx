@@ -10,7 +10,7 @@ import {
   OLModalBody,
   OLModalFooter,
 } from '@/shared/components/ol/ol-modal'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import OLButton from '@/shared/components/ol/ol-button'
 import OLForm from '@/shared/components/ol/ol-form'
 import OLFormGroup from '@/shared/components/ol/ol-form-group'
@@ -89,14 +89,14 @@ const GitSyncExportModal = ({
         <p>{t('project_not_linked_to_github')}</p>
 
         {error && (
-          <OLNotification
+          <Notification
             type="error"
             content={error}
           />
         )}
 
         {errorUserAndOrgs && (
-          <OLNotification
+          <Notification
             type="error"
             content={t('something_went_wrong_server')}
           />

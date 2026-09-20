@@ -1,5 +1,5 @@
 import { useTranslation, Trans } from 'react-i18next'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import {
   OLModalBody,
   OLModalFooter,
@@ -17,7 +17,7 @@ const GitSyncNeedPermissionModal = ({ projectSyncState, handleHide }: GitSyncCon
   return (
     <>
       <OLModalBody>
-        <OLNotification
+        <Notification
           type="warning"
           content={(
             <Trans

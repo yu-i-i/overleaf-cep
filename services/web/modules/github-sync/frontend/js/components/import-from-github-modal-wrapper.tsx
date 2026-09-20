@@ -16,7 +16,7 @@ import {
 } from '@/shared/components/ol/ol-modal'
 import OLButton from '@/shared/components/ol/ol-button'
 import OLSpinner from '@/shared/components/ol/ol-spinner'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 
 type GitSyncRepo = {
   name: string
@@ -100,7 +100,7 @@ function ImportFromGitHubModalContent({ handleHide }: { handleHide: () => void }
 
         {isError && (
           <div className="notification-list">
-            <OLNotification
+            <Notification
               type="error"
               content={t('something_went_wrong_server')}
             />
@@ -169,7 +169,7 @@ function ImportFromGitHubModalContent({ handleHide }: { handleHide: () => void }
 
         {isErrorImport && (
           <div className="notification-list">
-            <OLNotification
+            <Notification
               type="error"
               content={t('something_went_wrong_server')}
             />
