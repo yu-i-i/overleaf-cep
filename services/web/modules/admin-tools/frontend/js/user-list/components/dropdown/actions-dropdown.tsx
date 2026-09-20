@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import getMeta from '@/utils/meta'
 import {
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-} from '@/shared/components/dropdown/dropdown-menu'
+  OLDropdown,
+  OLDropdownItem,
+  OLDropdownMenu,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 import MaterialIcon from '@/shared/components/material-icon'
 import OLSpinner from '@/shared/components/ol/ol-spinner'
 import FlagUserButton from '../table/cells/action-buttons/flag-user-button'
@@ -22,27 +22,27 @@ const flagActions = [
   { action: 'resume', icon: 'resume', unfilled: false },
 ]
 
-type ActionDropdownProps = {
+type ActionsDropdownProps = {
   user: User
 }
 
-function ActionsDropdown({ user }: ActionDropdownProps) {
+function ActionsDropdown({ user }: ActionsDropdownProps) {
   const { t } = useTranslation()
   const isSelf = getMeta('ol-user_id') === user.id
 
   return (
-    <Dropdown align="end">
-      <DropdownToggle
+    <OLDropdown align="end">
+      <OLDropdownToggle
         id={`user-actions-dropdown-toggle-btn-${user.id}`}
         bsPrefix="dropdown-table-button-toggle"
       >
         <MaterialIcon type="more_vert" accessibilityLabel={t('actions')} />
-      </DropdownToggle>
-      <DropdownMenu flip={false}>
+      </OLDropdownToggle>
+      <OLDropdownMenu flip={false}>
         <ShowUserInfoButton user={user}>
           {(text, handleOpenModal) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={handleOpenModal}
@@ -50,14 +50,14 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
                 unfilled={true}
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </ShowUserInfoButton>
         <UpdateUserButton user={user}>
           {(text, handleOpenModal) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={handleOpenModal}
@@ -65,7 +65,7 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
                 unfilled={true}
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </UpdateUserButton>
@@ -75,7 +75,7 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
               <FlagUserButton key={action} user={user} action={action}>
                 {(text, handleOpenModal) => (
                   <li role="none">
-                    <DropdownItem
+                    <OLDropdownItem
                       as="button"
                       tabIndex={-1}
                       onClick={handleOpenModal}
@@ -83,7 +83,7 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
                       unfilled={unfilled}
                     >
                       {text}
-                    </DropdownItem>
+                    </OLDropdownItem>
                   </li>
                 )}
               </FlagUserButton>
@@ -92,7 +92,7 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
             <DeleteUserButton user={user}>
               {(text, handleOpenModal) => (
                 <li role="none">
-                  <DropdownItem
+                  <OLDropdownItem
                     as="button"
                     tabIndex={-1}
                     onClick={handleOpenModal}
@@ -100,7 +100,7 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
                     unfilled
                   >
                     {text}
-                  </DropdownItem>
+                  </OLDropdownItem>
                 </li>
               )}
             </DeleteUserButton>
@@ -108,14 +108,14 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
             <RestoreUserButton user={user}>
               {(text, handleOpenModal) => (
                 <li role="none">
-                  <DropdownItem
+                  <OLDropdownItem
                     as="button"
                     tabIndex={-1}
                     onClick={handleOpenModal}
                     leadingIcon="restore"
                   >
                     {text}
-                  </DropdownItem>
+                  </OLDropdownItem>
                 </li>
               )}
             </RestoreUserButton>
@@ -123,14 +123,14 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
             <PurgeUserButton user={user}>
               {(text, handleOpenModal) => (
                 <li role="none">
-                  <DropdownItem
+                  <OLDropdownItem
                     as="button"
                     tabIndex={-1}
                     onClick={handleOpenModal}
                     leadingIcon="delete_forever"
                   >
                     {text}
-                  </DropdownItem>
+                  </OLDropdownItem>
                 </li>
               )}
             </PurgeUserButton>
@@ -138,7 +138,7 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
               <SendRegEmailButton user={user}>
                 {(text, handleOpenModal) => (
                   <li role="none">
-                    <DropdownItem
+                    <OLDropdownItem
                       as="button"
                       tabIndex={-1}
                       onClick={handleOpenModal}
@@ -146,15 +146,15 @@ function ActionsDropdown({ user }: ActionDropdownProps) {
                       unfilled
                     >
                       {text}
-                    </DropdownItem>
+                    </OLDropdownItem>
                   </li>
                 )}
               </SendRegEmailButton>
             )}
           </>
         )}
-      </DropdownMenu>
-    </Dropdown>
+      </OLDropdownMenu>
+    </OLDropdown>
   )
 }
 

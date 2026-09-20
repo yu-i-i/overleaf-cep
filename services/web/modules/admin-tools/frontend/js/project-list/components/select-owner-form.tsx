@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCombobox } from 'downshift'
 import MaterialIcon from '@/shared/components/material-icon'
-import { DropdownItem } from '@/shared/components/dropdown/dropdown-menu'
+import { OLDropdownItem } from '@/shared/components/ol/ol-dropdown-menu'
 import OLFormLabel from '@/shared/components/ol/ol-form-label'
 import OLSpinner from '@/shared/components/ol/ol-spinner'
 import { UserRef } from '../../../../types/project/api'
@@ -173,7 +173,7 @@ const SelectOwnerForm = React.forwardRef<
                 key={item.id}
                 {...getItemProps({ item, index })}
               >
-                <DropdownItem
+                <OLDropdownItem
                   as="span"
                   role={undefined}
                   leadingIcon="person"
@@ -182,7 +182,7 @@ const SelectOwnerForm = React.forwardRef<
                   })}
                 >
                   {getDisplayName(item)}
-                </DropdownItem>
+                </OLDropdownItem>
               </li>
             ))}
         </ul>

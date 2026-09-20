@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import {
-  Dropdown,
-  DropdownMenu,
-  DropdownItem,
-  DropdownToggle,
-} from '@/shared/components/dropdown/dropdown-menu'
+  OLDropdown,
+  OLDropdownMenu,
+  OLDropdownItem,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 import { useProjectListContext } from '../context/project-list-context'
 
 const OPTIONS = [20, 40, 80]
@@ -31,28 +31,28 @@ export default function ProjectListSummary() {
         <span className="mx-2">·</span>
 
         <span className="d-inline-flex gap-1">
-          <Dropdown>
+          <OLDropdown>
 
-            <DropdownToggle
+            <OLDropdownToggle
               as="span"
               className="entries-per-page-toggle"
             >
               {projectsPerPage}
-            </DropdownToggle>
+            </OLDropdownToggle>
 
-            <DropdownMenu>
+            <OLDropdownMenu>
               {OPTIONS.map((value) => (
-                <DropdownItem
+                <OLDropdownItem
                   key={value}
                   active={value === projectsPerPage}
                   onClick={() => setProjectsPerPage(value)}
                 >
                   {value}
-                </DropdownItem>
+                </OLDropdownItem>
               ))}
-            </DropdownMenu>
+            </OLDropdownMenu>
 
-          </Dropdown>
+          </OLDropdown>
           <span>{t('per_page')}</span>
         </span>
     </div>

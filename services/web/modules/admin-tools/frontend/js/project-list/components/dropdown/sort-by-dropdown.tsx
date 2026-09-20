@@ -5,23 +5,23 @@ import withContent, { SortBtnProps } from '../sort/with-content'
 import { useProjectListContext } from '../../context/project-list-context'
 import { Sort } from '../../../../../types/project/api'
 import {
-  Dropdown,
-  DropdownHeader,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-} from '@/shared/components/dropdown/dropdown-menu'
+  OLDropdown,
+  OLDropdownHeader,
+  OLDropdownItem,
+  OLDropdownMenu,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 
 function Item({ onClick, text, iconType }: SortBtnProps) {
   return (
-    <DropdownItem
+    <OLDropdownItem
       as="button"
       tabIndex={-1}
       onClick={onClick}
       trailingIcon={iconType}
     >
       {text}
-    </DropdownItem>
+    </OLDropdownItem>
   )
 }
 
@@ -48,8 +48,8 @@ function SortByDropdown() {
   }, [sort.by])
 
   return (
-    <Dropdown className="projects-sort-dropdown" align="end">
-      <DropdownToggle
+    <OLDropdown className="projects-sort-dropdown" align="end">
+      <OLDropdownToggle
         id="projects-sort-dropdown"
         className="pe-0 mb-0 btn-transparent"
         size="sm"
@@ -58,11 +58,11 @@ function SortByDropdown() {
         <span className="text-truncate" aria-hidden>
           {title}
         </span>
-      </DropdownToggle>
-      <DropdownMenu flip={false}>
-        <DropdownHeader className="text-uppercase">
+      </OLDropdownToggle>
+      <OLDropdownMenu flip={false}>
+        <OLDropdownHeader className="text-uppercase">
           {t('sort_by')}:
-        </DropdownHeader>
+        </OLDropdownHeader>
         <ItemWithContent
           column="title"
           text={t('title')}
@@ -90,8 +90,8 @@ function SortByDropdown() {
             onClick={() => handleClick('deletedAt')}
           />
         )}
-      </DropdownMenu>
-    </Dropdown>
+      </OLDropdownMenu>
+    </OLDropdown>
   )
 }
 

@@ -19,8 +19,10 @@ export default function ActionsCell({ user }: ActionsCellProps) {
       <span style={isSelf ? { visibility: 'hidden' } : undefined} >
         <SendRegEmailButtonTooltip user={user} />
       </span>
-      <ShowUserInfoButtonTooltip user={user} />
-      <UpdateUserButtonTooltip user={user} />
+      <span>
+        <ShowUserInfoButtonTooltip user={user} />
+        <UpdateUserButtonTooltip user={user} />
+      </span>
       <span style={isSelf ? { visibility: 'hidden' } : undefined} >
         <FlagUserButtonTooltip user={user} flag="suspended" />
       </span>

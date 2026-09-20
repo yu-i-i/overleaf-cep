@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Dropdown,
-  DropdownHeader,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-} from '@/shared/components/dropdown/dropdown-menu'
+  OLDropdown,
+  OLDropdownHeader,
+  OLDropdownItem,
+  OLDropdownMenu,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 import { useUserListContext } from '../../context/user-list-context'
 import useSort from '../../hooks/use-sort'
 import withContent, { SortBtnProps } from '../sort/with-content'
@@ -14,14 +14,14 @@ import { Sort } from '../../../../../types/user/api'
 
 function Item({ onClick, text, iconType }: SortBtnProps) {
   return (
-    <DropdownItem
+    <OLDropdownItem
       as="button"
       tabIndex={-1}
       onClick={onClick}
       trailingIcon={iconType}
     >
       {text}
-    </DropdownItem>
+    </OLDropdownItem>
   )
 }
 
@@ -50,8 +50,8 @@ function SortByDropdown() {
   }, [sort.by])
 
   return (
-    <Dropdown className="projects-sort-dropdown" align="end">
-      <DropdownToggle
+    <OLDropdown className="projects-sort-dropdown" align="end">
+      <OLDropdownToggle
         id="projects-sort-dropdown"
         className="pe-0 mb-0 btn-transparent"
         size="sm"
@@ -60,11 +60,11 @@ function SortByDropdown() {
         <span className="text-truncate" aria-hidden>
           {title}
         </span>
-      </DropdownToggle>
-      <DropdownMenu flip={false}>
-        <DropdownHeader className="text-uppercase">
+      </OLDropdownToggle>
+      <OLDropdownMenu flip={false}>
+        <OLDropdownHeader className="text-uppercase">
           {t('sort_by')}:
-        </DropdownHeader>
+        </OLDropdownHeader>
         <ItemWithContent
           column="name"
           text={t('name')}
@@ -99,8 +99,8 @@ function SortByDropdown() {
           sort={sort}
           onClick={() => handleClick('lastActive')}
         />
-      </DropdownMenu>
-    </Dropdown>
+      </OLDropdownMenu>
+    </OLDropdown>
   )
 }
 

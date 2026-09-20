@@ -5,12 +5,12 @@ import {
   useProjectListContext,
 } from '../../context/project-list-context'
 import {
-  Dropdown,
-  DropdownHeader,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-} from '@/shared/components/dropdown/dropdown-menu'
+  OLDropdown,
+  OLDropdownHeader,
+  OLDropdownItem,
+  OLDropdownMenu,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 import BackToUserList from '../back-to-user-list'
 import ProjectsFilterMenu from '../projects-filter-menu'
 
@@ -30,7 +30,7 @@ export function Item({ filter, text, onClick }: ItemProps) {
   return (
     <ProjectsFilterMenu filter={filter}>
       {isActive => (
-        <DropdownItem
+        <OLDropdownItem
           as="button"
           tabIndex={-1}
           onClick={handleClick}
@@ -38,7 +38,7 @@ export function Item({ filter, text, onClick }: ItemProps) {
           active={isActive}
         >
           {text}
-        </DropdownItem>
+        </OLDropdownItem>
       )}
     </ProjectsFilterMenu>
   )
@@ -60,8 +60,8 @@ function ProjectsDropdown() {
   }, [filter, t])
 
   return (
-    <Dropdown>
-      <DropdownToggle
+    <OLDropdown>
+      <OLDropdownToggle
         id="projects-types-dropdown-toggle-btn"
         className="ps-0 mb-0 btn-transparent h4"
         size="lg"
@@ -70,8 +70,8 @@ function ProjectsDropdown() {
         <span className="text-truncate" aria-hidden>
           {title}
         </span>
-      </DropdownToggle>
-      <DropdownMenu flip={false}>
+      </OLDropdownToggle>
+      <OLDropdownMenu flip={false}>
         <li role="none">
           <Item filter="owned" text={t('all_projects')} />
         </li>
@@ -84,8 +84,8 @@ function ProjectsDropdown() {
         <li role="none">
           <Item filter="deleted" text={t('deleted_projects')} />
         </li>
-      </DropdownMenu>
-    </Dropdown>
+      </OLDropdownMenu>
+    </OLDropdown>
   )
 }
 

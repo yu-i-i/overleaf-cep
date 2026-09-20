@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import {
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-} from '@/shared/components/dropdown/dropdown-menu'
+  OLDropdown,
+  OLDropdownItem,
+  OLDropdownMenu,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 import DownloadProjectButton from '../table/cells/action-buttons/download-project-button'
 import TrashProjectButton from '../table/cells/action-buttons/trash-project-button'
 import UntrashProjectButton from '../table/cells/action-buttons/untrash-project-button'
@@ -16,128 +16,122 @@ import { Project } from '../../../../../types/project/api'
 import MaterialIcon from '@/shared/components/material-icon'
 import OLSpinner from '@/shared/components/ol/ol-spinner'
 
-type ActionDropdownProps = {
+type ActionsDropdownProps = {
   project: Project
 }
 
-function ActionsDropdown({ project }: ActionDropdownProps) {
+function ActionsDropdown({ project }: ActionsDropdownProps) {
   const { t } = useTranslation()
 
   return (
-    <Dropdown align="end">
-      <DropdownToggle
+    <OLDropdown align="end">
+      <OLDropdownToggle
         id={`project-actions-dropdown-toggle-btn-${project.id}`}
         bsPrefix="dropdown-table-button-toggle"
       >
         <MaterialIcon type="more_vert" accessibilityLabel={t('actions')} />
-      </DropdownToggle>
-      <DropdownMenu flip={false}>
+      </OLDropdownToggle>
+      <OLDropdownMenu flip={false}>
         <DownloadProjectButton project={project}>
           {(text, downloadProject) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={downloadProject}
                 leadingIcon="download"
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </DownloadProjectButton>
         <TransferProjectButton project={project}>
           {(text, handleOpenModal) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={handleOpenModal}
                 leadingIcon="swap_horiz"
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </TransferProjectButton>
         <TrashProjectButton project={project}>
           {(text, handleOpenModal) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={handleOpenModal}
                 leadingIcon="delete"
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </TrashProjectButton>
         <UntrashProjectButton project={project}>
           {(text, untrashProject) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={untrashProject}
                 leadingIcon="restore_page"
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </UntrashProjectButton>
         <DeleteProjectButton project={project}>
           {(text, handleOpenModal) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={handleOpenModal}
                 leadingIcon="block"
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </DeleteProjectButton>
         <RestoreProjectButton project={project}>
           {(text, handleOpenModal) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={handleOpenModal}
                 leadingIcon="restore"
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </RestoreProjectButton>
         <PurgeProjectButton project={project}>
           {(text, handleOpenModal) => (
             <li role="none">
-              <DropdownItem
+              <OLDropdownItem
                 as="button"
                 tabIndex={-1}
                 onClick={handleOpenModal}
                 leadingIcon="delete_forever"
               >
                 {text}
-              </DropdownItem>
+              </OLDropdownItem>
             </li>
           )}
         </PurgeProjectButton>
-
-
-
-
-
-
-      </DropdownMenu>
-    </Dropdown>
+      </OLDropdownMenu>
+    </OLDropdown>
   )
 }
 

@@ -1,7 +1,11 @@
 import classnames from 'classnames'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dropdown } from 'react-bootstrap'
+import {
+  OLDropdown,
+  OLDropdownMenu,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 import { User as UserIcon } from '@phosphor-icons/react'
 import { usePersistedResize } from '@/shared/hooks/use-resize'
 import getMeta from '@/utils/meta'
@@ -13,6 +17,7 @@ import { useUserIdentityContext } from '../../../user-list/context/user-identity
 import { useProjectListContext } from '../../context/project-list-context'
 import { useScrolled } from '@/features/project-list/components/sidebar/use-scroll'
 import { useSendProjectListMB } from '@/features/project-list/components/project-list-events'
+import { SidebarLowerSection } from '@/shared/components/sidebar/sidebar-lower-section'
 
 function SidebarDsNav() {
   const { t } = useTranslation()
@@ -79,62 +84,7 @@ function SidebarDsNav() {
           scrolledUp && 'show-shadow'
         )}
       >
-        <nav
-          className="d-flex flex-row gap-3 mb-2"
-          aria-label={t('account_help')}
-        >
-          {sessionUser && (
-            <>
-              <Dropdown
-                className="ds-nav-icon-dropdown"
-                onToggle={show => {
-                  setShowAccountDropdown(show)
-                  if (show) {
-                    sendMB('menu-expand', {
-                      item: 'account',
-                      location: 'sidebar',
-                    })
-                  }
-                }}
-                role="menu"
-              >
-                <Dropdown.Toggle role="menuitem" aria-label={t('Account')}>
-                  <OLTooltip
-                    description={t('Account')}
-                    id="open-account"
-                    overlayProps={{
-                      placement: 'top',
-                    }}
-                    hidden={showAccountDropdown}
-                  >
-                    <div>
-                      <UserIcon size={24} />
-                    </div>
-                  </OLTooltip>
-                </Dropdown.Toggle>
-                <Dropdown.Menu
-                  as="ul"
-                  role="menu"
-                  align="end"
-                  popperConfig={{
-                    modifiers: [
-                      { name: 'offset', options: { offset: [-50, 5] } },
-                    ],
-                  }}
-                >
-                  <AccountMenuItems
-                    sessionUser={sessionUser}
-                    showSubscriptionLink={false}
-                    showThemeToggle={true}
-                  />
-                </Dropdown.Menu>
-              </Dropdown>
-            </>
-          )}
-        </nav>
-        <div className="ds-nav-ds-name" translate="no">
-          <span>Extended CE</span>
-        </div>
+        <SidebarLowerSection showThemeToggle />
       </div>
       <div
         {...getHandleProps({

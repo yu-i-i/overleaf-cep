@@ -1,3 +1,21 @@
+:root {
+  --user-list-upload-modal-hint-color: var(--neutral-60);
+}
+
+@include theme('default') {
+  .modal-themed {
+    --user-list-upload-modal-hint-color: var(--content-secondary-dark);
+  }
+}
+
+.user-list-modal .form-label {
+  color: var(--content-secondary-themed);
+}
+
+.user-list-action-modal {
+  @include themed-links;
+}
+
 .user-list-empty-col {
   display: flex;
   height: 100%;
@@ -48,7 +66,7 @@
   min-height: 36px;
 
   .user-list-title {
-    @include heading-sm;
+    @include heading-md;
 
     color: var(--content-secondary-themed);
     font-weight: bold;
@@ -463,15 +481,15 @@ ul.user-list-filters {
     }
 
     .dash-cell-date-signup {
-      width: 17%;
+      width: 16%;
     }
 
     .dash-cell-date-active {
-      width: 17%;
+      width: 16%;
     }
 
     .dash-cell-actions {
-      width: 12%;
+      width: 14%;
     }
   }
 
@@ -514,7 +532,7 @@ ul.user-list-filters {
   .uppy-Dashboard-AddFiles-title {
     display: flex;
     flex-direction: column;
-    color: var(--neutral-60);
+    color: var(--user-list-upload-modal-hint-color);
     white-space: pre-line;
 
     @include body-base;

@@ -5,11 +5,11 @@ import {
   useUserListContext,
 } from '../../context/user-list-context'
 import {
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-} from '@/shared/components/dropdown/dropdown-menu'
+  OLDropdown,
+  OLDropdownItem,
+  OLDropdownMenu,
+  OLDropdownToggle,
+} from '@/shared/components/ol/ol-dropdown-menu'
 import UsersFilterMenu from '../users-filter-menu'
 
 type ItemProps = {
@@ -28,7 +28,7 @@ export function Item({ filter, text, onClick }: ItemProps) {
   return (
     <UsersFilterMenu filter={filter}>
       {isActive => (
-        <DropdownItem
+        <OLDropdownItem
           as="button"
           tabIndex={-1}
           onClick={handleClick}
@@ -36,7 +36,7 @@ export function Item({ filter, text, onClick }: ItemProps) {
           active={isActive}
         >
           {text}
-        </DropdownItem>
+        </OLDropdownItem>
       )}
     </UsersFilterMenu>
   )
@@ -49,8 +49,8 @@ function UsersDropdown() {
   const title = filterTranslations.get(filter) ?? t('user_category_all')
 
   return (
-    <Dropdown>
-      <DropdownToggle
+    <OLDropdown>
+      <OLDropdownToggle
         id="users-types-dropdown-toggle-btn"
         className="ps-0 mb-0 btn-transparent h3"
         size="lg"
@@ -59,15 +59,15 @@ function UsersDropdown() {
         <span className="text-truncate" aria-hidden>
           {title}
         </span>
-      </DropdownToggle>
-      <DropdownMenu flip={false}>
+      </OLDropdownToggle>
+      <OLDropdownMenu flip={false}>
         {[...filterTranslations.entries()].map(([key, text]) => (
           <li role="none" key={key}>
             <Item filter={key} text={text} />
           </li>
         ))}
-      </DropdownMenu>
-    </Dropdown>
+      </OLDropdownMenu>
+    </OLDropdown>
   )
 }
 
