@@ -1,0 +1,184 @@
+.project-inspection-panel {
+  height: 100%;
+  min-width: 0;
+
+  .project-inspection-content {
+    height: calc(100% - 48px);
+    overflow: auto;
+    padding: var(--spacing-04);
+  }
+
+  fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  legend,
+  h3 {
+    font-size: var(--font-size-02);
+    font-weight: 600;
+    margin-bottom: var(--spacing-03);
+  }
+
+  h4 {
+    font-size: var(--font-size-01);
+    font-weight: 600;
+    margin: var(--spacing-04) 0 var(--spacing-02);
+  }
+
+  .project-inspection-entry-points {
+    max-height: 9rem;
+    margin-bottom: var(--spacing-03);
+    overflow: auto;
+  }
+
+  .project-inspection-timestamp,
+  .project-inspection-note,
+  .project-inspection-totals,
+  .project-inspection-empty {
+    color: var(--content-secondary);
+    font-size: var(--font-size-01);
+    margin: var(--spacing-03) 0;
+  }
+
+  .project-inspection-overview {
+    margin-top: var(--spacing-05);
+  }
+
+  .project-inspection-summary-grid {
+    display: grid;
+    gap: var(--spacing-02);
+    grid-template-columns: 1fr 1fr;
+
+    button {
+      align-items: center;
+      background: var(--bg-primary-themed);
+      border: 1px solid var(--border-divider);
+      border-radius: var(--border-radius-base);
+      color: inherit;
+      display: grid;
+      font-size: var(--font-size-01);
+      gap: var(--spacing-01);
+      grid-template-columns: auto 1fr auto;
+      padding: var(--spacing-02);
+      text-align: left;
+    }
+  }
+
+  .project-inspection-section {
+    border-top: 1px solid var(--border-divider);
+    padding: var(--spacing-03) 0;
+
+    > summary {
+      cursor: pointer;
+      font-weight: 600;
+      list-style-position: inside;
+    }
+  }
+
+  .project-inspection-count {
+    float: right;
+  }
+
+  .project-inspection-tree,
+  .project-inspection-tree ul,
+  .project-inspection-issue-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .project-inspection-tree {
+    padding: var(--spacing-03) 0 0 var(--spacing-02);
+
+    ul {
+      border-left: 1px solid var(--border-divider);
+      margin-left: var(--spacing-02);
+      padding-left: var(--spacing-03);
+    }
+
+    li {
+      overflow-wrap: anywhere;
+      padding: var(--spacing-01) 0;
+    }
+  }
+
+  .project-inspection-cycle {
+    color: var(--content-danger);
+  }
+
+  .project-inspection-tree-link {
+    background: none;
+    border: 0;
+    color: inherit;
+    padding: 0;
+    text-align: left;
+  }
+
+  .project-inspection-status {
+    background: var(--content-secondary);
+    border-radius: 50%;
+    display: inline-block;
+    height: 0.55rem;
+    margin-right: var(--spacing-02);
+    width: 0.55rem;
+  }
+
+  .project-inspection-category-icon {
+    display: inline-block;
+    margin-right: var(--spacing-02);
+    width: 1rem;
+  }
+
+  .project-inspection-status-missing,
+  .project-inspection-status-circular {
+    background: var(--content-danger);
+  }
+
+  .project-inspection-status-unused,
+  .project-inspection-status-unreferenced {
+    background: var(--content-warning);
+  }
+
+  .project-inspection-status-duplicate {
+    background: var(--orange-50);
+  }
+
+  .project-inspection-status-normal {
+    background: var(--content-positive);
+  }
+
+  .project-inspection-issue-list li {
+    border-bottom: 1px solid var(--border-divider);
+    padding: var(--spacing-02) 0;
+  }
+
+  .project-inspection-issue,
+  .project-inspection-secondary-location {
+    background: none;
+    border: 0;
+    color: inherit;
+    display: flex;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+  }
+
+  .project-inspection-issue-title,
+  .project-inspection-location {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .project-inspection-location,
+  .project-inspection-secondary-location {
+    color: var(--content-secondary);
+    font-size: var(--font-size-01);
+  }
+
+  .project-inspection-secondary-location {
+    margin-left: calc(0.55rem + var(--spacing-02));
+    padding-top: var(--spacing-01);
+  }
+}

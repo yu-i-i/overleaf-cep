@@ -1,0 +1,145 @@
+import { describe, expect, it } from 'vitest'
+import { analyzeProject } from '../../../app/src/analyzer/analyze-project.mjs'
+
+function document(id, path, content) {
+  return { id, path, content, revision: 1 }
+}
+
+function snapshot({ documents, files = [], entryPointIds }) {
+  return {
+    projectId: 'project-id',
+    documents,
+    files,
+    binaryBibliographies: [],
+    entryPointIds,
+  }
+}
+
+function issueTypes(result) {
+  return Object.values(result.issues.byId).map(issue => issue.type)
+}
+
+describe('project inspection analyzer', function () {
+  it('builds the selected dependency scope and reports high-confidence issues', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\input{chapter}
+\input{missing}
+\begin{figure}
+  \includegraphics{figures/used}
+\end{figure}
+\begin{table}
+  \label{tab:not-referenced}
+\end{table}
+See \ref{fig:missing} and \cite{Used,MissingCitation}.`
+          ),
+          document(
+            'chapter',
+            'chapter.tex',
+            String.raw`\bibliography{references}`
+          ),
+          document(
+            'bib',
+            'references.bib',
+            String.raw`@article{Used, title={Used}}
+@article{Unused, title={Unused}}
+@article{Used, title={Duplicate}}`
+          ),
+          document('draft', 'draft.tex', 'Draft only.'),
+        ],
+        files: [
+          { id: 'used-image', path: 'figures/used.png' },
+          { id: 'old-image', path: 'figures/old.png' },
+        ],
+      })
+    )
+
+    const types = issueTypes(result)
+    expect(types).toContain('missing-file')
+    expect(types).toContain('missing-reference')
+    expect(types).toContain('missing-citation')
+    expect(types).toContain('duplicate-bibliography-key')
+    expect(types).toContain('unused-bibliography-entry')
+    expect(types).toContain('possibly-unused-file')
+    expect(types).toContain('unreferenced-figure')
+    expect(types).toContain('unreferenced-table')
+    expect(types).toContain('unlabeled-figure')
+    expect(result.graph.roots).toEqual(['file:main.tex'])
+  })
+
+  it('does not treat a standalone includegraphics command as an unlabeled figure', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\includegraphics{figures/logo}`
+          ),
+        ],
+        files: [{ id: 'logo', path: 'figures/logo.png' }],
+      })
+    )
+
+    expect(issueTypes(result)).not.toContain('unlabeled-figure')
+  })
+
+  it.each(['figure', 'figure*', 'table', 'table*', 'longtable'])(
+    'warns when the %s environment has no label',
+    environment => {
+      const result = analyzeProject(
+        snapshot({
+          entryPointIds: ['main'],
+          documents: [
+            document(
+              'main',
+              'main.tex',
+              `\\begin{${environment}}\ncontent\n\\end{${environment}}`
+            ),
+          ],
+        })
+      )
+
+      expect(issueTypes(result)).toContain(
+        environment.startsWith('figure')
+          ? 'unlabeled-figure'
+          : 'unlabeled-table'
+      )
+    }
+  )
+
+  it('calculates duplicate labels independently for each selected root', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['first', 'second'],
+        documents: [
+          document('first', 'first.tex', String.raw`\label{shared:name}`),
+          document('second', 'second.tex', String.raw`\label{shared:name}`),
+        ],
+      })
+    )
+
+    expect(issueTypes(result)).not.toContain('duplicate-label')
+  })
+
+  it('reports an include cycle without recursing indefinitely', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document('main', 'main.tex', String.raw`\input{chapter}`),
+          document('chapter', 'chapter.tex', String.raw`\input{main}`),
+        ],
+      })
+    )
+
+    expect(result.overview.circular).toBe(1)
+    expect(issueTypes(result)).toContain('circular-dependency')
+  })
+})

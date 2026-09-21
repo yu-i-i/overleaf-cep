@@ -1182,7 +1182,12 @@ module.exports = {
         '../modules/reference-picker/frontend/reference-index/advanced-reference-index.ts'
       ),
     ],
-    railEntries: [],
+    railEntries: [
+      Path.resolve(
+        __dirname,
+        '../modules/project-inspection/frontend/js/project-inspection-rail-entry.tsx'
+      ),
+    ],
     railPopovers: [],
     railActions: [],
     railModals: [],
@@ -1205,6 +1210,7 @@ module.exports = {
     'git-bridge',
     'github-sync',
     'zotero',
+    'project-inspection',
   ],
   viewIncludes: {},
 
