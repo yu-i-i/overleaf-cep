@@ -63,6 +63,86 @@ function CategoryIcon({ category }: { category: string }) {
   )
 }
 
+const DEPENDENCY_TYPE_ICONS: Record<
+  string,
+  { icon: string; label: string }
+> = {
+  document: { icon: 'description', label: 'Document' },
+  file: { icon: 'description', label: 'File' },
+  include: { icon: 'input', label: 'Included file' },
+  figure: { icon: 'image', label: 'Figure' },
+  table: { icon: 'table_chart', label: 'Table' },
+  label: { icon: 'label', label: 'Label' },
+  reference: { icon: 'link', label: 'Reference' },
+  citation: { icon: 'format_quote', label: 'Citation' },
+  bibliography: { icon: 'book_5', label: 'Bibliography' },
+  'bibliography-entry': { icon: 'text_snippet', label: 'Bibliography entry' },
+  'missing-resource': { icon: 'help', label: 'Missing resource' },
+}
+
+const DEPENDENCY_STATUS_ICONS: Record<
+  Exclude<InspectionGraphNode['status'], 'normal'>,
+  string
+> = {
+  missing: 'error',
+  unused: 'warning',
+  unreferenced: 'warning',
+  duplicate: 'content_copy',
+  circular: 'autorenew',
+}
+
+function dependencyType(node: InspectionGraphNode, incomingKind?: string) {
+  if (node.kind === 'missing-resource') {
+    return incomingKind ?? node.kind
+  }
+  if (node.kind === 'document' || node.kind === 'file') {
+    const filePath = node.path ?? ''
+    if (/\.(?:bib|bibtex)$/i.test(filePath)) return 'bibliography'
+    if (/\.(?:pdf|png|jpe?g|eps|svg)$/i.test(filePath)) return 'figure'
+  }
+  return node.kind
+}
+
+function DependencyTypeIcon({
+  node,
+  incomingKind,
+}: {
+  node: InspectionGraphNode
+  incomingKind?: string
+}) {
+  const type = dependencyType(node, incomingKind)
+  const definition =
+    DEPENDENCY_TYPE_ICONS[type] ?? DEPENDENCY_TYPE_ICONS['missing-resource']
+  return (
+    <MaterialIcon
+      type={definition.icon}
+      accessibilityLabel={definition.label}
+      className="project-inspection-tree-type"
+    />
+  )
+}
+
+function DependencyStatus({
+  status,
+}: {
+  status: InspectionGraphNode['status']
+}) {
+  if (status === 'normal') return null
+  return (
+    <span
+      className={`project-inspection-tree-status project-inspection-tree-status-${status}`}
+    >
+      <span aria-hidden="true">(</span>
+      <MaterialIcon
+        type={DEPENDENCY_STATUS_ICONS[status]}
+        className="project-inspection-tree-status-icon"
+      />
+      {status}
+      <span aria-hidden="true">)</span>
+    </span>
+  )
+}
+
 type Navigate = (location?: SourceLocation, fallbackPath?: string) => void
 
 function IssueList({
@@ -218,6 +298,7 @@ function DependencyNode({
   nodeId,
   nodes,
   childrenByParent,
+  incomingKindByNode,
   path,
   onNavigate,
   root = false,
@@ -225,6 +306,7 @@ function DependencyNode({
   nodeId: string
   nodes: Map<string, InspectionGraphNode>
   childrenByParent: Map<string, string[]>
+  incomingKindByNode: Map<string, string>
   path: Set<string>
   onNavigate: Navigate
   root?: boolean
@@ -238,19 +320,28 @@ function DependencyNode({
       : node.label
   const children = childrenByParent.get(nodeId) ?? []
   const circular = path.has(nodeId)
+  const displayStatus = circular ? 'circular' : node.status
   if (children.length === 0 || circular) {
     return (
       <li>
-        <span className="project-inspection-tree-toggle" aria-hidden="true" />
-        <StatusDot status={circular ? 'circular' : node.status} />
-        <button
-          type="button"
-          className="project-inspection-tree-link"
-          onClick={() => onNavigate(node.location, node.path)}
-        >
-          {displayLabel}
-        </button>
-        {circular && <span className="project-inspection-cycle"> cycle</span>}
+        <div className="project-inspection-tree-row">
+          <span
+            className="project-inspection-tree-toggle"
+            aria-hidden="true"
+          />
+          <DependencyTypeIcon
+            node={node}
+            incomingKind={incomingKindByNode.get(nodeId)}
+          />
+          <button
+            type="button"
+            className="project-inspection-tree-link"
+            onClick={() => onNavigate(node.location, node.path)}
+          >
+            {displayLabel}
+          </button>
+          <DependencyStatus status={displayStatus} />
+        </div>
       </li>
     )
   }
@@ -268,7 +359,10 @@ function DependencyNode({
             type={expanded ? 'indeterminate_check_box' : 'add_box'}
             className="project-inspection-tree-toggle"
           />
-          <StatusDot status={node.status} />
+          <DependencyTypeIcon
+            node={node}
+            incomingKind={incomingKindByNode.get(nodeId)}
+          />
           <button
             type="button"
             className="project-inspection-tree-link"
@@ -279,6 +373,7 @@ function DependencyNode({
           >
             {displayLabel}
           </button>
+          <DependencyStatus status={displayStatus} />
         </summary>
         {expanded && (
           <ul>
@@ -288,6 +383,7 @@ function DependencyNode({
                 nodeId={childId}
                 nodes={nodes}
                 childrenByParent={childrenByParent}
+                incomingKindByNode={incomingKindByNode}
                 path={nextPath}
                 onNavigate={onNavigate}
               />
@@ -306,9 +402,10 @@ function DependencyTree({
   result: ProjectInspectionResult
   onNavigate: Navigate
 }) {
-  const { nodes, childrenByParent } = useMemo(() => {
+  const { nodes, childrenByParent, incomingKindByNode } = useMemo(() => {
     const nodeMap = new Map(result.graph.nodes.map(node => [node.id, node]))
     const outgoing = new Map<string, string[]>()
+    const incomingKinds = new Map<string, string>()
     const addChild = (parentId: string, childId: string) => {
       const children = outgoing.get(parentId) ?? []
       if (!children.includes(childId)) children.push(childId)
@@ -320,8 +417,13 @@ function DependencyTree({
     for (const edge of result.graph.edges) {
       if (edge.kind === 'contains') continue
       addChild(edge.from, edge.to)
+      if (!incomingKinds.has(edge.to)) incomingKinds.set(edge.to, edge.kind)
     }
-    return { nodes: nodeMap, childrenByParent: outgoing }
+    return {
+      nodes: nodeMap,
+      childrenByParent: outgoing,
+      incomingKindByNode: incomingKinds,
+    }
   }, [result])
 
   return (
@@ -338,6 +440,7 @@ function DependencyTree({
             nodeId={root}
             nodes={nodes}
             childrenByParent={childrenByParent}
+            incomingKindByNode={incomingKindByNode}
             path={new Set()}
             onNavigate={onNavigate}
             root

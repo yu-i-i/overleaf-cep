@@ -92,10 +92,12 @@
   .project-inspection-tree {
     padding: var(--spacing-03) 0 0 var(--spacing-02);
 
+    .project-inspection-tree-row,
     details > summary {
       align-items: center;
       display: flex;
       list-style: none;
+      min-width: 0;
     }
 
     details > summary::-webkit-details-marker {
@@ -126,18 +128,50 @@
     width: 1rem;
   }
 
-  .project-inspection-cycle {
-    color: var(--content-danger);
+  .project-inspection-tree-type {
+    flex: 0 0 1rem;
+    font-size: 1rem;
+    margin-right: var(--spacing-02);
+    width: 1rem;
   }
 
   .project-inspection-tree-link {
     background: none;
     border: 0;
     color: inherit;
+    flex: 0 1 auto;
     min-width: 0;
     overflow-wrap: anywhere;
     padding: 0;
     text-align: left;
+  }
+
+  .project-inspection-tree-status {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: var(--font-size-01);
+    margin-left: var(--spacing-02);
+    white-space: nowrap;
+  }
+
+  .project-inspection-tree-status-icon {
+    font-size: 1rem;
+    margin-right: var(--spacing-01);
+  }
+
+  .project-inspection-tree-status-missing,
+  .project-inspection-tree-status-circular {
+    color: var(--content-danger);
+  }
+
+  .project-inspection-tree-status-unused,
+  .project-inspection-tree-status-unreferenced {
+    color: var(--content-warning);
+  }
+
+  .project-inspection-tree-status-duplicate {
+    color: var(--orange-50);
   }
 
   .project-inspection-status {
