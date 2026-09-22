@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import Button from '@/shared/components/button/button'
+import MaterialIcon from '@/shared/components/material-icon'
 import Notification from '@/shared/components/notification'
 import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
 import RailPanelHeader from '@/features/ide-react/components/rail/rail-panel-header'
@@ -240,6 +241,7 @@ function DependencyNode({
   if (children.length === 0 || circular) {
     return (
       <li>
+        <span className="project-inspection-tree-toggle" aria-hidden="true" />
         <StatusDot status={circular ? 'circular' : node.status} />
         <button
           type="button"
@@ -262,6 +264,10 @@ function DependencyNode({
         onToggle={event => setExpanded(event.currentTarget.open)}
       >
         <summary>
+          <MaterialIcon
+            type={expanded ? 'indeterminate_check_box' : 'add_box'}
+            className="project-inspection-tree-toggle"
+          />
           <StatusDot status={node.status} />
           <button
             type="button"

@@ -92,6 +92,16 @@
   .project-inspection-tree {
     padding: var(--spacing-03) 0 0 var(--spacing-02);
 
+    details > summary {
+      align-items: center;
+      display: flex;
+      list-style: none;
+    }
+
+    details > summary::-webkit-details-marker {
+      display: none;
+    }
+
     ul {
       border-left: 1px solid var(--border-divider);
       margin-left: var(--spacing-02);
@@ -104,6 +114,18 @@
     }
   }
 
+  .project-inspection-tree-toggle {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 1rem;
+    font-size: 1rem;
+    height: 1rem;
+    justify-content: center;
+    margin-right: var(--spacing-01);
+    vertical-align: middle;
+    width: 1rem;
+  }
+
   .project-inspection-cycle {
     color: var(--content-danger);
   }
@@ -112,6 +134,8 @@
     background: none;
     border: 0;
     color: inherit;
+    min-width: 0;
+    overflow-wrap: anywhere;
     padding: 0;
     text-align: left;
   }
