@@ -298,47 +298,6 @@ function IssueSection({
   )
 }
 
-function CitationSection({
-  result,
-  onNavigate,
-}: {
-  result: ProjectInspectionResult
-  onNavigate: Navigate
-}) {
-  const [expanded, setExpanded] = useState(false)
-  return (
-    <details
-      className="project-inspection-section"
-      open={expanded}
-      onToggle={event => setExpanded(event.currentTarget.open)}
-    >
-      <summary>Citation / Bibliography</summary>
-      {expanded && (
-        <>
-          <h4>Missing citations</h4>
-          <IssueList
-            ids={result.views.citation.missing}
-            issues={result.issues.byId}
-            onNavigate={onNavigate}
-          />
-          <h4>Unused entries</h4>
-          <IssueList
-            ids={result.views.citation.unused}
-            issues={result.issues.byId}
-            onNavigate={onNavigate}
-          />
-          <h4>Duplicate keys</h4>
-          <IssueList
-            ids={result.views.citation.duplicate}
-            issues={result.issues.byId}
-            onNavigate={onNavigate}
-          />
-        </>
-      )}
-    </details>
-  )
-}
-
 function DependencyNode({
   nodeId,
   nodes,
@@ -743,7 +702,6 @@ function ProjectInspectionPanel() {
               result={result}
               onNavigate={onNavigate}
             />
-            <CitationSection result={result} onNavigate={onNavigate} />
           </>
         )}
       </div>
