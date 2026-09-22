@@ -34,6 +34,8 @@ const BIB_EXTENSIONS = ['.bib', '.bibtex']
 const fileNodeId = filePath => `file:${filePath}`
 const occurrenceNodeId = (kind, location, identity = '') =>
   `${kind}:${location.entityId}:${location.from}:${encodeURIComponent(identity)}`
+const figureResourceNodeId = item =>
+  occurrenceNodeId('figure-file', item.location, item.target)
 
 function extension(filePath) {
   return path.posix.extname(filePath).toLowerCase()
@@ -47,8 +49,8 @@ function isBibliography(filePath) {
   return BIB_EXTENSIONS.includes(extension(filePath))
 }
 
-function relationNode(graph, kind, item, parentPath, label) {
-  const id = occurrenceNodeId(kind, item.location, label)
+function relationNode(graph, kind, item, parentPath, label, identity = label) {
+  const id = occurrenceNodeId(kind, item.location, identity)
   graph.addNode({
     id,
     kind,
@@ -63,6 +65,22 @@ function relationNode(graph, kind, item, parentPath, label) {
     to: id,
   })
   return id
+}
+
+function environmentNodeId(environment) {
+  return occurrenceNodeId(
+    environment.kind,
+    environment.location,
+    environment.name
+  )
+}
+
+function environmentLabel(environment, sourcePath) {
+  const prefix = environment.kind === 'figure' ? 'Figure' : 'Table'
+  return (
+    environment.labels[0] ??
+    `${prefix} ${sourcePath}:${environment.location.line}`
+  )
 }
 
 function resolveRelations(parsed, availablePaths) {
@@ -134,6 +152,45 @@ function addResolvedRelationToGraph(graph, sourcePath, kind, item) {
     graph.addEdge({ kind, from: commandId, to: missingId })
   }
   return commandId
+}
+
+function attachNodeToFile(graph, nodeId, filePath) {
+  graph.addNode({ id: nodeId, parentId: fileNodeId(filePath) })
+  graph.addEdge({
+    kind: 'contains',
+    from: fileNodeId(filePath),
+    to: nodeId,
+  })
+}
+
+function addFigureResourceToGraph(
+  graph,
+  sourcePath,
+  item,
+  environmentsByFrom,
+  entityByPath
+) {
+  const id = figureResourceNodeId(item)
+  const environment = environmentsByFrom.get(item.environmentFrom)
+  const parentId = environment
+    ? environmentNodeId(environment)
+    : fileNodeId(sourcePath)
+  const node = {
+    id,
+    kind: 'figure-file',
+    label: item.target,
+    parentId,
+  }
+  if (item.resolution.status === 'resolved') {
+    node.path = item.resolution.path
+    node.entityId = entityByPath.get(item.resolution.path)?.id
+  } else {
+    node.path = sourcePath
+    node.location = item.location
+  }
+  graph.addNode(node)
+  graph.addEdge({ kind: 'contains', from: parentId, to: id })
+  return id
 }
 
 function collectScope(rootPath, latexByPath, relationsByPath, bibByPath) {
@@ -269,7 +326,6 @@ export function analyzeProject(snapshot) {
     relationsByPath.set(sourcePath, relations)
     for (const [kind, items] of [
       ['include', relations.includes],
-      ['figure', relations.figures],
       ['bibliography', relations.bibliographies],
     ]) {
       for (const item of items) {
@@ -285,23 +341,55 @@ export function analyzeProject(snapshot) {
       }
     }
 
-    for (const label of parsed.labels) {
-      relationNode(graph, 'label', label, sourcePath, label.key)
-    }
-    for (const reference of parsed.references) {
-      relationNode(graph, 'reference', reference, sourcePath, reference.key)
-    }
-    for (const citation of parsed.citations) {
-      relationNode(graph, 'citation', citation, sourcePath, citation.key)
-    }
+    const environmentsByFrom = new Map(
+      parsed.environments.map(environment => [environment.from, environment])
+    )
     for (const environment of parsed.environments) {
       relationNode(
         graph,
         environment.kind,
         environment,
         sourcePath,
+        environmentLabel(environment, sourcePath),
         environment.name
       )
+    }
+    for (const item of relations.figures) {
+      addFigureResourceToGraph(
+        graph,
+        sourcePath,
+        item,
+        environmentsByFrom,
+        entityByPath
+      )
+      if (item.resolution.status === 'ambiguous') {
+        ambiguousReferences.push({
+          kind: 'figure',
+          target: item.target,
+          candidates: item.resolution.candidates,
+          location: item.location,
+        })
+      }
+    }
+
+    for (const label of parsed.labels) {
+      relationNode(graph, 'label', label, sourcePath, label.key)
+    }
+    for (const reference of parsed.references) {
+      graph.addNode({
+        id: occurrenceNodeId(
+          'reference',
+          reference.location,
+          reference.key
+        ),
+        kind: 'reference',
+        label: reference.key,
+        path: sourcePath,
+        location: reference.location,
+      })
+    }
+    for (const citation of parsed.citations) {
+      relationNode(graph, 'citation', citation, sourcePath, citation.key)
     }
   }
 
@@ -358,12 +446,19 @@ export function analyzeProject(snapshot) {
         for (const item of items) {
           if (item.resolution.status !== 'missing') continue
           const kind = type.replace('missing-', '')
-          const commandId = occurrenceNodeId(
-            kind === 'file' ? 'include' : kind,
-            item.location,
-            item.target
-          )
+          const commandId =
+            type === 'missing-figure'
+              ? figureResourceNodeId(item)
+              : occurrenceNodeId(
+                  kind === 'file' ? 'include' : kind,
+                  item.location,
+                  item.target
+                )
           const missingId = `missing:${kind === 'file' ? 'include' : kind}:${sourcePath}:${item.target}`
+          const nodeIds =
+            type === 'missing-figure'
+              ? [commandId]
+              : [commandId, missingId]
           addIssue(
             `${type}:${sourcePath}:${item.target}`,
             {
@@ -372,7 +467,7 @@ export function analyzeProject(snapshot) {
               category: kind,
               target: item.target,
               locations: [item.location],
-              nodeIds: [commandId, missingId],
+              nodeIds,
             },
             scope.root.id,
             ['missing']
@@ -434,35 +529,42 @@ export function analyzeProject(snapshot) {
         reference.location,
         reference.key
       )
-      if (definitions.length === 0 && !labelsIncomplete) {
-        addIssue(
-          `missing-reference:${reference.location.entityId}:${reference.location.from}:${reference.key}`,
-          {
-            type: 'missing-reference',
-            status: 'missing',
-            category: 'reference',
-            target: reference.key,
-            locations: [reference.location],
-            nodeIds: [referenceId],
-          },
-          scope.root.id,
-          ['missing']
-        )
-      } else {
-        for (const definition of definitions) {
-          usedLabels.add(
-            occurrenceNodeId('label', definition.location, definition.key)
+      if (definitions.length === 0) {
+        attachNodeToFile(graph, referenceId, reference.location.path)
+        if (!labelsIncomplete) {
+          addIssue(
+            `missing-reference:${reference.location.entityId}:${reference.location.from}:${reference.key}`,
+            {
+              type: 'missing-reference',
+              status: 'missing',
+              category: 'reference',
+              target: reference.key,
+              locations: [reference.location],
+              nodeIds: [referenceId],
+            },
+            scope.root.id,
+            ['missing']
           )
-          graph.addEdge({
-            kind: 'references',
-            from: referenceId,
-            to: occurrenceNodeId(
-              'label',
-              definition.location,
-              definition.key
-            ),
-          })
         }
+        continue
+      }
+
+      graph.addNode({
+        id: referenceId,
+        label: `${reference.location.path}:${reference.location.line}`,
+      })
+      for (const definition of definitions) {
+        const labelId = occurrenceNodeId(
+          'label',
+          definition.location,
+          definition.key
+        )
+        usedLabels.add(labelId)
+        graph.addEdge({
+          kind: 'references',
+          from: labelId,
+          to: referenceId,
+        })
       }
     }
 

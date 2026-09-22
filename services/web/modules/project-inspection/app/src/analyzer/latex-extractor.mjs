@@ -103,6 +103,15 @@ function commandLocation(source, lineStarts, doc, node, raw, value) {
   })
 }
 
+function fullCommandLocation(source, lineStarts, doc, node) {
+  return createLocation(source, lineStarts, {
+    entityId: doc.id,
+    path: doc.path,
+    from: node.from,
+    to: node.to,
+  })
+}
+
 function parseGraphicPaths(value) {
   const paths = []
   for (const argument of topLevelBraceArguments(value)) {
@@ -207,14 +216,7 @@ export function extractLatex(doc) {
       if (type === 'Label') {
         const value = topLevelBraceArguments(raw).at(-1)?.value ?? ''
         const key = staticValue(value)
-        const location = commandLocation(
-          source,
-          lineStarts,
-          doc,
-          node,
-          raw,
-          value
-        )
+        const location = fullCommandLocation(source, lineStarts, doc, node)
         if (key) {
           result.labels.push({
             key,
@@ -229,14 +231,7 @@ export function extractLatex(doc) {
       if (type === 'Ref') {
         const value = topLevelBraceArguments(raw).at(-1)?.value ?? ''
         const keys = splitStaticList(value)
-        const location = commandLocation(
-          source,
-          lineStarts,
-          doc,
-          node,
-          raw,
-          value
-        )
+        const location = fullCommandLocation(source, lineStarts, doc, node)
         if (keys.length > 0) {
           for (const key of keys) result.references.push({ key, location })
         } else {
@@ -332,6 +327,7 @@ export function extractLatex(doc) {
           to: Math.min(node.to, node.from + raw.indexOf('}') + 1),
         }),
         labels: [],
+        figures: [],
       })
     },
   })
@@ -350,6 +346,24 @@ export function extractLatex(doc) {
     if (containing) {
       containing.labels.push(label.key)
       label.environmentKind = containing.kind
+    }
+  }
+
+  for (const figure of result.figures) {
+    const containing = result.environments
+      .filter(
+        environment =>
+          environment.kind === 'figure' &&
+          figure.location.from >= environment.from &&
+          figure.location.to <= environment.to
+      )
+      .sort(
+        (left, right) =>
+          left.to - left.from - (right.to - right.from)
+      )[0]
+    if (containing) {
+      containing.figures.push(figure)
+      figure.environmentFrom = containing.from
     }
   }
 

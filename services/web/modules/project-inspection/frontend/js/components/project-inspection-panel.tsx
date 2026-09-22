@@ -69,6 +69,7 @@ const DEPENDENCY_TYPE_ICONS: Record<
 > = {
   document: { icon: 'description', label: 'Document' },
   file: { icon: 'description', label: 'File' },
+  'figure-file': { icon: 'description', label: 'Image file' },
   include: { icon: 'input', label: 'Included file' },
   figure: { icon: 'image', label: 'Figure' },
   table: { icon: 'table_chart', label: 'Table' },
@@ -101,6 +102,48 @@ function dependencyType(node: InspectionGraphNode, incomingKind?: string) {
     if (/\.(?:pdf|png|jpe?g|eps|svg)$/i.test(filePath)) return 'figure'
   }
   return node.kind
+}
+
+const DEPENDENCY_TYPE_ORDER: Record<string, number> = {
+  include: 0,
+  input: 0,
+  document: 0,
+  file: 0,
+  'figure-file': 0,
+  figure: 1,
+  table: 2,
+  label: 3,
+  reference: 3,
+  citation: 4,
+  bibliography: 5,
+  'bibliography-entry': 5,
+}
+
+const DEPENDENCY_LABEL_COLLATOR = new Intl.Collator('en', {
+  numeric: true,
+  sensitivity: 'base',
+})
+
+function compareDependencyNodes(
+  leftId: string,
+  rightId: string,
+  nodes: Map<string, InspectionGraphNode>,
+  incomingKinds: Map<string, string>
+) {
+  const left = nodes.get(leftId)
+  const right = nodes.get(rightId)
+  if (!left || !right) return leftId.localeCompare(rightId)
+  const leftType = dependencyType(left, incomingKinds.get(leftId))
+  const rightType = dependencyType(right, incomingKinds.get(rightId))
+  const typeDifference =
+    (DEPENDENCY_TYPE_ORDER[leftType] ?? Number.MAX_SAFE_INTEGER) -
+    (DEPENDENCY_TYPE_ORDER[rightType] ?? Number.MAX_SAFE_INTEGER)
+  if (typeDifference !== 0) return typeDifference
+  const labelDifference = DEPENDENCY_LABEL_COLLATOR.compare(
+    left.label,
+    right.label
+  )
+  return labelDifference || left.id.localeCompare(right.id)
 }
 
 function DependencyTypeIcon({
@@ -418,6 +461,11 @@ function DependencyTree({
       if (edge.kind === 'contains') continue
       addChild(edge.from, edge.to)
       if (!incomingKinds.has(edge.to)) incomingKinds.set(edge.to, edge.kind)
+    }
+    for (const children of outgoing.values()) {
+      children.sort((leftId, rightId) =>
+        compareDependencyNodes(leftId, rightId, nodeMap, incomingKinds)
+      )
     }
     return {
       nodes: nodeMap,

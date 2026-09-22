@@ -90,6 +90,129 @@ See \ref{fig:missing} and \cite{Used,MissingCitation}.`
     expect(issueTypes(result)).not.toContain('unlabeled-figure')
   })
 
+  it('builds semantic figure, table, and reference nodes', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['chapter'],
+        documents: [
+          document(
+            'chapter',
+            'chap4.tex',
+            String.raw`\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{custom/offline-training.png}
+\caption{Offline training}
+\label{fig:offline-training-pipeline}
+\end{figure}
+\begin{table}[H]
+\caption{Analyzer fields}
+\label{tab:analyzer-log-fields}
+\end{table}
+See \ref{tab:analyzer-log-fields}.`
+          ),
+        ],
+        files: [
+          {
+            id: 'offline-training',
+            path: 'custom/offline-training.png',
+          },
+        ],
+      })
+    )
+
+    const figure = result.graph.nodes.find(
+      node =>
+        node.kind === 'figure' &&
+        node.label === 'fig:offline-training-pipeline'
+    )
+    const image = result.graph.nodes.find(
+      node =>
+        node.kind === 'figure-file' &&
+        node.label === 'custom/offline-training.png'
+    )
+    const table = result.graph.nodes.find(
+      node =>
+        node.kind === 'table' &&
+        node.label === 'tab:analyzer-log-fields'
+    )
+    const label = result.graph.nodes.find(
+      node =>
+        node.kind === 'label' &&
+        node.label === 'tab:analyzer-log-fields'
+    )
+    const reference = result.graph.nodes.find(
+      node =>
+        node.kind === 'reference' &&
+        node.label === 'chap4.tex:11'
+    )
+
+    expect(figure).toMatchObject({
+      parentId: 'file:chap4.tex',
+      location: { line: 1, column: 0, sourceText: String.raw`\begin{figure}` },
+    })
+    expect(image).toMatchObject({
+      parentId: figure.id,
+      path: 'custom/offline-training.png',
+    })
+    expect(image.location).toBeUndefined()
+    expect(table).toMatchObject({
+      parentId: 'file:chap4.tex',
+      location: { line: 7, column: 0, sourceText: String.raw`\begin{table}` },
+    })
+    expect(label.location).toMatchObject({
+      line: 9,
+      column: 0,
+      sourceText: String.raw`\label{tab:analyzer-log-fields}`,
+    })
+    expect(reference).toMatchObject({
+      location: {
+        line: 11,
+        column: 4,
+        sourceText: String.raw`\ref{tab:analyzer-log-fields}`,
+      },
+    })
+    expect(result.graph.edges).toContainEqual(
+      expect.objectContaining({
+        kind: 'references',
+        from: label.id,
+        to: reference.id,
+      })
+    )
+  })
+
+  it('uses path and line fallbacks for unlabeled environments', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\begin{figure}
+content
+\end{figure}
+\begin{table}
+content
+\end{table}`
+          ),
+        ],
+      })
+    )
+
+    expect(result.graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'figure',
+          label: 'Figure main.tex:1',
+        }),
+        expect.objectContaining({
+          kind: 'table',
+          label: 'Table main.tex:4',
+        }),
+      ])
+    )
+  })
+
   it.each(['figure', 'figure*', 'table', 'table*', 'longtable'])(
     'warns when the %s environment has no label',
     environment => {
