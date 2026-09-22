@@ -43,7 +43,7 @@ const DockerRunner = {
       return callback(new Error('image not allowed'))
     }
 
-    if (Settings.texliveImageNameOveride != null) {
+    if (Settings.texliveImageNameOveride != null && compileGroup != 'conversions') {
       const img = Path.basename(image)
       image = `${Settings.texliveImageNameOveride}/${img}`
     }
