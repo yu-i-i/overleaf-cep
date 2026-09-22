@@ -98,20 +98,6 @@ function ThinFooter({
             ))}
           </ul>
         </OLRow>
-        {env === 'server-ce' && (
-          <OLRow>
-            <OLCol lg={12}>
-              <p className="copyright-notice">
-                Overleaf Community Edition™ is a free unsupported software that
-                may contain vulnerabilities and used at your own risk. Use of
-                Overleaf Community Edition™ here is not operated, supported or
-                endorsed by Overleaf®. It has been provided "AS IS" with all
-                liability disclaimed (to the fullest extent lawful) and all
-                rights reserved.
-              </p>
-            </OLCol>
-          </OLRow>
-        )}
       </div>
     </footer>
   )

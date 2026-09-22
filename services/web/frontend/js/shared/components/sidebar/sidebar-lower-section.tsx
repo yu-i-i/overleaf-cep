@@ -119,7 +119,7 @@ export function SidebarLowerSection({
         </ul>
       </nav>
       <div className="ds-nav-ds-name" translate="no">
-        <span>Digital Science</span>
+        <span>Overleaf CE+</span>
       </div>
       <UserProvider>{contactUsModal}</UserProvider>
     </>
