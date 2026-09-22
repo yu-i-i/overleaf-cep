@@ -128,7 +128,8 @@
     width: 1rem;
   }
 
-  .project-inspection-tree-type {
+  .project-inspection-tree-type,
+  .project-inspection-category-icon {
     flex: 0 0 1rem;
     font-size: 1rem;
     margin-right: var(--spacing-02);
@@ -183,12 +184,6 @@
     width: 0.55rem;
   }
 
-  .project-inspection-category-icon {
-    display: inline-block;
-    margin-right: var(--spacing-02);
-    width: 1rem;
-  }
-
   .project-inspection-status-missing,
   .project-inspection-status-circular {
     background: var(--content-danger);
@@ -221,6 +216,10 @@
     padding: 0;
     text-align: left;
     width: 100%;
+  }
+
+  .project-inspection-issue {
+    align-items: baseline;
   }
 
   .project-inspection-issue-title,

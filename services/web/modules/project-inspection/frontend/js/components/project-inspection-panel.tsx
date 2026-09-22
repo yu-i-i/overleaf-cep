@@ -45,24 +45,6 @@ function StatusDot({ status }: { status: string }) {
   )
 }
 
-function CategoryIcon({ category }: { category: string }) {
-  const icon =
-    {
-      file: '📄',
-      figure: '🖼️',
-      table: '📊',
-      citation: '📚',
-      bibliography: '📚',
-      label: '🔖',
-      reference: '🔗',
-    }[category] ?? '•'
-  return (
-    <span className="project-inspection-category-icon" aria-hidden="true">
-      {icon}
-    </span>
-  )
-}
-
 const DEPENDENCY_TYPE_ICONS: Record<
   string,
   { icon: string; label: string }
@@ -79,6 +61,27 @@ const DEPENDENCY_TYPE_ICONS: Record<
   bibliography: { icon: 'book_5', label: 'Bibliography' },
   'bibliography-entry': { icon: 'text_snippet', label: 'Bibliography entry' },
   'missing-resource': { icon: 'help', label: 'Missing resource' },
+}
+
+const ISSUE_DEPENDENCY_TYPES: Record<string, string> = {
+  'missing-file': 'include',
+  'missing-figure': 'figure-file',
+  'missing-bibliography': 'bibliography',
+  'unused-bibliography-entry': 'bibliography-entry',
+  'possibly-unused-file': 'file',
+}
+
+function CategoryIcon({ issue }: { issue: InspectionIssue }) {
+  const type = ISSUE_DEPENDENCY_TYPES[issue.type] ?? issue.category
+  const definition =
+    DEPENDENCY_TYPE_ICONS[type] ?? DEPENDENCY_TYPE_ICONS['missing-resource']
+  return (
+    <MaterialIcon
+      type={definition.icon}
+      accessibilityLabel={definition.label}
+      className="project-inspection-category-icon"
+    />
+  )
 }
 
 const DEPENDENCY_STATUS_ICONS: Record<
@@ -218,8 +221,7 @@ function IssueList({
                 className="project-inspection-issue"
                 onClick={() => onNavigate(primaryLocation, issue.target)}
               >
-                <StatusDot status={issue.status} />
-                <CategoryIcon category={issue.category} />
+                <CategoryIcon issue={issue} />
                 <span>
                   <span className="project-inspection-issue-title">
                     {issue.title}
