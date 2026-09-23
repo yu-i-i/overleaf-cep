@@ -643,6 +643,11 @@ function ProjectInspectionPanel() {
             )}
             <section className="project-inspection-overview">
               <h3>Overview</h3>
+              <p className="project-inspection-totals">
+                {result.overview.fileCount} files · {result.overview.figureCount}{' '}
+                figures · {result.overview.tableCount} tables ·{' '}
+                {result.overview.citationCount} citations
+              </p>
               <div className="project-inspection-summary-grid">
                 <button
                   type="button"
@@ -673,11 +678,6 @@ function ProjectInspectionPanel() {
                   <strong>{result.overview.circular}</strong>
                 </button>
               </div>
-              <p className="project-inspection-totals">
-                {result.overview.fileCount} files · {result.overview.figureCount}{' '}
-                figures · {result.overview.tableCount} tables ·{' '}
-                {result.overview.citationCount} citations
-              </p>
             </section>
             <DependencyTree result={result} onNavigate={onNavigate} />
             <IssueSection

@@ -4,6 +4,8 @@
 
   .project-inspection-content {
     height: calc(100% - 48px);
+    font-size: var(--font-size-02);
+    line-height: var(--line-height-02);
     overflow: auto;
     padding: var(--spacing-04);
   }
@@ -18,13 +20,8 @@
   h3 {
     font-size: var(--font-size-02);
     font-weight: 600;
+    line-height: var(--line-height-02);
     margin-bottom: var(--spacing-03);
-  }
-
-  h4 {
-    font-size: var(--font-size-01);
-    font-weight: 600;
-    margin: var(--spacing-04) 0 var(--spacing-02);
   }
 
   .project-inspection-entry-points {
@@ -39,11 +36,16 @@
   .project-inspection-empty {
     color: var(--content-secondary);
     font-size: var(--font-size-01);
+    line-height: var(--line-height-01);
     margin: var(--spacing-03) 0;
   }
 
   .project-inspection-overview {
     margin-top: var(--spacing-05);
+  }
+
+  .project-inspection-totals {
+    margin-top: 0;
   }
 
   .project-inspection-summary-grid {
@@ -58,9 +60,11 @@
       border-radius: var(--border-radius-base);
       color: inherit;
       display: grid;
-      font-size: var(--font-size-01);
+      font-size: var(--font-size-02);
+      font-weight: normal;
       gap: var(--spacing-01);
       grid-template-columns: auto 1fr auto;
+      line-height: var(--line-height-02);
       padding: var(--spacing-02);
       text-align: left;
     }
@@ -152,6 +156,7 @@
     display: inline-flex;
     flex: 0 0 auto;
     font-size: var(--font-size-01);
+    line-height: var(--line-height-01);
     margin-left: var(--spacing-02);
     white-space: nowrap;
   }
@@ -161,18 +166,21 @@
     margin-right: var(--spacing-01);
   }
 
-  .project-inspection-tree-status-missing,
-  .project-inspection-tree-status-circular {
-    color: var(--content-danger);
+  .project-inspection-tree-status-missing {
+    color: var(--red-50);
   }
 
   .project-inspection-tree-status-unused,
   .project-inspection-tree-status-unreferenced {
-    color: var(--content-warning);
+    color: var(--yellow-50);
   }
 
   .project-inspection-tree-status-duplicate {
-    color: var(--orange-50);
+    color: var(--yellow-40);
+  }
+
+  .project-inspection-tree-status-circular {
+    color: var(--red-70);
   }
 
   .project-inspection-status {
@@ -184,18 +192,21 @@
     width: 0.55rem;
   }
 
-  .project-inspection-status-missing,
-  .project-inspection-status-circular {
-    background: var(--content-danger);
+  .project-inspection-status-missing {
+    background: var(--red-50);
   }
 
   .project-inspection-status-unused,
   .project-inspection-status-unreferenced {
-    background: var(--content-warning);
+    background: var(--yellow-50);
   }
 
   .project-inspection-status-duplicate {
-    background: var(--orange-50);
+    background: var(--yellow-40);
+  }
+
+  .project-inspection-status-circular {
+    background: var(--red-70);
   }
 
   .project-inspection-status-normal {
@@ -232,10 +243,12 @@
   .project-inspection-secondary-location {
     color: var(--content-secondary);
     font-size: var(--font-size-01);
+    line-height: var(--line-height-01);
   }
 
   .project-inspection-secondary-location {
-    margin-left: calc(0.55rem + var(--spacing-02));
+    margin-left: 0;
+    padding-left: calc(1rem + var(--spacing-02));
     padding-top: var(--spacing-01);
   }
 }
