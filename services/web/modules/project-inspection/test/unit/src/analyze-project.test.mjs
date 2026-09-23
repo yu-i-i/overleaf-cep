@@ -263,6 +263,183 @@ content
     )
 
     expect(result.overview.circular).toBe(1)
-    expect(issueTypes(result)).toContain('circular-dependency')
+    const issue = Object.values(result.issues.byId).find(
+      item => item.type === 'circular-dependency'
+    )
+    expect(issue.status).toBe('circular')
+    expect(issue.cycleEdges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          from: 'main.tex',
+          to: 'chapter.tex',
+          location: expect.objectContaining({
+            path: 'main.tex',
+            line: 1,
+            column: 7,
+            sourceText: 'chapter',
+          }),
+        }),
+        expect.objectContaining({
+          from: 'chapter.tex',
+          to: 'main.tex',
+          location: expect.objectContaining({
+            path: 'chapter.tex',
+            line: 1,
+            column: 7,
+            sourceText: 'main',
+          }),
+        }),
+      ])
+    )
+    expect(issue.title).toContain(' ↔ ')
+  })
+
+  it('reports each edge in a multi-file include cycle', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['a'],
+        documents: [
+          document('a', 'a.tex', String.raw`\input{b}`),
+          document('b', 'b.tex', String.raw`\input{c}`),
+          document('c', 'c.tex', String.raw`\input{a}`),
+        ],
+      })
+    )
+
+    const issue = Object.values(result.issues.byId).find(
+      item => item.type === 'circular-dependency'
+    )
+    expect(issue.cycleEdges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ from: 'a.tex', to: 'b.tex' }),
+        expect.objectContaining({ from: 'b.tex', to: 'c.tex' }),
+        expect.objectContaining({ from: 'c.tex', to: 'a.tex' }),
+      ])
+    )
+  })
+
+  it('reports the include location for a self-cycle', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document('main', 'main.tex', String.raw`\input{main}`),
+        ],
+      })
+    )
+
+    const issue = Object.values(result.issues.byId).find(
+      item => item.type === 'circular-dependency'
+    )
+    expect(issue.cycleEdges).toEqual([
+      {
+        from: 'main.tex',
+        to: 'main.tex',
+        location: expect.objectContaining({
+          path: 'main.tex',
+          line: 1,
+          column: 7,
+          sourceText: 'main',
+        }),
+      },
+    ])
+  })
+
+  it('reports bibliography entries with equivalent normalized titles', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\bibliography{references}`
+          ),
+          document(
+            'bib',
+            'references.bib',
+            String.raw`@article{First, title={An {Overview}~of GPU}}
+@book{Second, TITLE=" an overview" # " of gpu "}`
+          ),
+        ],
+      })
+    )
+
+    const issues = Object.values(result.issues.byId).filter(
+      item => item.type === 'duplicate-bibliography-title'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].title).toBe(
+      'Duplicate bibliography title: An Overview of GPU'
+    )
+    expect(issues[0].locations).toEqual([
+      expect.objectContaining({
+        path: 'references.bib',
+        line: 1,
+        sourceText: 'title={An {Overview}~of GPU}',
+      }),
+      expect.objectContaining({
+        path: 'references.bib',
+        line: 2,
+        sourceText: 'TITLE=" an overview" # " of gpu "',
+      }),
+    ])
+    expect(result.views.duplicate).toContain(issues[0].id)
+  })
+
+  it('does not report the same entries twice when key and title both match', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\bibliography{references}`
+          ),
+          document(
+            'bib',
+            'references.bib',
+            String.raw`@article{Same, title={Same title}}
+@book{Same, title={Same title}}`
+          ),
+        ],
+      })
+    )
+
+    const duplicateTypes = result.views.duplicate.map(
+      id => result.issues.byId[id].type
+    )
+    expect(duplicateTypes).toEqual(['duplicate-bibliography-key'])
+  })
+
+  it('skips dynamic titles and bibliography files outside the selected scope', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\bibliography{references}`
+          ),
+          document(
+            'bib',
+            'references.bib',
+            String.raw`@article{First, title=sharedTitle}
+@book{Second, title=sharedTitle}
+@misc{NoTitle}`
+          ),
+          document(
+            'unused-bib',
+            'unused.bib',
+            String.raw`@article{OutsideA, title={Outside}}
+@book{OutsideB, title={Outside}}`
+          ),
+        ],
+      })
+    )
+
+    expect(issueTypes(result)).not.toContain('duplicate-bibliography-title')
   })
 })

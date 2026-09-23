@@ -1,11 +1,17 @@
 .project-inspection-panel {
+  container-name: project-inspection;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  min-height: 0;
   min-width: 0;
 
   .project-inspection-content {
-    height: calc(100% - 48px);
+    flex: 1 1 auto;
     font-size: var(--font-size-02);
     line-height: var(--line-height-02);
+    min-height: 0;
     overflow: auto;
     padding: var(--spacing-04);
   }
@@ -27,7 +33,24 @@
   .project-inspection-entry-points {
     max-height: 9rem;
     margin-bottom: var(--spacing-03);
-    overflow: auto;
+    overflow: hidden auto;
+
+    .form-check,
+    .form-check-label {
+      min-width: 0;
+    }
+
+    .form-check-label {
+      display: block;
+      overflow: hidden;
+    }
+  }
+
+  .project-inspection-entry-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .project-inspection-timestamp,
@@ -51,7 +74,8 @@
   .project-inspection-summary-grid {
     display: grid;
     gap: var(--spacing-02);
-    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 
     button {
       align-items: center;
@@ -63,8 +87,11 @@
       font-size: var(--font-size-02);
       font-weight: normal;
       gap: var(--spacing-01);
-      grid-template-columns: auto 1fr auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      height: 100%;
       line-height: var(--line-height-02);
+      min-width: 0;
+      overflow-wrap: normal;
       padding: var(--spacing-02);
       text-align: left;
     }
@@ -75,14 +102,31 @@
     padding: var(--spacing-03) 0;
 
     > summary {
+      align-items: start;
+      column-gap: var(--spacing-02);
       cursor: pointer;
+      display: grid;
       font-weight: 600;
-      list-style-position: inside;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      list-style: none;
+      min-width: 0;
+    }
+
+    > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    > summary::before {
+      content: '▸';
+    }
+
+    &[open] > summary::before {
+      content: '▾';
     }
   }
 
   .project-inspection-count {
-    float: right;
+    white-space: nowrap;
   }
 
   .project-inspection-tree,
@@ -115,8 +159,9 @@
     }
 
     li {
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
       padding: var(--spacing-01) 0;
+      word-break: normal;
     }
   }
 
@@ -146,9 +191,10 @@
     color: inherit;
     flex: 0 1 auto;
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     padding: 0;
     text-align: left;
+    word-break: normal;
   }
 
   .project-inspection-tree-status {
@@ -180,6 +226,10 @@
   }
 
   .project-inspection-tree-status-circular {
+    color: var(--red-70);
+  }
+
+  .project-inspection-circular-icon {
     color: var(--red-70);
   }
 
@@ -230,13 +280,25 @@
   }
 
   .project-inspection-issue {
-    align-items: baseline;
+    align-items: start;
+    column-gap: var(--spacing-02);
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+
+    > .project-inspection-category-icon {
+      margin-right: 0;
+    }
+  }
+
+  .project-inspection-issue-content {
+    min-width: 0;
   }
 
   .project-inspection-issue-title,
   .project-inspection-location {
     display: block;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .project-inspection-location,
@@ -250,5 +312,59 @@
     margin-left: 0;
     padding-left: calc(1rem + var(--spacing-02));
     padding-top: var(--spacing-01);
+  }
+}
+
+@container project-inspection (max-width: 260px) {
+  .project-inspection-panel {
+    .project-inspection-content {
+      padding: var(--spacing-02);
+    }
+
+    .project-inspection-coverage-warning.notification {
+      column-gap: var(--spacing-02);
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      padding: 0 var(--spacing-03);
+
+      .notification-icon {
+        padding: var(--spacing-03) 0 0;
+      }
+
+      .notification-content {
+        padding: var(--spacing-03) 0;
+      }
+    }
+
+    .project-inspection-summary-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .project-inspection-tree {
+      padding-left: 0;
+
+      ul {
+        margin-left: 2px;
+        padding-left: var(--spacing-01);
+      }
+
+      .project-inspection-tree-row,
+      details > summary {
+        flex-wrap: wrap;
+      }
+    }
+
+    .project-inspection-tree-toggle,
+    .project-inspection-tree-type {
+      margin-right: var(--spacing-01);
+    }
+
+    .project-inspection-tree-status {
+      margin-left: calc(2rem + var(--spacing-02));
+    }
+
+    .project-inspection-secondary-location {
+      padding-left: 0;
+    }
   }
 }

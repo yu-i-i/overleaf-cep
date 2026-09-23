@@ -4,6 +4,7 @@ import Button from '@/shared/components/button/button'
 import MaterialIcon from '@/shared/components/material-icon'
 import Notification from '@/shared/components/notification'
 import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
+import OLTooltip from '@/shared/components/ol/ol-tooltip'
 import RailPanelHeader from '@/features/ide-react/components/rail/rail-panel-header'
 import { useProjectContext } from '@/shared/context/project-context'
 import { useFileTreeData } from '@/shared/context/file-tree-data-context'
@@ -191,6 +192,37 @@ function DependencyStatus({
 
 type Navigate = (location?: SourceLocation, fallbackPath?: string) => void
 
+function CircularIssue({
+  issue,
+  onNavigate,
+}: {
+  issue: InspectionIssue
+  onNavigate: Navigate
+}) {
+  return (
+    <>
+      <div className="project-inspection-issue">
+        <MaterialIcon
+          type="autorenew"
+          accessibilityLabel="Circular dependency"
+          className="project-inspection-category-icon project-inspection-circular-icon"
+        />
+        <span className="project-inspection-issue-title">{issue.title}</span>
+      </div>
+      {issue.cycleEdges?.map(edge => (
+        <button
+          type="button"
+          className="project-inspection-secondary-location"
+          key={`${edge.from}:${edge.to}:${edge.location.from}`}
+          onClick={() => onNavigate(edge.location)}
+        >
+          {edge.from} → {edge.to}
+        </button>
+      ))}
+    </>
+  )
+}
+
 function IssueList({
   ids,
   issues,
@@ -214,6 +246,13 @@ function IssueList({
           const issue = issues[id]
           if (!issue) return null
           const primaryLocation = issue.locations[0]
+          if (issue.type === 'circular-dependency') {
+            return (
+              <li key={id}>
+                <CircularIssue issue={issue} onNavigate={onNavigate} />
+              </li>
+            )
+          }
           return (
             <li key={id}>
               <button
@@ -222,7 +261,7 @@ function IssueList({
                 onClick={() => onNavigate(primaryLocation, issue.target)}
               >
                 <CategoryIcon issue={issue} />
-                <span>
+                <span className="project-inspection-issue-content">
                   <span className="project-inspection-issue-title">
                     {issue.title}
                   </span>
@@ -441,7 +480,9 @@ function DependencyTree({
       className="project-inspection-section"
       open
     >
-      <summary>Dependency Tree</summary>
+      <summary>
+        <span>Dependency Tree</span>
+      </summary>
       <ul className="project-inspection-tree">
         {result.graph.roots.map(root => (
           <DependencyNode
@@ -475,11 +516,22 @@ function ProjectInspectionPanel() {
     () => (docs ?? []).filter(item => isValidTeXFile(item.path)),
     [docs]
   )
+  const displayedEntryPoints = useMemo(() => {
+    const preferred =
+      entryPoints.find(item => item.doc.id === project?.rootDocId) ??
+      entryPoints[0]
+    if (!preferred) return entryPoints
+    return [
+      preferred,
+      ...entryPoints.filter(item => item.doc.id !== preferred.doc.id),
+    ]
+  }, [entryPoints, project?.rootDocId])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [result, setResult] = useState<ProjectInspectionResult>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>()
   const abortControllerRef = useRef<AbortController | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setSelectedIds(current => {
@@ -557,8 +609,16 @@ function ProjectInspectionPanel() {
     [findEntityByPath, openDocWithId, openFileWithId]
   )
 
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToSection = (id: string) => {
+    const container = contentRef.current
+    const target = container?.querySelector<HTMLElement>(`#${id}`)
+    if (!container || !target) return
+    const containerRect = container.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    container.scrollTo({
+      top: container.scrollTop + targetRect.top - containerRect.top,
+      behavior: 'smooth',
+    })
   }
   const coverageWarningCount = result
     ? result.coverage.parseErrors.length +
@@ -577,18 +637,25 @@ function ProjectInspectionPanel() {
   return (
     <div className="project-inspection-panel">
       <RailPanelHeader title="Project Inspection" />
-      <div className="project-inspection-content">
+      <div ref={contentRef} className="project-inspection-content">
         <form onSubmit={onSubmit}>
           <fieldset disabled={loading}>
             <legend>Entry points</legend>
             <div className="project-inspection-entry-points">
-              {entryPoints.map(item => {
+              {displayedEntryPoints.map(item => {
                 const id = String(item.doc.id)
                 return (
                   <OLFormCheckbox
                     key={id}
                     id={`project-inspection-entry-${id}`}
-                    label={item.path}
+                    label={
+                      <span
+                        className="project-inspection-entry-label"
+                        title={item.path}
+                      >
+                        {item.path}
+                      </span>
+                    }
                     checked={selectedIds.has(id)}
                     disabled={
                       !selectedIds.has(id) &&
@@ -638,6 +705,7 @@ function ProjectInspectionPanel() {
             {hasCoverageWarning && (
               <Notification
                 type="warning"
+                className="project-inspection-coverage-warning"
                 content={`${coverageWarningCount} item(s) could not be analyzed conclusively or the displayed result was truncated. Results favor fewer false positives.`}
               />
             )}
@@ -649,34 +717,70 @@ function ProjectInspectionPanel() {
                 {result.overview.citationCount} citations
               </p>
               <div className="project-inspection-summary-grid">
-                <button
-                  type="button"
-                  onClick={() => scrollTo('inspection-missing')}
+                <OLTooltip
+                  id="project-inspection-overview-missing"
+                  description="Shows the number of missing components."
+                  overlayProps={{
+                    placement: 'right',
+                    trigger: ['hover', 'focus'],
+                  }}
                 >
-                  <StatusDot status="missing" /> Missing
-                  <strong>{result.overview.missing}</strong>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollTo('inspection-unused')}
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('inspection-missing')}
+                  >
+                    <StatusDot status="missing" /> Missing
+                    <strong>{result.overview.missing}</strong>
+                  </button>
+                </OLTooltip>
+                <OLTooltip
+                  id="project-inspection-overview-unused"
+                  description="Shows the number of unused or unreferenced components."
+                  overlayProps={{
+                    placement: 'right',
+                    trigger: ['hover', 'focus'],
+                  }}
                 >
-                  <StatusDot status="unused" /> Unused / Unreferenced
-                  <strong>{result.overview.unusedUnreferenced}</strong>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollTo('inspection-duplicate')}
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('inspection-unused')}
+                  >
+                    <StatusDot status="unused" /> Unused / Unreferenced
+                    <strong>{result.overview.unusedUnreferenced}</strong>
+                  </button>
+                </OLTooltip>
+                <OLTooltip
+                  id="project-inspection-overview-duplicate"
+                  description="Shows the number of duplicate labels or bibliography keys."
+                  overlayProps={{
+                    placement: 'right',
+                    trigger: ['hover', 'focus'],
+                  }}
                 >
-                  <StatusDot status="duplicate" /> Duplicate
-                  <strong>{result.overview.duplicate}</strong>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollTo('inspection-dependencies')}
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('inspection-duplicate')}
+                  >
+                    <StatusDot status="duplicate" /> Duplicate
+                    <strong>{result.overview.duplicate}</strong>
+                  </button>
+                </OLTooltip>
+                <OLTooltip
+                  id="project-inspection-overview-circular"
+                  description="Shows the number of circular file-dependency cycles."
+                  overlayProps={{
+                    placement: 'right',
+                    trigger: ['hover', 'focus'],
+                  }}
                 >
-                  <StatusDot status="circular" /> Circular
-                  <strong>{result.overview.circular}</strong>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('inspection-circular')}
+                  >
+                    <StatusDot status="circular" /> Circular
+                    <strong>{result.overview.circular}</strong>
+                  </button>
+                </OLTooltip>
               </div>
             </section>
             <DependencyTree result={result} onNavigate={onNavigate} />
@@ -699,6 +803,13 @@ function ProjectInspectionPanel() {
               id="inspection-duplicate"
               title="Duplicate Components"
               issueIds={result.views.duplicate}
+              result={result}
+              onNavigate={onNavigate}
+            />
+            <IssueSection
+              id="inspection-circular"
+              title="Circular Dependencies"
+              issueIds={result.views.circular}
               result={result}
               onNavigate={onNavigate}
             />

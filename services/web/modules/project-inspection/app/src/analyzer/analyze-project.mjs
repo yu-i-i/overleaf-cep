@@ -37,6 +37,43 @@ const occurrenceNodeId = (kind, location, identity = '') =>
 const figureResourceNodeId = item =>
   occurrenceNodeId('figure-file', item.location, item.target)
 
+function normalizedBibliographyTitle(title) {
+  const display = title
+    .normalize('NFKC')
+    .replace(/~/g, ' ')
+    .replace(/[{}]/g, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+  return { display, key: display.toLocaleLowerCase('en-US') }
+}
+
+function bibliographyEntrySignature(entries) {
+  return entries
+    .map(
+      entry =>
+        entry.location.entityId +
+        ':' +
+        entry.location.from +
+        ':' +
+        entry.location.to
+    )
+    .sort()
+    .join(',')
+}
+
+function collectBibliographyEntry(entriesByKey, entriesByTitle, entry) {
+  const keyEntries = entriesByKey.get(entry.key) ?? []
+  keyEntries.push(entry)
+  entriesByKey.set(entry.key, keyEntries)
+
+  if (entry.title == null || !entry.titleLocation) return
+  const normalizedTitle = normalizedBibliographyTitle(entry.title)
+  if (!normalizedTitle.key) return
+  const titleEntries = entriesByTitle.get(normalizedTitle.key) ?? []
+  titleEntries.push({ ...entry, displayTitle: normalizedTitle.display })
+  entriesByTitle.set(normalizedTitle.key, titleEntries)
+}
+
 function extension(filePath) {
   return path.posix.extname(filePath).toLowerCase()
 }
@@ -124,6 +161,20 @@ function resolveRelations(parsed, availablePaths) {
     })
   }
   return result
+}
+
+function buildCycleEdges(cycle, relationsByPath) {
+  return cycle.path.slice(0, -1).flatMap((from, index) => {
+    const to = cycle.path[index + 1]
+    const relation = relationsByPath
+      .get(from)
+      ?.includes.find(
+        item =>
+          item.resolution.status === 'resolved' &&
+          item.resolution.path === to
+      )
+    return relation ? [{ from, to, location: relation.location }] : []
+  })
 }
 
 function addResolvedRelationToGraph(graph, sourcePath, kind, item) {
@@ -256,6 +307,7 @@ function issueTitle(type, target) {
     'missing-citation': 'Citation has no matching bibliography entry',
     'duplicate-label': 'Duplicate label',
     'duplicate-bibliography-key': 'Duplicate bibliography key',
+    'duplicate-bibliography-title': 'Duplicate bibliography title',
     'unreferenced-label': 'Label is not referenced',
     'unreferenced-figure': 'Figure is not referenced',
     'unreferenced-table': 'Table is not referenced',
@@ -420,6 +472,7 @@ export function analyzeProject(snapshot) {
 
     const labelsByKey = new Map()
     const entriesByKey = new Map()
+    const entriesByTitle = new Map()
     const references = []
     const citations = []
     let labelsIncomplete = false
@@ -486,9 +539,7 @@ export function analyzeProject(snapshot) {
         reference => reference.kind === 'label'
       )
       for (const entry of parsed.bibliographyEntries) {
-        const values = entriesByKey.get(entry.key) ?? []
-        values.push(entry)
-        entriesByKey.set(entry.key, values)
+        collectBibliographyEntry(entriesByKey, entriesByTitle, entry)
       }
     }
 
@@ -496,9 +547,7 @@ export function analyzeProject(snapshot) {
       const bibliography = bibByPath.get(bibPath)
       if (!bibliography || bibliography.unavailable) continue
       for (const entry of bibliography.entries) {
-        const values = entriesByKey.get(entry.key) ?? []
-        values.push(entry)
-        entriesByKey.set(entry.key, values)
+        collectBibliographyEntry(entriesByKey, entriesByTitle, entry)
       }
     }
 
@@ -568,8 +617,11 @@ export function analyzeProject(snapshot) {
       }
     }
 
+    const duplicateKeyEntrySignatures = new Set()
     for (const [key, entries] of entriesByKey) {
       if (entries.length < 2) continue
+      const entrySignature = bibliographyEntrySignature(entries)
+      duplicateKeyEntrySignatures.add(entrySignature)
       const nodeIds = entries.map(entry =>
         occurrenceNodeId('bibliography-entry', entry.location, entry.key)
       )
@@ -581,6 +633,28 @@ export function analyzeProject(snapshot) {
           category: 'bibliography',
           target: key,
           locations: entries.map(item => item.location),
+          nodeIds,
+        },
+        scope.root.id,
+        ['duplicate', 'citationDuplicate']
+      )
+    }
+
+    for (const entries of entriesByTitle.values()) {
+      if (entries.length < 2) continue
+      const entrySignature = bibliographyEntrySignature(entries)
+      if (duplicateKeyEntrySignatures.has(entrySignature)) continue
+      const nodeIds = entries.map(entry =>
+        occurrenceNodeId('bibliography-entry', entry.location, entry.key)
+      )
+      addIssue(
+        'duplicate-bibliography-title:' + entrySignature,
+        {
+          type: 'duplicate-bibliography-title',
+          status: 'duplicate',
+          category: 'bibliography',
+          target: entries[0].displayTitle,
+          locations: entries.map(item => item.titleLocation),
           nodeIds,
         },
         scope.root.id,
@@ -635,15 +709,17 @@ export function analyzeProject(snapshot) {
     const scopeCycles = findCycles([...scope.documents], includeAdjacency)
     for (const cycle of scopeCycles) {
       const nodeIds = cycle.files.map(fileNodeId)
+      const cycleEdges = buildCycleEdges(cycle, relationsByPath)
       addIssue(
         `circular-dependency:${cycle.files.join('|')}`,
         {
           type: 'circular-dependency',
           status: 'circular',
           category: 'file',
-          target: cycle.path.join(' → '),
+          target: cycle.path.slice(0, -1).join(' ↔ '),
           locations: [],
           nodeIds,
+          cycleEdges,
         },
         scope.root.id,
         ['circular']

@@ -26,6 +26,11 @@ export type InspectionIssue = {
   locations: SourceLocation[]
   entryPoints: string[]
   nodeIds: string[]
+  cycleEdges?: Array<{
+    from: string
+    to: string
+    location: SourceLocation
+  }>
 }
 
 export type InspectionGraphNode = {
