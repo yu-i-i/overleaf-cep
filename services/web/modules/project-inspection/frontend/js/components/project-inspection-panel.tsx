@@ -60,6 +60,10 @@ const DEPENDENCY_TYPE_ICONS: Record<
   reference: { icon: 'link', label: 'Reference' },
   citation: { icon: 'format_quote', label: 'Citation' },
   bibliography: { icon: 'book_5', label: 'Bibliography' },
+  'bibliography-include': {
+    icon: 'input',
+    label: 'Included bibliography file',
+  },
   'bibliography-entry': { icon: 'text_snippet', label: 'Bibliography entry' },
   'missing-resource': { icon: 'help', label: 'Missing resource' },
 }
@@ -106,6 +110,14 @@ function dependencyType(node: InspectionGraphNode, incomingKind?: string) {
     if (/\.(?:pdf|png|jpe?g|eps|svg)$/i.test(filePath)) return 'figure'
   }
   return node.kind
+}
+
+function dependencyIconType(
+  node: InspectionGraphNode,
+  incomingKind?: string
+) {
+  if (node.kind === 'bibliography') return 'bibliography-include'
+  return dependencyType(node, incomingKind)
 }
 
 const DEPENDENCY_TYPE_ORDER: Record<string, number> = {
@@ -157,7 +169,7 @@ function DependencyTypeIcon({
   node: InspectionGraphNode
   incomingKind?: string
 }) {
-  const type = dependencyType(node, incomingKind)
+  const type = dependencyIconType(node, incomingKind)
   const definition =
     DEPENDENCY_TYPE_ICONS[type] ?? DEPENDENCY_TYPE_ICONS['missing-resource']
   return (
