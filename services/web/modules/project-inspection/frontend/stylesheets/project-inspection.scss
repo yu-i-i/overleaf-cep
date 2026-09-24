@@ -212,6 +212,12 @@
     margin-right: var(--spacing-01);
   }
 
+  .project-inspection-tree-status-icon-only {
+    .project-inspection-tree-status-icon {
+      margin-right: 0;
+    }
+  }
+
   .project-inspection-tree-status-missing {
     color: var(--red-50);
   }
@@ -361,6 +367,10 @@
 
     .project-inspection-tree-status {
       margin-left: calc(2rem + var(--spacing-02));
+    }
+
+    .project-inspection-tree-status-icon-only {
+      margin-left: var(--spacing-02);
     }
 
     .project-inspection-secondary-location {

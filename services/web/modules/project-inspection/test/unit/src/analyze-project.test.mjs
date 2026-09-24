@@ -278,7 +278,7 @@ Third \cite{li2026webspotter} and \cite{li2026webspotter}.`
     ).toEqual([1, 1])
   })
 
-  it('groups missing citation occurrences without changing issue counts', function () {
+  it('groups missing citation occurrences into one issue', function () {
     const result = analyzeProject(
       snapshot({
         entryPointIds: ['main'],
@@ -310,7 +310,125 @@ Third \cite{li2026webspotter} and \cite{li2026webspotter}.`
     )
     expect(occurrences).toHaveLength(2)
     expect(occurrences.every(node => node.status === 'normal')).toBe(true)
-    expect(result.overview.missing).toBe(2)
+    const issues = Object.values(result.issues.byId).filter(
+      issue => issue.type === 'missing-citation'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].locations.map(location => location.line)).toEqual([1, 2])
+    expect(result.views.missing).toEqual([issues[0].id])
+    expect(result.overview.missing).toBe(1)
+  })
+
+  it('groups normalized missing targets across source files', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['first', 'second'],
+        documents: [
+          document(
+            'first',
+            'sections/first.tex',
+            String.raw`\includegraphics{./missing.png}`
+          ),
+          document(
+            'second',
+            'chapters/second.tex',
+            String.raw`\includegraphics{missing.png}`
+          ),
+        ],
+      })
+    )
+
+    const issues = Object.values(result.issues.byId).filter(
+      issue => issue.type === 'missing-figure'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].locations.map(location => location.path)).toEqual([
+      'chapters/second.tex',
+      'sections/first.tex',
+    ])
+    expect(issues[0].entryPoints.sort()).toEqual(['first', 'second'])
+    expect(result.overview.missing).toBe(1)
+  })
+
+  it('groups unreferenced definitions by component identity', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\label{orphan}
+\label{orphan}`
+          ),
+        ],
+      })
+    )
+
+    const issues = Object.values(result.issues.byId).filter(
+      issue => issue.type === 'unreferenced-label'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].locations.map(location => location.line)).toEqual([1, 2])
+    expect(result.overview.unusedUnreferenced).toBe(1)
+  })
+
+  it('groups unused bibliography entries by key', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\bibliography{references}`
+          ),
+          document(
+            'bib',
+            'references.bib',
+            String.raw`@article{orphan, title={First}}
+@article{orphan, title={Second}}`
+          ),
+        ],
+      })
+    )
+
+    const issues = Object.values(result.issues.byId).filter(
+      issue => issue.type === 'unused-bibliography-entry'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].locations.map(location => location.line)).toEqual([1, 2])
+    expect(result.overview.unusedUnreferenced).toBe(1)
+  })
+
+  it('groups duplicate components found through multiple entry points', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['first', 'second'],
+        documents: [
+          document(
+            'first',
+            'first.tex',
+            String.raw`\label{shared}
+\label{shared}`
+          ),
+          document(
+            'second',
+            'second.tex',
+            String.raw`\label{shared}
+\label{shared}`
+          ),
+        ],
+      })
+    )
+
+    const issues = Object.values(result.issues.byId).filter(
+      issue => issue.type === 'duplicate-label'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].locations).toHaveLength(4)
+    expect(issues[0].entryPoints.sort()).toEqual(['first', 'second'])
+    expect(result.overview.duplicate).toBe(1)
   })
 
   it('navigates a duplicate citation key to its first bibliography entry', function () {
@@ -630,6 +748,27 @@ content
         expect.objectContaining({ from: 'c.tex', to: 'a.tex' }),
       ])
     )
+  })
+
+  it('groups the same cycle found through multiple entry points', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['a', 'b'],
+        documents: [
+          document('a', 'a.tex', String.raw`\input{b}`),
+          document('b', 'b.tex', String.raw`\input{a}`),
+        ],
+      })
+    )
+
+    const issues = Object.values(result.issues.byId).filter(
+      issue => issue.type === 'circular-dependency'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0].entryPoints.sort()).toEqual(['a', 'b'])
+    expect(issues[0].cycleEdges).toHaveLength(2)
+    expect(result.views.circular).toEqual([issues[0].id])
+    expect(result.overview.circular).toBe(1)
   })
 
   it('reports the include location for a self-cycle', function () {

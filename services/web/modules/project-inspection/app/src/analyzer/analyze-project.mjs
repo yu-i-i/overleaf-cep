@@ -35,6 +35,13 @@ const PROJECT_CLASS_RELATIONS = new Set([
   'loadclass',
   'loadclasswithoptions',
 ])
+const PATH_TARGET_ISSUE_TYPES = new Set([
+  'missing-file',
+  'missing-figure',
+  'missing-bibliography',
+  'unreferenced-figure',
+  'possibly-unused-file',
+])
 
 const fileNodeId = filePath => `file:${filePath}`
 const occurrenceNodeId = (kind, location, identity = '') =>
@@ -69,6 +76,14 @@ function bibliographyEntrySignature(entries) {
     )
     .sort()
     .join(',')
+}
+
+function componentIssueKey(type, target) {
+  let identity = String(target ?? '')
+  if (PATH_TARGET_ISSUE_TYPES.has(type)) {
+    identity = path.posix.normalize(identity.replace(/^\.\//, ''))
+  }
+  return `${type}:${encodeURIComponent(identity)}`
 }
 
 function collectBibliographyEntry(entriesByKey, entriesByTitle, entry) {
@@ -556,7 +571,7 @@ export function analyzeProject(snapshot) {
               ? [commandId]
               : [commandId, missingId]
           addIssue(
-            `${type}:${sourcePath}:${item.target}`,
+            componentIssueKey(type, item.target),
             {
               type,
               status: 'missing',
@@ -600,7 +615,7 @@ export function analyzeProject(snapshot) {
         occurrenceNodeId('label', definition.location, definition.key)
       )
       addIssue(
-        `duplicate-label:${key}:${definitions.map(item => item.location.entityId).sort().join(',')}`,
+        componentIssueKey('duplicate-label', key),
         {
           type: 'duplicate-label',
           status: 'duplicate',
@@ -625,7 +640,7 @@ export function analyzeProject(snapshot) {
         attachNodeToFile(graph, referenceId, reference.location.path)
         if (!labelsIncomplete) {
           addIssue(
-            `missing-reference:${reference.location.entityId}:${reference.location.from}:${reference.key}`,
+            componentIssueKey('missing-reference', reference.key),
             {
               type: 'missing-reference',
               status: 'missing',
@@ -669,7 +684,7 @@ export function analyzeProject(snapshot) {
         occurrenceNodeId('bibliography-entry', entry.location, entry.key)
       )
       addIssue(
-        `duplicate-bibliography-key:${key}:${entries.map(item => item.location.entityId).sort().join(',')}`,
+        componentIssueKey('duplicate-bibliography-key', key),
         {
           type: 'duplicate-bibliography-key',
           status: 'duplicate',
@@ -683,7 +698,7 @@ export function analyzeProject(snapshot) {
       )
     }
 
-    for (const entries of entriesByTitle.values()) {
+    for (const [normalizedTitle, entries] of entriesByTitle) {
       if (entries.length < 2) continue
       const entrySignature = bibliographyEntrySignature(entries)
       if (duplicateKeyEntrySignatures.has(entrySignature)) continue
@@ -691,7 +706,7 @@ export function analyzeProject(snapshot) {
         occurrenceNodeId('bibliography-entry', entry.location, entry.key)
       )
       addIssue(
-        'duplicate-bibliography-title:' + entrySignature,
+        componentIssueKey('duplicate-bibliography-title', normalizedTitle),
         {
           type: 'duplicate-bibliography-title',
           status: 'duplicate',
@@ -741,7 +756,7 @@ export function analyzeProject(snapshot) {
       })
       if (entries.length === 0 && !scope.bibliographyIncomplete) {
         addIssue(
-          `missing-citation:${citation.location.entityId}:${citation.location.from}:${citation.key}`,
+          componentIssueKey('missing-citation', citation.key),
           {
             type: 'missing-citation',
             status: 'missing',
@@ -769,7 +784,7 @@ export function analyzeProject(snapshot) {
       const nodeIds = cycle.files.map(fileNodeId)
       const cycleEdges = buildCycleEdges(cycle, relationsByPath)
       addIssue(
-        `circular-dependency:${cycle.files.join('|')}`,
+        componentIssueKey('circular-dependency', cycle.files.join('|')),
         {
           type: 'circular-dependency',
           status: 'circular',
@@ -804,7 +819,7 @@ export function analyzeProject(snapshot) {
         continue
       }
       addIssue(
-        `unreferenced-label:${label.location.entityId}:${label.location.from}`,
+        componentIssueKey('unreferenced-label', label.key),
         {
           type: 'unreferenced-label',
           status: 'unreferenced',
@@ -884,7 +899,7 @@ export function analyzeProject(snapshot) {
         continue
       }
       addIssue(
-        `unused-bibliography-entry:${entry.location.entityId}:${entry.location.from}`,
+        componentIssueKey('unused-bibliography-entry', entry.key),
         {
           type: 'unused-bibliography-entry',
           status: 'unused',
@@ -914,7 +929,7 @@ export function analyzeProject(snapshot) {
         continue
       }
       addIssue(
-        `unused-bibliography-entry:${entry.location.entityId}:${entry.location.from}`,
+        componentIssueKey('unused-bibliography-entry', entry.key),
         {
           type: 'unused-bibliography-entry',
           status: 'unused',
@@ -938,7 +953,7 @@ export function analyzeProject(snapshot) {
       !reachableDynamicKinds.has('graphicspath')
     ) {
       addIssue(
-        `unreferenced-figure:${entity.path}`,
+        componentIssueKey('unreferenced-figure', entity.path),
         {
           type: 'unreferenced-figure',
           status: 'unreferenced',
@@ -958,7 +973,7 @@ export function analyzeProject(snapshot) {
       reachableBibliographies.has(entity.path)
     if (eligible && !reachable) {
       addIssue(
-        `possibly-unused-file:${entity.path}`,
+        componentIssueKey('possibly-unused-file', entity.path),
         {
           type: 'possibly-unused-file',
           status: 'unused',
@@ -1035,7 +1050,7 @@ export function analyzeProject(snapshot) {
       missing: idsFor('missing').length,
       unusedUnreferenced: idsFor('unused').length,
       duplicate: idsFor('duplicate').length,
-      circular: cycles.length,
+      circular: idsFor('circular').length,
     },
     graph: graph.serialize({
       roots: selectedRoots.map(root => fileNodeId(root.path)),

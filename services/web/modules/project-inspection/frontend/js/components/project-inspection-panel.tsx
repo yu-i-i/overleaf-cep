@@ -101,6 +101,28 @@ const DEPENDENCY_STATUS_ICONS: Record<
   circular: 'autorenew',
 }
 
+const DEPENDENCY_STATUS_PRIORITY: Record<
+  InspectionGraphNode['status'],
+  number
+> = {
+  normal: 0,
+  unused: 1,
+  unreferenced: 1,
+  duplicate: 2,
+  missing: 3,
+  circular: 4,
+}
+
+function higherPriorityStatus(
+  current: InspectionGraphNode['status'],
+  candidate: InspectionGraphNode['status']
+) {
+  return DEPENDENCY_STATUS_PRIORITY[candidate] >
+    DEPENDENCY_STATUS_PRIORITY[current]
+    ? candidate
+    : current
+}
+
 function dependencyType(node: InspectionGraphNode, incomingKind?: string) {
   if (node.kind === 'missing-resource') {
     return incomingKind ?? node.kind
@@ -185,21 +207,22 @@ function DependencyTypeIcon({
 
 function DependencyStatus({
   status,
+  showLabel = true,
 }: {
   status: InspectionGraphNode['status']
+  showLabel?: boolean
 }) {
   if (status === 'normal') return null
   return (
     <span
-      className={`project-inspection-tree-status project-inspection-tree-status-${status}`}
+      className={`project-inspection-tree-status project-inspection-tree-status-${status}${showLabel ? '' : ' project-inspection-tree-status-icon-only'}`}
     >
-      <span aria-hidden="true">(</span>
       <MaterialIcon
         type={DEPENDENCY_STATUS_ICONS[status]}
+        accessibilityLabel={showLabel ? undefined : `Contains ${status} issue`}
         className="project-inspection-tree-status-icon"
       />
-      {status}
-      <span aria-hidden="true">)</span>
+      {showLabel && status}
     </span>
   )
 }
@@ -269,24 +292,30 @@ function IssueList({
           }
           return (
             <li key={id}>
-              <button
-                type="button"
-                className="project-inspection-issue"
-                onClick={() => onNavigate(primaryLocation, issue.target)}
-              >
-                <CategoryIcon issue={issue} />
-                <span className="project-inspection-issue-content">
-                  <span className="project-inspection-issue-title">
-                    {issue.title}
-                  </span>
-                  {primaryLocation && (
-                    <span className="project-inspection-location">
-                      {primaryLocation.path}:{primaryLocation.line}
+              {primaryLocation ? (
+                <div className="project-inspection-issue">
+                  <CategoryIcon issue={issue} />
+                  <span className="project-inspection-issue-content">
+                    <span className="project-inspection-issue-title">
+                      {issue.title}
                     </span>
-                  )}
-                </span>
-              </button>
-              {issue.locations.slice(1).map(location => (
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="project-inspection-issue"
+                  onClick={() => onNavigate(undefined, issue.target)}
+                >
+                  <CategoryIcon issue={issue} />
+                  <span className="project-inspection-issue-content">
+                    <span className="project-inspection-issue-title">
+                      {issue.title}
+                    </span>
+                  </span>
+                </button>
+              )}
+              {issue.locations.map(location => (
                 <button
                   type="button"
                   className="project-inspection-secondary-location"
@@ -356,6 +385,7 @@ function DependencyNode({
   nodes,
   childrenByParent,
   incomingKindByNode,
+  subtreeStatusByNode,
   path,
   onNavigate,
   root = false,
@@ -364,6 +394,7 @@ function DependencyNode({
   nodes: Map<string, InspectionGraphNode>
   childrenByParent: Map<string, string[]>
   incomingKindByNode: Map<string, string>
+  subtreeStatusByNode: Map<string, InspectionGraphNode['status']>
   path: Set<string>
   onNavigate: Navigate
   root?: boolean
@@ -377,7 +408,13 @@ function DependencyNode({
       : node.label
   const children = childrenByParent.get(nodeId) ?? []
   const circular = path.has(nodeId)
-  const displayStatus = circular ? 'circular' : node.status
+  const hasDirectStatus = node.status !== 'normal'
+  const displayStatus = hasDirectStatus
+    ? node.status
+    : circular
+      ? 'circular'
+      : (subtreeStatusByNode.get(nodeId) ?? 'normal')
+  const showStatusLabel = hasDirectStatus || circular
   if (children.length === 0 || circular) {
     return (
       <li>
@@ -397,7 +434,10 @@ function DependencyNode({
           >
             {displayLabel}
           </button>
-          <DependencyStatus status={displayStatus} />
+          <DependencyStatus
+            status={displayStatus}
+            showLabel={showStatusLabel}
+          />
         </div>
       </li>
     )
@@ -430,7 +470,10 @@ function DependencyNode({
           >
             {displayLabel}
           </button>
-          <DependencyStatus status={displayStatus} />
+          <DependencyStatus
+            status={displayStatus}
+            showLabel={showStatusLabel}
+          />
         </summary>
         {expanded && (
           <ul>
@@ -441,6 +484,7 @@ function DependencyNode({
                 nodes={nodes}
                 childrenByParent={childrenByParent}
                 incomingKindByNode={incomingKindByNode}
+                subtreeStatusByNode={subtreeStatusByNode}
                 path={nextPath}
                 onNavigate={onNavigate}
               />
@@ -459,34 +503,57 @@ function DependencyTree({
   result: ProjectInspectionResult
   onNavigate: Navigate
 }) {
-  const { nodes, childrenByParent, incomingKindByNode } = useMemo(() => {
-    const nodeMap = new Map(result.graph.nodes.map(node => [node.id, node]))
-    const outgoing = new Map<string, string[]>()
-    const incomingKinds = new Map<string, string>()
-    const addChild = (parentId: string, childId: string) => {
-      const children = outgoing.get(parentId) ?? []
-      if (!children.includes(childId)) children.push(childId)
-      outgoing.set(parentId, children)
-    }
-    for (const node of result.graph.nodes) {
-      if (node.parentId) addChild(node.parentId, node.id)
-    }
-    for (const edge of result.graph.edges) {
-      if (edge.kind === 'contains') continue
-      addChild(edge.from, edge.to)
-      if (!incomingKinds.has(edge.to)) incomingKinds.set(edge.to, edge.kind)
-    }
-    for (const children of outgoing.values()) {
-      children.sort((leftId, rightId) =>
-        compareDependencyNodes(leftId, rightId, nodeMap, incomingKinds)
-      )
-    }
-    return {
-      nodes: nodeMap,
-      childrenByParent: outgoing,
-      incomingKindByNode: incomingKinds,
-    }
-  }, [result])
+  const { nodes, childrenByParent, incomingKindByNode, subtreeStatusByNode } =
+    useMemo(() => {
+      const nodeMap = new Map(result.graph.nodes.map(node => [node.id, node]))
+      const outgoing = new Map<string, string[]>()
+      const parentsByChild = new Map<string, string[]>()
+      const incomingKinds = new Map<string, string>()
+      const addChild = (parentId: string, childId: string) => {
+        const children = outgoing.get(parentId) ?? []
+        if (!children.includes(childId)) children.push(childId)
+        outgoing.set(parentId, children)
+        const parents = parentsByChild.get(childId) ?? []
+        if (!parents.includes(parentId)) parents.push(parentId)
+        parentsByChild.set(childId, parents)
+      }
+      for (const node of result.graph.nodes) {
+        if (node.parentId) addChild(node.parentId, node.id)
+      }
+      for (const edge of result.graph.edges) {
+        if (edge.kind === 'contains') continue
+        addChild(edge.from, edge.to)
+        if (!incomingKinds.has(edge.to)) incomingKinds.set(edge.to, edge.kind)
+      }
+      for (const children of outgoing.values()) {
+        children.sort((leftId, rightId) =>
+          compareDependencyNodes(leftId, rightId, nodeMap, incomingKinds)
+        )
+      }
+      const subtreeStatuses = new Map<string, InspectionGraphNode['status']>()
+      const pending: string[] = []
+      for (const node of result.graph.nodes) {
+        subtreeStatuses.set(node.id, node.status)
+        if (node.status !== 'normal') pending.push(node.id)
+      }
+      for (let index = 0; index < pending.length; index += 1) {
+        const childId = pending[index]
+        const childStatus = subtreeStatuses.get(childId) ?? 'normal'
+        for (const parentId of parentsByChild.get(childId) ?? []) {
+          const parentStatus = subtreeStatuses.get(parentId) ?? 'normal'
+          const nextStatus = higherPriorityStatus(parentStatus, childStatus)
+          if (nextStatus === parentStatus) continue
+          subtreeStatuses.set(parentId, nextStatus)
+          pending.push(parentId)
+        }
+      }
+      return {
+        nodes: nodeMap,
+        childrenByParent: outgoing,
+        incomingKindByNode: incomingKinds,
+        subtreeStatusByNode: subtreeStatuses,
+      }
+    }, [result])
 
   return (
     <details
@@ -505,6 +572,7 @@ function DependencyTree({
             nodes={nodes}
             childrenByParent={childrenByParent}
             incomingKindByNode={incomingKindByNode}
+            subtreeStatusByNode={subtreeStatusByNode}
             path={new Set()}
             onNavigate={onNavigate}
             root
