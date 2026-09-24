@@ -180,6 +180,171 @@ See \ref{tab:analyzer-log-fields}.`
     )
   })
 
+  it('groups repeated citations by source file and keeps exact occurrences', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\input{sections/relatedwork}
+\bibliography{references}`
+          ),
+          document(
+            'related',
+            'sections/relatedwork.tex',
+            String.raw`First \cite{li2026webspotter}.
+Second \cite{other, li2026webspotter}.
+Third \cite{li2026webspotter} and \cite{li2026webspotter}.`
+          ),
+          document(
+            'bib',
+            'references.bib',
+            String.raw`@article{li2026webspotter, title={Web Spotter}}
+@article{other, title={Other}}`
+          ),
+        ],
+      })
+    )
+
+    const groups = result.graph.nodes.filter(
+      node =>
+        node.kind === 'citation' &&
+        node.label === 'li2026webspotter' &&
+        node.parentId === 'file:sections/relatedwork.tex'
+    )
+    expect(groups).toHaveLength(1)
+    expect(groups[0].location).toMatchObject({
+      path: 'references.bib',
+      line: 1,
+      sourceText: 'li2026webspotter',
+    })
+
+    const occurrences = result.graph.nodes
+      .filter(
+        node =>
+          node.kind === 'citation-occurrence' &&
+          node.parentId === groups[0].id
+      )
+      .sort((left, right) => left.location.from - right.location.from)
+    expect(occurrences.map(node => node.label)).toEqual([
+      'sections/relatedwork.tex:1',
+      'sections/relatedwork.tex:2',
+      'sections/relatedwork.tex:3',
+      'sections/relatedwork.tex:3',
+    ])
+    expect(occurrences.map(node => node.location.sourceText)).toEqual([
+      'li2026webspotter',
+      'li2026webspotter',
+      'li2026webspotter',
+      'li2026webspotter',
+    ])
+    expect(new Set(occurrences.map(node => node.location.from)).size).toBe(4)
+    expect(result.overview.citationCount).toBe(5)
+  })
+
+  it('creates a separate citation group for each source file', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\input{a}
+\input{b}
+\bibliography{references}`
+          ),
+          document('a', 'a.tex', String.raw`\cite{shared}`),
+          document('b', 'b.tex', String.raw`\cite{shared}`),
+          document('bib', 'references.bib', String.raw`@article{shared}`),
+        ],
+      })
+    )
+
+    const groups = result.graph.nodes.filter(
+      node => node.kind === 'citation' && node.label === 'shared'
+    )
+    expect(groups).toHaveLength(2)
+    expect(groups.map(node => node.parentId).sort()).toEqual([
+      'file:a.tex',
+      'file:b.tex',
+    ])
+    expect(
+      groups.map(group =>
+        result.graph.nodes.filter(node => node.parentId === group.id).length
+      )
+    ).toEqual([1, 1])
+  })
+
+  it('groups missing citation occurrences without changing issue counts', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\cite{missing}
+\cite{missing}`
+          ),
+        ],
+      })
+    )
+
+    const groups = result.graph.nodes.filter(
+      node => node.kind === 'citation' && node.label === 'missing'
+    )
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({
+      status: 'missing',
+      location: {
+        path: 'main.tex',
+        line: 1,
+        sourceText: 'missing',
+      },
+    })
+    const occurrences = result.graph.nodes.filter(
+      node => node.parentId === groups[0].id
+    )
+    expect(occurrences).toHaveLength(2)
+    expect(occurrences.every(node => node.status === 'normal')).toBe(true)
+    expect(result.overview.missing).toBe(2)
+  })
+
+  it('navigates a duplicate citation key to its first bibliography entry', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\cite{shared}
+\bibliography{references}`
+          ),
+          document(
+            'bib',
+            'references.bib',
+            String.raw`@article{shared, title={First}}
+@article{shared, title={Second}}`
+          ),
+        ],
+      })
+    )
+
+    const group = result.graph.nodes.find(
+      node => node.kind === 'citation' && node.label === 'shared'
+    )
+    expect(group.location).toMatchObject({
+      path: 'references.bib',
+      line: 1,
+      sourceText: 'shared',
+    })
+    expect(issueTypes(result)).toContain('duplicate-bibliography-key')
+  })
+
   it('uses path and line fallbacks for unlabeled environments', function () {
     const result = analyzeProject(
       snapshot({
@@ -249,6 +414,155 @@ content
     )
 
     expect(issueTypes(result)).not.toContain('duplicate-label')
+  })
+
+  it('includes a project-local document class and its internal input', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\documentclass[runningheads]{llncs}`
+          ),
+          document('class', 'llncs.cls', String.raw`\input{settings}`),
+          document('settings', 'settings.def', 'settings'),
+        ],
+      })
+    )
+
+    const classCommand = result.graph.nodes.find(
+      node => node.kind === 'include' && node.label === 'llncs'
+    )
+    const settingsCommand = result.graph.nodes.find(
+      node => node.kind === 'include' && node.label === 'settings'
+    )
+
+    expect(classCommand).toMatchObject({
+      parentId: 'file:main.tex',
+      location: {
+        path: 'main.tex',
+        line: 1,
+        sourceText: 'llncs',
+      },
+    })
+    expect(result.graph.edges).toContainEqual(
+      expect.objectContaining({
+        kind: 'include',
+        from: classCommand.id,
+        to: 'file:llncs.cls',
+      })
+    )
+    expect(settingsCommand).toMatchObject({ parentId: 'file:llncs.cls' })
+    expect(result.graph.edges).toContainEqual(
+      expect.objectContaining({
+        kind: 'include',
+        from: settingsCommand.id,
+        to: 'file:settings.def',
+      })
+    )
+    expect(result.overview.fileCount).toBe(3)
+    expect(issueTypes(result)).not.toContain('possibly-unused-file')
+  })
+
+  it('keeps the existing tex priority for extensionless input', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document('main', 'main.tex', String.raw`\input{shared}`),
+          document('tex', 'shared.tex', 'tex file'),
+          document('def', 'shared.def', 'def file'),
+        ],
+      })
+    )
+
+    const input = result.graph.nodes.find(
+      node => node.kind === 'include' && node.label === 'shared'
+    )
+    expect(result.graph.edges).toContainEqual(
+      expect.objectContaining({
+        kind: 'include',
+        from: input.id,
+        to: 'file:shared.tex',
+      })
+    )
+    expect(result.overview.fileCount).toBe(2)
+  })
+
+  it('ignores document classes that are not stored in the project', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document('main', 'main.tex', String.raw`\documentclass{article}`),
+        ],
+      })
+    )
+
+    expect(
+      result.graph.nodes.some(
+        node => node.kind === 'include' && node.label === 'article'
+      )
+    ).toBe(false)
+    expect(issueTypes(result)).not.toContain('missing-file')
+  })
+
+  it('follows project-local LoadClass dependencies from class files', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document('main', 'main.tex', String.raw`\documentclass{custom}`),
+          document(
+            'custom',
+            'custom.cls',
+            String.raw`\LoadClassWithOptions{base}`
+          ),
+          document('base', 'base.cls', 'base class'),
+        ],
+      })
+    )
+
+    const loadClass = result.graph.nodes.find(
+      node => node.kind === 'include' && node.label === 'base'
+    )
+    expect(loadClass).toMatchObject({ parentId: 'file:custom.cls' })
+    expect(result.graph.edges).toContainEqual(
+      expect.objectContaining({
+        kind: 'include',
+        from: loadClass.id,
+        to: 'file:base.cls',
+      })
+    )
+    expect(result.overview.fileCount).toBe(3)
+  })
+
+  it('does not create dependencies for package-loading commands', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\usepackage{local}\RequirePackage{required}`
+          ),
+          document('local', 'local.sty', 'local package'),
+          document('required', 'required.sty', 'required package'),
+        ],
+      })
+    )
+
+    expect(
+      result.graph.nodes.some(
+        node =>
+          node.kind === 'include' &&
+          ['local', 'required'].includes(node.label)
+      )
+    ).toBe(false)
+    expect(result.overview.fileCount).toBe(1)
   })
 
   it('reports an include cycle without recursing indefinitely', function () {

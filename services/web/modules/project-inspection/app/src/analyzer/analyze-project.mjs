@@ -30,12 +30,22 @@ const IMAGE_EXTENSIONS = [
   '.svg',
 ]
 const BIB_EXTENSIONS = ['.bib', '.bibtex']
+const PROJECT_CLASS_RELATIONS = new Set([
+  'documentclass',
+  'loadclass',
+  'loadclasswithoptions',
+])
 
 const fileNodeId = filePath => `file:${filePath}`
 const occurrenceNodeId = (kind, location, identity = '') =>
   `${kind}:${location.entityId}:${location.from}:${encodeURIComponent(identity)}`
 const figureResourceNodeId = item =>
   occurrenceNodeId('figure-file', item.location, item.target)
+const citationGroupNodeId = citation =>
+  'citation-group:' +
+  citation.location.entityId +
+  ':' +
+  encodeURIComponent(citation.key)
 
 function normalizedBibliographyTitle(title) {
   const display = title
@@ -127,14 +137,30 @@ function resolveRelations(parsed, availablePaths) {
     bibliographies: [],
   }
   for (const item of parsed.includes) {
-    result.includes.push({
-      ...item,
-      resolution: resolveProjectPath({
+    const resolve = extensions =>
+      resolveProjectPath({
         target: item.target,
         sourcePath: parsed.path,
         availablePaths,
-        extensions: ['.tex'],
-      }),
+        extensions,
+      })
+    let resolution = resolve(
+      PROJECT_CLASS_RELATIONS.has(item.relation) ? ['.cls'] : ['.tex']
+    )
+    if (item.relation === 'input' && resolution.status === 'missing') {
+      resolution = resolve(
+        [...TEX_EXTENSIONS].filter(extension => extension !== '.tex')
+      )
+    }
+    if (
+      PROJECT_CLASS_RELATIONS.has(item.relation) &&
+      resolution.status === 'missing'
+    ) {
+      continue
+    }
+    result.includes.push({
+      ...item,
+      resolution,
     })
   }
   for (const item of parsed.figures) {
@@ -441,7 +467,22 @@ export function analyzeProject(snapshot) {
       })
     }
     for (const citation of parsed.citations) {
-      relationNode(graph, 'citation', citation, sourcePath, citation.key)
+      if (citation.key === '*') continue
+      const citationId = occurrenceNodeId(
+        'citation-occurrence',
+        citation.location,
+        citation.key
+      )
+      const groupId = citationGroupNodeId(citation)
+      graph.addNode({
+        id: citationId,
+        kind: 'citation-occurrence',
+        label: sourcePath + ':' + citation.location.line,
+        path: sourcePath,
+        location: citation.location,
+        parentId: groupId,
+      })
+      graph.addEdge({ kind: 'contains', from: groupId, to: citationId })
     }
   }
 
@@ -463,6 +504,8 @@ export function analyzeProject(snapshot) {
   const reachableBibliographies = new Set()
   const usedLabels = new Set()
   const usedBibliographyEntries = new Set()
+  const createdCitationGroups = new Set()
+  const resolvedCitationGroups = new Set()
   const includeAdjacency = new Map()
 
   for (const scope of scopes) {
@@ -675,11 +718,27 @@ export function analyzeProject(snapshot) {
     for (const citation of citations) {
       if (citation.key === '*') continue
       const entries = entriesByKey.get(citation.key) ?? []
-      const citationId = occurrenceNodeId(
-        'citation',
-        citation.location,
-        citation.key
-      )
+      const groupId = citationGroupNodeId(citation)
+      if (
+        !createdCitationGroups.has(groupId) ||
+        (!resolvedCitationGroups.has(groupId) && entries.length > 0)
+      ) {
+        graph.addNode({
+          id: groupId,
+          kind: 'citation',
+          label: citation.key,
+          path: citation.location.path,
+          location: entries[0]?.location ?? citation.location,
+          parentId: fileNodeId(citation.location.path),
+        })
+        createdCitationGroups.add(groupId)
+        if (entries.length > 0) resolvedCitationGroups.add(groupId)
+      }
+      graph.addEdge({
+        kind: 'contains',
+        from: fileNodeId(citation.location.path),
+        to: groupId,
+      })
       if (entries.length === 0 && !scope.bibliographyIncomplete) {
         addIssue(
           `missing-citation:${citation.location.entityId}:${citation.location.from}:${citation.key}`,
@@ -689,7 +748,7 @@ export function analyzeProject(snapshot) {
             category: 'citation',
             target: citation.key,
             locations: [citation.location],
-            nodeIds: [citationId],
+            nodeIds: [groupId],
           },
           scope.root.id,
           ['missing', 'citationMissing']
@@ -702,7 +761,6 @@ export function analyzeProject(snapshot) {
           entry.key
         )
         usedBibliographyEntries.add(entryId)
-        graph.addEdge({ kind: 'cites', from: citationId, to: entryId })
       }
     }
 

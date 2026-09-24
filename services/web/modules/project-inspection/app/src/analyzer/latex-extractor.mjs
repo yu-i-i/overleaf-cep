@@ -6,6 +6,10 @@ const FILE_COMMANDS = new Map([
   ['Include', 'include'],
   ['Subfile', 'subfile'],
 ])
+const PROJECT_CLASS_COMMANDS = new Set([
+  'loadclass',
+  'loadclasswithoptions',
+])
 const FIGURE_COMMANDS = new Map([
   ['IncludeGraphics', 'includegraphics'],
   ['IncludeSvg', 'includesvg'],
@@ -85,6 +89,20 @@ function splitStaticList(value) {
     .filter(Boolean)
 }
 
+function splitStaticListWithOffsets(value) {
+  const results = []
+  let offset = 0
+  for (const item of value.split(',')) {
+    const key = staticValue(item)
+    if (key) {
+      const from = offset + item.indexOf(key)
+      results.push({ key, from, to: from + key.length })
+    }
+    offset += item.length + 1
+  }
+  return results
+}
+
 function commandTarget(raw) {
   const args = topLevelBraceArguments(raw)
   if (args.length > 0) return staticValue(args.at(-1).value)
@@ -150,6 +168,26 @@ export function extractLatex(doc) {
       }
 
       const raw = source.slice(node.from, node.to)
+      if (type === 'DocumentClass') {
+        const target = commandTarget(raw)
+        const location = commandLocation(
+          source,
+          lineStarts,
+          doc,
+          node,
+          raw,
+          target
+        )
+        if (target) {
+          result.includes.push({
+            relation: 'documentclass',
+            target,
+            location,
+          })
+        }
+        return
+      }
+
       const fileRelation = FILE_COMMANDS.get(type)
       if (fileRelation) {
         const target = commandTarget(raw)
@@ -242,25 +280,32 @@ export function extractLatex(doc) {
 
       if (type === 'Cite') {
         const value = topLevelBraceArguments(raw).at(-1)?.value ?? ''
-        const keys = splitStaticList(value)
-        const location = commandLocation(
-          source,
-          lineStarts,
-          doc,
-          node,
-          raw,
-          value
-        )
+        const keys = splitStaticListWithOffsets(value)
+        const valueOffset = Math.max(0, raw.indexOf(value))
         const name = commandName(raw)
         if (keys.length > 0) {
           for (const key of keys) {
+            const from = node.from + valueOffset + key.from
             result.citations.push({
-              key,
+              key: key.key,
               nocite: name === 'nocite',
-              location,
+              location: createLocation(source, lineStarts, {
+                entityId: doc.id,
+                path: doc.path,
+                from,
+                to: node.from + valueOffset + key.to,
+              }),
             })
           }
         } else {
+          const location = commandLocation(
+            source,
+            lineStarts,
+            doc,
+            node,
+            raw,
+            value
+          )
           result.dynamicReferences.push({ kind: 'citation', location })
         }
         return
@@ -277,7 +322,12 @@ export function extractLatex(doc) {
           raw,
           value
         )
-        if (name === 'addbibresource') {
+        if (PROJECT_CLASS_COMMANDS.has(name)) {
+          const target = staticValue(value)
+          if (target) {
+            result.includes.push({ relation: name, target, location })
+          }
+        } else if (name === 'addbibresource') {
           const target = staticValue(value)
           if (target) {
             result.bibliographyFiles.push({

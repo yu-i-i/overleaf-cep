@@ -59,6 +59,7 @@ const DEPENDENCY_TYPE_ICONS: Record<
   label: { icon: 'label', label: 'Label' },
   reference: { icon: 'link', label: 'Reference' },
   citation: { icon: 'format_quote', label: 'Citation' },
+  'citation-occurrence': { icon: 'link', label: 'Citation occurrence' },
   bibliography: { icon: 'book_5', label: 'Bibliography' },
   'bibliography-include': {
     icon: 'input',
@@ -131,6 +132,7 @@ const DEPENDENCY_TYPE_ORDER: Record<string, number> = {
   label: 3,
   reference: 3,
   citation: 4,
+  'citation-occurrence': 4,
   bibliography: 5,
   'bibliography-entry': 5,
 }
