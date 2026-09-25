@@ -37,6 +37,18 @@
     .modal-header .btn-close {
       --bs-btn-close-bg: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27 fill=%27%23fff%27%3e%3cpath d=%27M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414%27/%3e%3c/svg%3e');
     }
+
+    .form-control:disabled {
+      background-color: var(--bg-disabled);
+      color: var(--content-disabled);
+    }
+
+    @import 'table';
+    .table,
+    .table-container {
+      @include dark-table;
+    }
+
   }
 
   .modal-backdrop-themed {
@@ -100,12 +112,43 @@
       margin: 0;
     }
   }
+
+  .modal-body {
+    hr {
+      border-color: var(--border-divider-themed);
+    }
+    .form-group {
+      .form-label {
+        color: var(--content-secondary-themed);
+      }
+      .form-select:disabled {
+        color: var(--content-disabled-themed);
+        background-color: var(--bg-disabled-themed);
+      }
+    }
+    button.btn-link, a {
+      color: var(--link-ui-themed) !important;
+      &:hover {
+        color: var(--link-ui-hover-themed) !important;
+      }
+    }
+    .card {
+      --bs-card-bg: var(--bg-secondary-themed);
+      --bs-card-color: var(--content-primary-themed);
+      .card-header {
+         color: var(--content-primary-themed);
+      }
+      .card-body .text-muted {
+         color: var(--content-primary-themed) !important;
+      }
+    }
+  }
 }
 
 // Git bridge modal
 .git-bridge-copy {
-  background: var(--bg-light-secondary);
-  color: var(--content-primary);
+  background: var(--bg-secondary-themed);
+  color: var(--content-primary-themed);
   padding: var(--spacing-05);
   border-radius: var(--border-radius-base);
   display: flex;
@@ -114,8 +157,15 @@
   align-items: center;
   margin: var(--spacing-09) 0;
 
+  .copy-button {
+    color: var(--content-primary-themed);
+    &:hover {
+      background-color: var(--bg-tertiary-themed);
+    }
+  }
+
   & code {
-    color: var(--content-primary);
+    color: var(--content-primary-themed);
     word-break: break-word;
   }
 }

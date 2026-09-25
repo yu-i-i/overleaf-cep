@@ -57,7 +57,7 @@ export default function ShareProjectModalContent({
   projectName,
 }: ShareProjectModalContentProps) {
   return (
-    <OLModal show={show} onShow={onShow} onHide={cancel} animation={animation}>
+    <OLModal show={show} onShow={onShow} onHide={cancel} animation={animation} themed="true">
       <ShareProjectModalContentInnerWithErrorBoundary
         inFlight={inFlight}
         error={error}

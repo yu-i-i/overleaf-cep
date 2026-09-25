@@ -4,6 +4,7 @@ import * as eventTracking from '@/infrastructure/event-tracking'
 import { isSmallDevice } from '@/infrastructure/event-tracking'
 import { getUserFacingMessage } from '@/infrastructure/fetch-json'
 import useIsMounted from '@/shared/hooks/use-is-mounted'
+import OLForm from '@/shared/components/ol/ol-form'
 import OLButton from '@/shared/components/ol/ol-button'
 import {
   OLModal,
@@ -97,12 +98,17 @@ function UsersActionModal({
       onHide={handleCloseModal}
       id="action-user-modal"
       backdrop="static"
+      themed="true"
     >
       <OLModalHeader>
         <OLModalTitle>{title}</OLModalTitle>
       </OLModalHeader>
       <OLModalBody>
+      <OLForm 
+        id="action-user-form"
+      >
         {children}
+      </OLForm>
         {!isProcessing &&
           errors.length > 0 &&
           errors.map((error, i) => (
@@ -122,8 +128,8 @@ function UsersActionModal({
           </OLButton>
         )}
         <OLButton
-          variant={variant}
           onClick={() => handleActionForUsers(users, options)}
+          variant={variant}
           disabled={isProcessing || actionIsDisabled}
         >
           {actionLabel}

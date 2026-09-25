@@ -211,6 +211,7 @@ export default function ImportFromGitHubModal({ onHide }: { onHide: () => void }
       size="lg"
       onHide={onHide}
       backdrop="static"
+      themed="true"
     >
       <ImportFromGitHubModalContent handleHide={onHide} />
     </OLModal>

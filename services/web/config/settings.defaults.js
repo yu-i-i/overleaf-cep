@@ -1238,6 +1238,7 @@ module.exports = {
   },
 
   splitTestOverrides: {
+    'themed-modals': 'enabled',
     ...(process.env.ENABLE_EDITOR_TABS?.toLowerCase() === 'true' ? {
       'editor-tabs': 'enabled',
     } : {}),

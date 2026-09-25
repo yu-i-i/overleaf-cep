@@ -299,7 +299,7 @@ const scrollToReference = useCallback((key: string) => {
   }, [focusArea, focusedIndex])
 
   return (
-    <OLModal show={show} onHide={onClose} size="lg">
+    <OLModal show={show} onHide={onClose} size="lg" themed="true">
       <OLModalHeader>
         <OLModalTitle>{t('references_picker_title')}</OLModalTitle>
       </OLModalHeader>

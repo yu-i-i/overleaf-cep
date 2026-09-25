@@ -1,3 +1,21 @@
+:root {
+  --badge-bg-color-existing: var(--ds-color-green-900);
+  --badge-bg-color-nonexistent: var(--ds-color-red-950);
+  --badge-bg-color-existing-hover: var(--ds-color-green-800);
+  --badge-close-color: var(--content-primary-dark);
+  --badge-close-bg-color-hover: var(--bg-dark-tertiary);
+  --search-result-at-focus-bg-color: var(--ds-color-teal-950);
+}
+
+@include theme('light') {
+  --badge-bg-color-existing: var(--ds-color-green-50);
+  --badge-bg-color-nonexistent: var(--ds-color-red-50);
+  --badge-bg-color-existing-hover: var(--ds-color-green-100);
+  --badge-close-color: var(--content-primary);
+  --badge-close-bg-color-hover: var(--bg-light-tertiary);
+  --search-result-at-focus-bg-color: var(--ds-color-teal-50);
+}
+
 .references-search-modal {
   .selected-key-tags {
     position: relative;
@@ -11,25 +29,30 @@
     font-size: var(--font-size-02);
     margin-top: -10px;
     margin-bottom: 8px;
-    box-shadow: 0 1px 0 var(--ds-color-neutral-100);
+    box-shadow: 0 1px 0 var(--border-divider-themed);
     padding-bottom: 6px;
   }
   .selected-key-tags .existing-key-tag .badge-tag {
-    background-color: var(--ds-color-green-50) !important;
+    background-color: var(--badge-bg-color-existing) !important;
   }
   .selected-key-tags .nonexistent-key-tag .badge-tag {
-    background-color: var(--ds-color-red-50) !important;
+    background-color: var(--badge-bg-color-nonexistent) !important;
   }
   .existing-key-tag .badge-tag-content-btn:hover {
-    background-color: var(--ds-color-green-100);
+    background-color: var(--badge-bg-color-existing-hover);
   }
   .nonexistent-key-tag .badge-tag-content-btn:hover {
     background-color: transparent;
   }
+  .badge-close {
+    color: var(--badge-close-color);
+  }
+
   .badge-close:hover,
   .badge-close:focus {
-    background-color: var(--ds-color-neutral-100);
+    background-color: var(--badge-close-bg-color-hover);
   }
+
 
   .search-results {
     .search-results-scroll-container {
@@ -38,7 +61,7 @@
     }
     .search-result-hit {
       &:focus {
-        background: var(--ds-color-yellow-50);
+        background: var(--search-result-at-focus-bg-color);
         outline: none;
       }
     }

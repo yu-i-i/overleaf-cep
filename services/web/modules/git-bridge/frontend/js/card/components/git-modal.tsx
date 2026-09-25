@@ -32,6 +32,7 @@ export default function GitModal({
       id="git-sync-modal"
       backdrop="static"
       size="lg"
+      themed="true"
     >
 
       <OLModalHeader closeButton>

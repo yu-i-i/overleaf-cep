@@ -128,7 +128,7 @@ const {
   }, [show, modalStatus, projectId, runAsyncConn, runAsync])
 
   return (
-    <OLModal show={show} onHide={handleHide} backdrop="static">
+    <OLModal show={show} onHide={handleHide} backdrop="static" themed="true">
       <OLModalHeader closeButton>
         <OLModalTitle>{t('sync_with_github')}</OLModalTitle>
       </OLModalHeader>

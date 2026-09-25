@@ -43,8 +43,7 @@ const ZoteroLinkInfoModal = ({ show, isError, handleHide }: ZoteroLinkInfoModalP
   }, [show])
 
   return (
-    <>
-      <OLModal show={show} onHide={handleHide} backdrop="static">
+    <OLModal show={show} onHide={handleHide} backdrop="static" themed="true">
       <OLModalHeader closeButton>
         <OLModalTitle>{t('zotero_integration')}</OLModalTitle>
       </OLModalHeader>
@@ -101,8 +100,7 @@ const ZoteroLinkInfoModal = ({ show, isError, handleHide }: ZoteroLinkInfoModalP
           {t('close')}
         </OLButton>
       </OLModalFooter>
-      </OLModal>
-    </>
+    </OLModal>
   )
 }
 

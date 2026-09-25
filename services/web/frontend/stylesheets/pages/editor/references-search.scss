@@ -54,7 +54,7 @@
         cursor: pointer;
       }
 
-      border-bottom: 1px solid var(--border-divider);
+      border-bottom: 1px solid var(--border-divider-themed);
       padding: var(--spacing-04);
 
       &:last-child {
@@ -64,7 +64,7 @@
       border-left: var(--spacing-02) solid transparent;
 
       &.selected-search-result-hit {
-        color: var(--content-positive);
+        color: var(--content-positive-themed);
       }
 
       .hit-title {

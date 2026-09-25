@@ -53,7 +53,7 @@
   }
 
   .public-access-level.public-access-level-notice {
-    background-color: var(--neutral-10);
+    background-color: var(--bg-secondary-themed);
     border-bottom: none;
     margin-top: var(--spacing-07);
     padding-top: var(--spacing-07);
@@ -62,7 +62,7 @@
   .project-member,
   .project-invite {
     &:hover {
-      background-color: var(--neutral-10);
+      background-color: var(--bg-secondary-themed);
     }
   }
 
@@ -74,7 +74,7 @@
       margin-left: auto;
 
       .select-trigger {
-        color: var(--neutral-70);
+        color: var(--bs-modal);
         border: none;
         background-color: transparent;
         text-align: right;
@@ -129,6 +129,9 @@
 
         &:last-child {
           margin-bottom: 0;
+        }
+        .form-text {
+          color: var(--content-secondary-themed);
         }
       }
 

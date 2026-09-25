@@ -93,8 +93,7 @@ function TransferProjectModal({
     >
       <p>{t('ownership_of_projects_will_be_transferred')}</p>
       <ProjectsList projects={projects} projectsToDisplay={projectsToDisplay} />
-
-      <OLForm className="add-collabs">
+      <OLForm id="ownership-form">
         <OLFormGroup>
           <SelectOwnerForm
             loading={!potentialOwners}
@@ -104,15 +103,15 @@ function TransferProjectModal({
           />
         </OLFormGroup>
 
-          <OLFormGroup controlId="send_notification_emails_checkbox">
-            <OLFormCheckbox
-              autoComplete="off"
-              onChange={handleCheckboxChange}
-              name="sendEmails"
-              label={t('send_notification_emails_to_users')}
-              checked={sendEmails}
-            />
-          </OLFormGroup>
+        <OLFormGroup controlId="send_notification_emails_checkbox">
+          <OLFormCheckbox
+            autoComplete="off"
+            onChange={handleCheckboxChange}
+            name="sendEmails"
+            label={t('send_notification_emails_to_users')}
+            checked={sendEmails}
+          />
+        </OLFormGroup>
       </OLForm>
     </ProjectsActionModal>
   )

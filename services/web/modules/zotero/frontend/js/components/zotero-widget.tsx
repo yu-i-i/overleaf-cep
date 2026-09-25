@@ -143,6 +143,7 @@ export const ZoteroWidget = function ZoteroWidget() {
         show={showUnlinkModal}
         onHide={() => setShowUnlinkModal(false)}
         backdrop="static"
+        themed="true"
       >
         <OLModalHeader>
           <OLModalTitle>

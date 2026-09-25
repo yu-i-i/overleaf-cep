@@ -104,6 +104,7 @@ function ProjectsActionModal({
       show={showModal}
       onHide={handleCloseModal}
       id="admin-action-project-modal"
+      themed="true"
       backdrop="static"
     >
       <OLModalHeader>

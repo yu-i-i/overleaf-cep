@@ -19,13 +19,15 @@
   overflow: hidden;
   word-wrap: break-word;
   cursor: text;
-  background-color: var(--white);
+  background-color: var(--bg-primary-themed);
   height: 100%;
   display: flex;
   flex-wrap: wrap;
 
   .badge-tag {
     margin: var(--spacing-01);
+    color: var(--content-primary-themed);
+    background-color: var(--bg-tertiary-themed) !important;
 
     .badge-tag-content {
       max-width: initial;
@@ -64,6 +66,7 @@
   flex-grow: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  background-color: var(--bg-primary-themed);
 
   &::placeholder {
     color: $input-placeholder-color;
