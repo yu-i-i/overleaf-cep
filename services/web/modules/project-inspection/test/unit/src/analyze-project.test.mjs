@@ -97,24 +97,24 @@ See \ref{fig:missing} and \cite{Used,MissingCitation}.`
         documents: [
           document(
             'chapter',
-            'chap4.tex',
+            'sections/example.tex',
             String.raw`\begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{custom/offline-training.png}
-\caption{Offline training}
-\label{fig:offline-training-pipeline}
+\includegraphics[width=\textwidth]{assets/example-diagram.png}
+\caption{Example diagram}
+\label{fig:example-diagram}
 \end{figure}
 \begin{table}[H]
-\caption{Analyzer fields}
-\label{tab:analyzer-log-fields}
+\caption{Example data}
+\label{tab:example-data}
 \end{table}
-See \ref{tab:analyzer-log-fields}.`
+See \ref{tab:example-data}.`
           ),
         ],
         files: [
           {
-            id: 'offline-training',
-            path: 'custom/offline-training.png',
+            id: 'example-diagram',
+            path: 'assets/example-diagram.png',
           },
         ],
       })
@@ -123,52 +123,52 @@ See \ref{tab:analyzer-log-fields}.`
     const figure = result.graph.nodes.find(
       node =>
         node.kind === 'figure' &&
-        node.label === 'fig:offline-training-pipeline'
+        node.label === 'fig:example-diagram'
     )
     const image = result.graph.nodes.find(
       node =>
         node.kind === 'figure-file' &&
-        node.label === 'custom/offline-training.png'
+        node.label === 'assets/example-diagram.png'
     )
     const table = result.graph.nodes.find(
       node =>
         node.kind === 'table' &&
-        node.label === 'tab:analyzer-log-fields'
+        node.label === 'tab:example-data'
     )
     const label = result.graph.nodes.find(
       node =>
         node.kind === 'label' &&
-        node.label === 'tab:analyzer-log-fields'
+        node.label === 'tab:example-data'
     )
     const reference = result.graph.nodes.find(
       node =>
         node.kind === 'reference' &&
-        node.label === 'chap4.tex:11'
+        node.label === 'sections/example.tex:11'
     )
 
     expect(figure).toMatchObject({
-      parentId: 'file:chap4.tex',
+      parentId: 'file:sections/example.tex',
       location: { line: 1, column: 0, sourceText: String.raw`\begin{figure}` },
     })
     expect(image).toMatchObject({
       parentId: figure.id,
-      path: 'custom/offline-training.png',
+      path: 'assets/example-diagram.png',
     })
     expect(image.location).toBeUndefined()
     expect(table).toMatchObject({
-      parentId: 'file:chap4.tex',
+      parentId: 'file:sections/example.tex',
       location: { line: 7, column: 0, sourceText: String.raw`\begin{table}` },
     })
     expect(label.location).toMatchObject({
       line: 9,
       column: 0,
-      sourceText: String.raw`\label{tab:analyzer-log-fields}`,
+      sourceText: String.raw`\label{tab:example-data}`,
     })
     expect(reference).toMatchObject({
       location: {
         line: 11,
         column: 4,
-        sourceText: String.raw`\ref{tab:analyzer-log-fields}`,
+        sourceText: String.raw`\ref{tab:example-data}`,
       },
     })
     expect(result.graph.edges).toContainEqual(
@@ -188,20 +188,20 @@ See \ref{tab:analyzer-log-fields}.`
           document(
             'main',
             'main.tex',
-            String.raw`\input{sections/relatedwork}
+            String.raw`\input{citations/example}
 \bibliography{references}`
           ),
           document(
             'related',
-            'sections/relatedwork.tex',
-            String.raw`First \cite{li2026webspotter}.
-Second \cite{other, li2026webspotter}.
-Third \cite{li2026webspotter} and \cite{li2026webspotter}.`
+            'citations/example.tex',
+            String.raw`First \cite{sample2026reference}.
+Second \cite{other, sample2026reference}.
+Third \cite{sample2026reference} and \cite{sample2026reference}.`
           ),
           document(
             'bib',
             'references.bib',
-            String.raw`@article{li2026webspotter, title={Web Spotter}}
+            String.raw`@article{sample2026reference, title={Sample Reference}}
 @article{other, title={Other}}`
           ),
         ],
@@ -211,14 +211,14 @@ Third \cite{li2026webspotter} and \cite{li2026webspotter}.`
     const groups = result.graph.nodes.filter(
       node =>
         node.kind === 'citation' &&
-        node.label === 'li2026webspotter' &&
-        node.parentId === 'file:sections/relatedwork.tex'
+        node.label === 'sample2026reference' &&
+        node.parentId === 'file:citations/example.tex'
     )
     expect(groups).toHaveLength(1)
     expect(groups[0].location).toMatchObject({
       path: 'references.bib',
       line: 1,
-      sourceText: 'li2026webspotter',
+      sourceText: 'sample2026reference',
     })
 
     const occurrences = result.graph.nodes
@@ -229,16 +229,16 @@ Third \cite{li2026webspotter} and \cite{li2026webspotter}.`
       )
       .sort((left, right) => left.location.from - right.location.from)
     expect(occurrences.map(node => node.label)).toEqual([
-      'sections/relatedwork.tex:1',
-      'sections/relatedwork.tex:2',
-      'sections/relatedwork.tex:3',
-      'sections/relatedwork.tex:3',
+      'citations/example.tex:1',
+      'citations/example.tex:2',
+      'citations/example.tex:3',
+      'citations/example.tex:3',
     ])
     expect(occurrences.map(node => node.location.sourceText)).toEqual([
-      'li2026webspotter',
-      'li2026webspotter',
-      'li2026webspotter',
-      'li2026webspotter',
+      'sample2026reference',
+      'sample2026reference',
+      'sample2026reference',
+      'sample2026reference',
     ])
     expect(new Set(occurrences.map(node => node.location.from)).size).toBe(4)
     expect(result.overview.citationCount).toBe(5)
@@ -542,16 +542,16 @@ content
           document(
             'main',
             'main.tex',
-            String.raw`\documentclass[runningheads]{llncs}`
+            String.raw`\documentclass[review]{projectreport}`
           ),
-          document('class', 'llncs.cls', String.raw`\input{settings}`),
+          document('class', 'projectreport.cls', String.raw`\input{settings}`),
           document('settings', 'settings.def', 'settings'),
         ],
       })
     )
 
     const classCommand = result.graph.nodes.find(
-      node => node.kind === 'include' && node.label === 'llncs'
+      node => node.kind === 'include' && node.label === 'projectreport'
     )
     const settingsCommand = result.graph.nodes.find(
       node => node.kind === 'include' && node.label === 'settings'
@@ -562,17 +562,17 @@ content
       location: {
         path: 'main.tex',
         line: 1,
-        sourceText: 'llncs',
+        sourceText: 'projectreport',
       },
     })
     expect(result.graph.edges).toContainEqual(
       expect.objectContaining({
         kind: 'include',
         from: classCommand.id,
-        to: 'file:llncs.cls',
+        to: 'file:projectreport.cls',
       })
     )
-    expect(settingsCommand).toMatchObject({ parentId: 'file:llncs.cls' })
+    expect(settingsCommand).toMatchObject({ parentId: 'file:projectreport.cls' })
     expect(result.graph.edges).toContainEqual(
       expect.objectContaining({
         kind: 'include',
@@ -811,8 +811,8 @@ content
           document(
             'bib',
             'references.bib',
-            String.raw`@article{First, title={An {Overview}~of GPU}}
-@book{Second, TITLE=" an overview" # " of gpu "}`
+            String.raw`@article{First, title={A {Sample}~Document}}
+@book{Second, TITLE=" a sample" # " document "}`
           ),
         ],
       })
@@ -823,18 +823,18 @@ content
     )
     expect(issues).toHaveLength(1)
     expect(issues[0].title).toBe(
-      'Duplicate bibliography title: An Overview of GPU'
+      'Duplicate bibliography title: A Sample Document'
     )
     expect(issues[0].locations).toEqual([
       expect.objectContaining({
         path: 'references.bib',
         line: 1,
-        sourceText: 'title={An {Overview}~of GPU}',
+        sourceText: 'title={A {Sample}~Document}',
       }),
       expect.objectContaining({
         path: 'references.bib',
         line: 2,
-        sourceText: 'TITLE=" an overview" # " of gpu "',
+        sourceText: 'TITLE=" a sample" # " document "',
       }),
     ])
     expect(result.views.duplicate).toContain(issues[0].id)

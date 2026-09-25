@@ -15,7 +15,7 @@ const ProjectInspectionIcon: RailElement['icon'] = ({ open, title }) => (
 const projectInspectionRailEntry: RailElement = {
   key: 'project-inspection' as RailTabKey,
   icon: ProjectInspectionIcon,
-  title: 'Project Inspection',
+  title: 'Project inspection',
   component: <ProjectInspectionPanel />,
 }
 

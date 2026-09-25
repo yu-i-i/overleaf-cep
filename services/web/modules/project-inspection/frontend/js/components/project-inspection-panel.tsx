@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import Button from '@/shared/components/button/button'
-import MaterialIcon from '@/shared/components/material-icon'
+import MaterialIcon, {
+  type AvailableUnfilledIcon,
+} from '@/shared/components/material-icon'
 import Notification from '@/shared/components/notification'
 import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
 import OLTooltip from '@/shared/components/ol/ol-tooltip'
@@ -9,6 +11,7 @@ import RailPanelHeader from '@/features/ide-react/components/rail/rail-panel-hea
 import { useProjectContext } from '@/shared/context/project-context'
 import { useFileTreeData } from '@/shared/context/file-tree-data-context'
 import { useFileTreePathContext } from '@/features/file-tree/contexts/file-tree-path'
+import { newEditorIconTypeFromName } from '@/features/file-tree/util/icon-type-from-name'
 import { useEditorManagerContext } from '@/features/ide-react/context/editor-manager-context'
 import { isValidTeXFile } from '@/main/is-valid-tex-file'
 import { signalWithTimeout } from '@/utils/abort-signal'
@@ -73,14 +76,62 @@ const ISSUE_DEPENDENCY_TYPES: Record<string, string> = {
   'missing-file': 'include',
   'missing-figure': 'figure-file',
   'missing-bibliography': 'bibliography',
+  'unreferenced-label': 'label',
+  'unreferenced-figure': 'figure',
+  'unreferenced-table': 'table',
+  'unlabeled-figure': 'figure',
+  'unlabeled-table': 'table',
   'unused-bibliography-entry': 'bibliography-entry',
   'possibly-unused-file': 'file',
+  'duplicate-label': 'label',
+  'duplicate-bibliography-key': 'bibliography-entry',
+  'duplicate-bibliography-title': 'bibliography-entry',
+}
+
+const UNFILLED_CATEGORY_ICONS = new Set<AvailableUnfilledIcon>([
+  'image',
+  'table_chart',
+  'text_snippet',
+])
+
+function isUnfilledCategoryIcon(
+  icon: string
+): icon is AvailableUnfilledIcon {
+  return UNFILLED_CATEGORY_ICONS.has(icon as AvailableUnfilledIcon)
 }
 
 function CategoryIcon({ issue }: { issue: InspectionIssue }) {
+  if (
+    issue.target &&
+    [
+      'missing-file',
+      'missing-figure',
+      'missing-bibliography',
+      'possibly-unused-file',
+    ].includes(issue.type)
+  ) {
+    return (
+      <MaterialIcon
+        unfilled
+        type={newEditorIconTypeFromName(issue.target)}
+        accessibilityLabel="File"
+        className="project-inspection-category-icon"
+      />
+    )
+  }
   const type = ISSUE_DEPENDENCY_TYPES[issue.type] ?? issue.category
   const definition =
     DEPENDENCY_TYPE_ICONS[type] ?? DEPENDENCY_TYPE_ICONS['missing-resource']
+  if (isUnfilledCategoryIcon(definition.icon)) {
+    return (
+      <MaterialIcon
+        unfilled
+        type={definition.icon}
+        accessibilityLabel={definition.label}
+        className="project-inspection-category-icon"
+      />
+    )
+  }
   return (
     <MaterialIcon
       type={definition.icon}
@@ -193,9 +244,38 @@ function DependencyTypeIcon({
   node: InspectionGraphNode
   incomingKind?: string
 }) {
+  if (
+    node.kind === 'document' ||
+    node.kind === 'file' ||
+    node.kind === 'figure-file' ||
+    node.kind === 'missing-resource'
+  ) {
+    const filePath = node.path ?? node.label
+    return (
+      <MaterialIcon
+        unfilled
+        type={newEditorIconTypeFromName(filePath)}
+        accessibilityLabel="File"
+        className="project-inspection-tree-type"
+      />
+    )
+  }
   const type = dependencyIconType(node, incomingKind)
   const definition =
     DEPENDENCY_TYPE_ICONS[type] ?? DEPENDENCY_TYPE_ICONS['missing-resource']
+  if (
+    type === 'bibliography-entry' &&
+    isUnfilledCategoryIcon(definition.icon)
+  ) {
+    return (
+      <MaterialIcon
+        unfilled
+        type={definition.icon}
+        accessibilityLabel={definition.label}
+        className="project-inspection-tree-type"
+      />
+    )
+  }
   return (
     <MaterialIcon
       type={definition.icon}
@@ -244,13 +324,19 @@ function CircularIssue({
           accessibilityLabel="Circular dependency"
           className="project-inspection-category-icon project-inspection-circular-icon"
         />
-        <span className="project-inspection-issue-title">{issue.title}</span>
+        <span
+          className="project-inspection-issue-title"
+          title={issue.title}
+        >
+          {issue.title}
+        </span>
       </div>
       {issue.cycleEdges?.map(edge => (
         <button
           type="button"
           className="project-inspection-secondary-location"
           key={`${edge.from}:${edge.to}:${edge.location.from}`}
+          title={`${edge.from} → ${edge.to}`}
           onClick={() => onNavigate(edge.location)}
         >
           {edge.from} → {edge.to}
@@ -296,7 +382,10 @@ function IssueList({
                 <div className="project-inspection-issue">
                   <CategoryIcon issue={issue} />
                   <span className="project-inspection-issue-content">
-                    <span className="project-inspection-issue-title">
+                    <span
+                      className="project-inspection-issue-title"
+                      title={issue.title}
+                    >
                       {issue.title}
                     </span>
                   </span>
@@ -309,7 +398,10 @@ function IssueList({
                 >
                   <CategoryIcon issue={issue} />
                   <span className="project-inspection-issue-content">
-                    <span className="project-inspection-issue-title">
+                    <span
+                      className="project-inspection-issue-title"
+                      title={issue.title}
+                    >
                       {issue.title}
                     </span>
                   </span>
@@ -320,6 +412,7 @@ function IssueList({
                   type="button"
                   className="project-inspection-secondary-location"
                   key={`${location.entityId}:${location.from}`}
+                  title={`${location.path}:${location.line}`}
                   onClick={() => onNavigate(location)}
                 >
                   {location.path}:{location.line}
@@ -430,6 +523,7 @@ function DependencyNode({
           <button
             type="button"
             className="project-inspection-tree-link"
+            title={displayLabel}
             onClick={() => onNavigate(node.location, node.path)}
           >
             {displayLabel}
@@ -463,6 +557,7 @@ function DependencyNode({
           <button
             type="button"
             className="project-inspection-tree-link"
+            title={displayLabel}
             onClick={event => {
               event.preventDefault()
               onNavigate(node.location, node.path)
@@ -718,7 +813,7 @@ function ProjectInspectionPanel() {
 
   return (
     <div className="project-inspection-panel">
-      <RailPanelHeader title="Project Inspection" />
+      <RailPanelHeader title="Project inspection" />
       <div ref={contentRef} className="project-inspection-content">
         <form onSubmit={onSubmit}>
           <fieldset disabled={loading}>

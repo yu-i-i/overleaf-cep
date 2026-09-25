@@ -1,4 +1,10 @@
 .project-inspection-panel {
+  --project-inspection-status-missing: var(--red-50);
+  --project-inspection-status-unused: var(--yellow-30);
+  --project-inspection-status-duplicate: var(--yellow-40);
+  --project-inspection-status-circular: var(--red-70);
+  --project-inspection-secondary-text: var(--content-secondary);
+
   container-name: project-inspection;
   container-type: inline-size;
   display: flex;
@@ -57,7 +63,7 @@
   .project-inspection-note,
   .project-inspection-totals,
   .project-inspection-empty {
-    color: var(--content-secondary);
+    color: var(--project-inspection-secondary-text);
     font-size: var(--font-size-01);
     line-height: var(--line-height-01);
     margin: var(--spacing-03) 0;
@@ -99,6 +105,7 @@
 
   .project-inspection-section {
     border-top: 1px solid var(--border-divider);
+    min-width: 0;
     padding: var(--spacing-03) 0;
 
     > summary {
@@ -109,6 +116,7 @@
       font-weight: 600;
       grid-template-columns: auto minmax(0, 1fr) auto;
       list-style: none;
+      max-width: 100%;
       min-width: 0;
     }
 
@@ -133,6 +141,7 @@
   .project-inspection-tree ul,
   .project-inspection-issue-list {
     list-style: none;
+    min-width: 0;
     margin: 0;
     padding: 0;
   }
@@ -145,6 +154,7 @@
       align-items: center;
       display: flex;
       list-style: none;
+      max-width: 100%;
       min-width: 0;
     }
 
@@ -159,6 +169,8 @@
     }
 
     li {
+      max-width: 100%;
+      min-width: 0;
       overflow-wrap: break-word;
       padding: var(--spacing-01) 0;
       word-break: normal;
@@ -179,10 +191,11 @@
 
   .project-inspection-tree-type,
   .project-inspection-category-icon {
-    flex: 0 0 1rem;
-    font-size: 1rem;
+    flex: 0 0 20px;
+    font-size: 20px;
+    line-height: 1;
     margin-right: var(--spacing-02);
-    width: 1rem;
+    width: 20px;
   }
 
   .project-inspection-tree-link {
@@ -219,24 +232,24 @@
   }
 
   .project-inspection-tree-status-missing {
-    color: var(--red-50);
+    color: var(--project-inspection-status-missing);
   }
 
   .project-inspection-tree-status-unused,
   .project-inspection-tree-status-unreferenced {
-    color: var(--yellow-30);
+    color: var(--project-inspection-status-unused);
   }
 
   .project-inspection-tree-status-duplicate {
-    color: var(--yellow-40);
+    color: var(--project-inspection-status-duplicate);
   }
 
   .project-inspection-tree-status-circular {
-    color: var(--red-70);
+    color: var(--project-inspection-status-circular);
   }
 
   .project-inspection-circular-icon {
-    color: var(--red-70);
+    color: var(--project-inspection-status-circular);
   }
 
   .project-inspection-status {
@@ -249,20 +262,20 @@
   }
 
   .project-inspection-status-missing {
-    background: var(--red-50);
+    background: var(--project-inspection-status-missing);
   }
 
   .project-inspection-status-unused,
   .project-inspection-status-unreferenced {
-    background: var(--yellow-30);
+    background: var(--project-inspection-status-unused);
   }
 
   .project-inspection-status-duplicate {
-    background: var(--yellow-40);
+    background: var(--project-inspection-status-duplicate);
   }
 
   .project-inspection-status-circular {
-    background: var(--red-70);
+    background: var(--project-inspection-status-circular);
   }
 
   .project-inspection-status-normal {
@@ -270,7 +283,9 @@
   }
 
   .project-inspection-issue-list li {
-    border-bottom: 1px solid var(--border-divider);
+    // border-bottom: 1px solid var(--border-divider);
+    max-width: 100%;
+    min-width: 0;
     padding: var(--spacing-02) 0;
   }
 
@@ -289,9 +304,12 @@
     align-items: start;
     column-gap: var(--spacing-02);
     display: grid;
-    grid-template-columns: 1rem minmax(0, 1fr);
+    grid-template-columns: 20px minmax(0, 1fr);
+    max-width: 100%;
+    min-width: 0;
 
     > .project-inspection-category-icon {
+      align-self: start;
       margin-right: 0;
     }
   }
@@ -303,21 +321,33 @@
   .project-inspection-issue-title,
   .project-inspection-location {
     display: block;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
     word-break: normal;
   }
 
   .project-inspection-location,
   .project-inspection-secondary-location {
-    color: var(--content-secondary);
+    color: var(--project-inspection-secondary-text);
     font-size: var(--font-size-01);
     line-height: var(--line-height-01);
   }
 
   .project-inspection-secondary-location {
     margin-left: 0;
-    padding-left: calc(1rem + var(--spacing-02));
+    padding-left: calc(20px + var(--spacing-02));
     padding-top: var(--spacing-01);
+  }
+}
+
+[data-theme='default'] .project-inspection-panel {
+  --project-inspection-status-missing: var(--red-30);
+  --project-inspection-status-unused: var(--yellow-20);
+  --project-inspection-status-duplicate: var(--yellow-30);
+  --project-inspection-status-circular: var(--red-40);
+  --project-inspection-secondary-text: var(--content-primary-dark);
+
+  .project-inspection-overview h3 {
+    color: var(--content-primary-dark);
   }
 }
 
@@ -350,31 +380,104 @@
       padding-left: 0;
 
       ul {
-        margin-left: 2px;
+        margin-left: 0;
         padding-left: var(--spacing-01);
       }
 
       .project-inspection-tree-row,
       details > summary {
-        flex-wrap: wrap;
+        align-items: center;
+        column-gap: var(--spacing-01);
+        display: grid;
+        grid-template-columns: 1rem 20px minmax(0, 1fr);
       }
     }
 
     .project-inspection-tree-toggle,
     .project-inspection-tree-type {
-      margin-right: var(--spacing-01);
+      margin-right: 0;
+    }
+
+    .project-inspection-tree-toggle {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .project-inspection-tree-type {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .project-inspection-tree-link {
+      grid-column: 3;
+      grid-row: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 100%;
     }
 
     .project-inspection-tree-status {
-      margin-left: calc(2rem + var(--spacing-02));
+      grid-column: 3;
+      grid-row: 2;
+      justify-self: start;
+      margin-left: 0;
+      min-width: 0;
     }
 
     .project-inspection-tree-status-icon-only {
-      margin-left: var(--spacing-02);
+      margin-left: 0;
+    }
+
+    .project-inspection-section > summary {
+      column-gap: var(--spacing-01);
+    }
+
+    .project-inspection-issue {
+      column-gap: var(--spacing-01);
+    }
+
+    .project-inspection-issue-title {
+      overflow-wrap: anywhere;
     }
 
     .project-inspection-secondary-location {
-      padding-left: 0;
+      display: block;
+      overflow: hidden;
+      padding-left: calc(20px + var(--spacing-01));
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+@container project-inspection (max-width: 190px) {
+  .project-inspection-panel {
+    .project-inspection-content {
+      padding: var(--spacing-01);
+    }
+
+    .project-inspection-section {
+      padding: var(--spacing-02) 0;
+    }
+
+    .project-inspection-tree {
+      ul {
+        padding-left: 2px;
+      }
+
+      .project-inspection-tree-row,
+      details > summary {
+        column-gap: 2px;
+      }
+    }
+
+    .project-inspection-issue {
+      column-gap: 2px;
+    }
+
+    .project-inspection-secondary-location {
+      padding-left: 22px;
     }
   }
 }
