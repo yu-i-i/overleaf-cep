@@ -1249,9 +1249,8 @@ module.exports = {
   splitTestOverrides: {
     'themed-modals': 'enabled',
     'overleaf-code': 'enabled',
-    ...(process.env.ENABLE_EDITOR_TABS?.toLowerCase() === 'true' ? {
-      'editor-tabs': 'enabled',
-    } : {}),
+    'editor-tabs': 'enabled',
+    'writefull-toolbar-migration': 'enabled',
     ...(process.env.ENABLE_PANDOC_CONVERSIONS === 'true' ? {
       'import-docx': 'enabled',
       'import-markdown': 'enabled',
