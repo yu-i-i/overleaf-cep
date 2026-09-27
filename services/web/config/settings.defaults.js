@@ -1063,7 +1063,12 @@ module.exports = {
       ),
     ],
     mainEditorLayoutPanels: [],
-    pythonRunner: [],
+    pythonRunner: [
+      Path.resolve(
+        __dirname,
+        '../modules/python-runner/frontend/js/components/layout/python-editor-split'
+      ),
+    ],
     langFeedbackLinkingWidgets: [],
     labsExperiments: [],
     integrationLinkingWidgets: [
@@ -1128,6 +1133,10 @@ module.exports = {
       Path.resolve(
         __dirname,
         '../frontend/js/features/pdf-preview/components/synctex-toasts'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/python-runner/frontend/js/components/editor/python/python-output-toasts'
       ),
     ],
     editorSidebarComponents: [
@@ -1239,6 +1248,7 @@ module.exports = {
 
   splitTestOverrides: {
     'themed-modals': 'enabled',
+    'overleaf-code': 'enabled',
     ...(process.env.ENABLE_EDITOR_TABS?.toLowerCase() === 'true' ? {
       'editor-tabs': 'enabled',
     } : {}),
