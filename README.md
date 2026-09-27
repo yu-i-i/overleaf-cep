@@ -14,7 +14,7 @@
 
 <img src="doc/screenshot.png" alt="A screenshot of a project being edited in Overleaf Extended Community Edition">
 <p align="center">
-  Figure 1: A screenshot of a project being edited in Overleaf Extended Community Edition.
+  Figure 1: A screenshot of a project being edited in Overleaf CE+
 </p>
 
 ## Community Edition
@@ -40,6 +40,7 @@ The present "extended" version of Overleaf CE includes:
 - Reference Search and Pick Tool
 - Document Import (`.docx`, `.md`) and Export (`.docx`, `.md`, `.html`) 
 - Advanced administrator tools for managing user accounts and projects
+- Python script runner
 - Logo tools
 
 > [!CAUTION]
@@ -81,13 +82,13 @@ folder are added.
 ## Authors
 
 [The Overleaf Team](https://www.overleaf.com/about)\
-[yu-i-i](https://github.com/yu-i-i), [davrot](https://github.com/davrot) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md)
+[yu-i-i](https://github.com/yu-i-i), [davrot](https://github.com/davrot) — CE extensions; references to adapted code are listed in [`CREDITS`](CREDITS.md). See also the authors of individual commits.
 
 ## License
 
 The code in this repository is released under the GNU AFFERO GENERAL PUBLIC LICENSE, version 3. A copy can be found in the [`LICENSE`](LICENSE) file.
 
 Copyright (c) Overleaf, 2014-2026.\
-Copyright (c) @yu-i-i, 2024-2026, for CE extensions.
+Copyright (c) @yu-i-i, @davrot, 2024-2026, for CE extensions.
 
 Portions of the code are derived from other open-source projects; see [`CREDITS`](CREDITS.md).

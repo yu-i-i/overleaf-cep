@@ -5,7 +5,7 @@ In most cases the original code has been modified, optimized, or extended.
 
 ## Symbol palette
 
-The symbol palette feature is based on the
+The Symbol palette feature is based on the
 [original Overleaf implementation](https://github.com/overleaf/web/tree/master/frontend/js/features/symbol-palette)
 
 The original code was slightly improved, particularly in the parts related to keyboard input.
@@ -46,6 +46,11 @@ from [here](https://github.com/ayaka-notes/overleaf-pro/commit/06a30fe9a0ed75e5a
 ## Sign Up page
 
 The Sign Up page is based on [this code](https://github.com/ayaka-notes/overleaf-pro/tree/feat-public-registeration).
+
+## Python script runner
+
+The Python script runner feature is the original Overleaf implementation, which
+[was hidden behind a paywall](https://github.com/overleaf/overleaf/commit/b90a8500d5df763d1a9b00352928a79c7e247de7) in later releases.
 
 # Acknowledgments
 
