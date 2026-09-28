@@ -12,7 +12,7 @@ import {
   OLModalHeader,
   OLModalTitle,
 } from '@/shared/components/ol/ol-modal'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 
 const DEFAULT_API_URL = 'https://wakatime.com/api/v1'
 
@@ -90,7 +90,7 @@ export default function WakaTimeConnectModal({
             />
           </OLFormGroup>
 
-          {error && <OLNotification type="error" content={error} />}
+          {error && <Notification type="error" content={error} />}
         </OLModalBody>
 
         <OLModalFooter>

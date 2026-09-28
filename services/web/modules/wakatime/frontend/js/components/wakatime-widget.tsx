@@ -4,7 +4,7 @@ import { getJSON, deleteJSON } from '@/infrastructure/fetch-json'
 import useAsync from '@/shared/hooks/use-async'
 import { debugConsole } from '@/utils/debugging'
 import OLButton from '@/shared/components/ol/ol-button'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import WakaTimeLogo from '@/shared/svgs/wakatime-logo'
 import WakaTimeConnectModal from './wakatime-connect-modal'
 
@@ -96,7 +96,7 @@ export const WakaTimeWidget = function WakaTimeWidget() {
           )}
 
           {isErrorConnCheck && (
-            <OLNotification
+            <Notification
               type="error"
               content={t('problem_checking_connection_with_provider', {
                 provider: 'WakaTime',
@@ -105,7 +105,7 @@ export const WakaTimeWidget = function WakaTimeWidget() {
           )}
 
           {isErrorUnlink && (
-            <OLNotification type="error" content={t('generic_something_went_wrong')} />
+            <Notification type="error" content={t('generic_something_went_wrong')} />
           )}
         </div>
 
