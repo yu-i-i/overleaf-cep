@@ -84,6 +84,8 @@ const ISSUE_DEPENDENCY_TYPES: Record<string, string> = {
   'unused-bibliography-entry': 'bibliography-entry',
   'possibly-unused-file': 'file',
   'duplicate-label': 'label',
+  'duplicate-figure-caption': 'figure',
+  'duplicate-table-caption': 'table',
   'duplicate-bibliography-key': 'bibliography-entry',
   'duplicate-bibliography-title': 'bibliography-entry',
 }
@@ -895,6 +897,22 @@ function ProjectInspectionPanel() {
               </p>
               <div className="project-inspection-summary-grid">
                 <OLTooltip
+                  id="project-inspection-overview-circular"
+                  description="Shows the number of circular file-dependency cycles."
+                  overlayProps={{
+                    placement: 'right',
+                    trigger: ['hover', 'focus'],
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('inspection-circular')}
+                  >
+                    <StatusDot status="circular" /> Circular
+                    <strong>{result.overview.circular}</strong>
+                  </button>
+                </OLTooltip>
+                <OLTooltip
                   id="project-inspection-overview-missing"
                   description="Shows the number of missing components."
                   overlayProps={{
@@ -908,6 +926,22 @@ function ProjectInspectionPanel() {
                   >
                     <StatusDot status="missing" /> Missing
                     <strong>{result.overview.missing}</strong>
+                  </button>
+                </OLTooltip>
+                <OLTooltip
+                  id="project-inspection-overview-duplicate"
+                  description="Shows the number of duplicate labels, figure or table captions, bibliography keys, or bibliography titles."
+                  overlayProps={{
+                    placement: 'right',
+                    trigger: ['hover', 'focus'],
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('inspection-duplicate')}
+                  >
+                    <StatusDot status="duplicate" /> Duplicate
+                    <strong>{result.overview.duplicate}</strong>
                   </button>
                 </OLTooltip>
                 <OLTooltip
@@ -926,41 +960,16 @@ function ProjectInspectionPanel() {
                     <strong>{result.overview.unusedUnreferenced}</strong>
                   </button>
                 </OLTooltip>
-                <OLTooltip
-                  id="project-inspection-overview-duplicate"
-                  description="Shows the number of duplicate labels or bibliography keys."
-                  overlayProps={{
-                    placement: 'right',
-                    trigger: ['hover', 'focus'],
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('inspection-duplicate')}
-                  >
-                    <StatusDot status="duplicate" /> Duplicate
-                    <strong>{result.overview.duplicate}</strong>
-                  </button>
-                </OLTooltip>
-                <OLTooltip
-                  id="project-inspection-overview-circular"
-                  description="Shows the number of circular file-dependency cycles."
-                  overlayProps={{
-                    placement: 'right',
-                    trigger: ['hover', 'focus'],
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('inspection-circular')}
-                  >
-                    <StatusDot status="circular" /> Circular
-                    <strong>{result.overview.circular}</strong>
-                  </button>
-                </OLTooltip>
               </div>
             </section>
             <DependencyTree result={result} onNavigate={onNavigate} />
+            <IssueSection
+              id="inspection-circular"
+              title="Circular Dependencies"
+              issueIds={result.views.circular}
+              result={result}
+              onNavigate={onNavigate}
+            />
             <IssueSection
               id="inspection-missing"
               title="Missing Components"
@@ -970,13 +979,6 @@ function ProjectInspectionPanel() {
               open
             />
             <IssueSection
-              id="inspection-unused"
-              title="Unused / Unreferenced Components"
-              issueIds={result.views.unused}
-              result={result}
-              onNavigate={onNavigate}
-            />
-            <IssueSection
               id="inspection-duplicate"
               title="Duplicate Components"
               issueIds={result.views.duplicate}
@@ -984,9 +986,9 @@ function ProjectInspectionPanel() {
               onNavigate={onNavigate}
             />
             <IssueSection
-              id="inspection-circular"
-              title="Circular Dependencies"
-              issueIds={result.views.circular}
+              id="inspection-unused"
+              title="Unused / Unreferenced Components"
+              issueIds={result.views.unused}
               result={result}
               onNavigate={onNavigate}
             />

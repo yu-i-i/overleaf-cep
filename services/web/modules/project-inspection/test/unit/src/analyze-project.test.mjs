@@ -798,6 +798,132 @@ content
     ])
   })
 
+  it('reports equivalent figure captions as one duplicate issue', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\begin{figure}
+\caption[First]{Shared {Figure}~Caption}
+\label{fig:first}
+\end{figure}
+\begin{figure}
+\caption{ shared figure   caption }
+\label{fig:second}
+\end{figure}`
+          ),
+        ],
+      })
+    )
+
+    const issues = Object.values(result.issues.byId).filter(
+      issue => issue.type === 'duplicate-figure-caption'
+    )
+    expect(issues).toHaveLength(1)
+    expect(issues[0]).toMatchObject({
+      title: 'Duplicate figure caption: Shared {Figure}~Caption',
+      category: 'figure',
+      status: 'duplicate',
+    })
+    expect(issues[0].locations).toEqual([
+      expect.objectContaining({
+        path: 'main.tex',
+        line: 2,
+        sourceText: String.raw`\caption[First]{Shared {Figure}~Caption}`,
+      }),
+      expect.objectContaining({
+        path: 'main.tex',
+        line: 6,
+        sourceText: String.raw`\caption{ shared figure caption }`,
+      }),
+    ])
+    expect(issues[0].nodeIds).toHaveLength(2)
+    expect(result.views.duplicate).toContain(issues[0].id)
+    expect(result.overview.duplicate).toBe(1)
+    expect(
+      result.graph.nodes.filter(
+        node => node.kind === 'figure' && node.status === 'duplicate'
+      )
+    ).toHaveLength(2)
+  })
+
+  it('reports duplicate table captions separately from figure captions', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\begin{table}
+\caption{Shared caption}
+\label{tab:first}
+\end{table}
+\begin{table*}
+\caption{SHARED CAPTION}
+\label{tab:second}
+\end{table*}
+\begin{figure}
+\caption{Shared caption}
+\label{fig:only}
+\end{figure}`
+          ),
+        ],
+      })
+    )
+
+    const duplicateIssues = result.views.duplicate.map(
+      id => result.issues.byId[id]
+    )
+    expect(duplicateIssues).toEqual([
+      expect.objectContaining({
+        type: 'duplicate-table-caption',
+        title: 'Duplicate table caption: Shared caption',
+      }),
+    ])
+    expect(
+      result.graph.nodes.filter(
+        node => node.kind === 'table' && node.status === 'duplicate'
+      )
+    ).toHaveLength(2)
+    expect(
+      result.graph.nodes.find(node => node.kind === 'figure')?.status
+    ).not.toBe('duplicate')
+  })
+
+  it('ignores captions outside supported environments and selected scopes', function () {
+    const result = analyzeProject(
+      snapshot({
+        entryPointIds: ['main'],
+        documents: [
+          document(
+            'main',
+            'main.tex',
+            String.raw`\caption{Repeated caption}
+\begin{figure}
+\caption{Repeated caption}
+\label{fig:main}
+\end{figure}`
+          ),
+          document(
+            'outside',
+            'outside.tex',
+            String.raw`\begin{figure}
+\caption{Repeated caption}
+\label{fig:outside}
+\end{figure}`
+          ),
+        ],
+      })
+    )
+
+    expect(issueTypes(result)).not.toContain('duplicate-figure-caption')
+    expect(issueTypes(result)).not.toContain('duplicate-table-caption')
+  })
+
   it('reports bibliography entries with equivalent normalized titles', function () {
     const result = analyzeProject(
       snapshot({

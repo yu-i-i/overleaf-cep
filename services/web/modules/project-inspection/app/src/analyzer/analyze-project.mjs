@@ -64,6 +64,17 @@ function normalizedBibliographyTitle(title) {
   return { display, key: display.toLocaleLowerCase('en-US') }
 }
 
+function normalizedCaption(caption) {
+  const key = caption
+    .normalize('NFKC')
+    .replace(/~/g, ' ')
+    .replace(/[{}]/g, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .toLocaleLowerCase('en-US')
+  return key
+}
+
 function bibliographyEntrySignature(entries) {
   return entries
     .map(
@@ -347,6 +358,8 @@ function issueTitle(type, target) {
     'missing-reference': 'Reference has no matching label',
     'missing-citation': 'Citation has no matching bibliography entry',
     'duplicate-label': 'Duplicate label',
+    'duplicate-figure-caption': 'Duplicate figure caption',
+    'duplicate-table-caption': 'Duplicate table caption',
     'duplicate-bibliography-key': 'Duplicate bibliography key',
     'duplicate-bibliography-title': 'Duplicate bibliography title',
     'unreferenced-label': 'Label is not referenced',
@@ -529,6 +542,10 @@ export function analyzeProject(snapshot) {
     for (const value of scope.bibliographies) reachableBibliographies.add(value)
 
     const labelsByKey = new Map()
+    const captionsByKind = {
+      figure: new Map(),
+      table: new Map(),
+    }
     const entriesByKey = new Map()
     const entriesByTitle = new Map()
     const references = []
@@ -591,6 +608,19 @@ export function analyzeProject(snapshot) {
         values.push(label)
         labelsByKey.set(label.key, values)
       }
+      for (const environment of parsed.environments) {
+        for (const caption of environment.captions) {
+          const normalized = normalizedCaption(caption.value)
+          if (!normalized) continue
+          const captions = captionsByKind[environment.kind]
+          const values = captions.get(normalized) ?? []
+          values.push({
+            caption,
+            environment,
+          })
+          captions.set(normalized, values)
+        }
+      }
       references.push(...parsed.references)
       citations.push(...parsed.citations)
       labelsIncomplete ||= parsed.dynamicReferences.some(
@@ -627,6 +657,28 @@ export function analyzeProject(snapshot) {
         scope.root.id,
         ['duplicate']
       )
+    }
+
+    for (const kind of ['figure', 'table']) {
+      for (const [normalizedValue, definitions] of captionsByKind[kind]) {
+        if (definitions.length < 2) continue
+        const type = `duplicate-${kind}-caption`
+        addIssue(
+          componentIssueKey(type, normalizedValue),
+          {
+            type,
+            status: 'duplicate',
+            category: kind,
+            target: definitions[0].caption.value,
+            locations: definitions.map(item => item.caption.location),
+            nodeIds: definitions.map(item =>
+              environmentNodeId(item.environment)
+            ),
+          },
+          scope.root.id,
+          ['duplicate']
+        )
+      }
     }
 
     for (const reference of references) {

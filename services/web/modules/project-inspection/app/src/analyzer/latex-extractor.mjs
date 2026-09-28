@@ -149,6 +149,7 @@ export function extractLatex(doc) {
     includes: [],
     figures: [],
     bibliographyFiles: [],
+    captions: [],
     labels: [],
     references: [],
     citations: [],
@@ -247,6 +248,17 @@ export function extractLatex(doc) {
           }
         } else {
           result.dynamicReferences.push({ kind: 'bibliography', location })
+        }
+        return
+      }
+
+      if (type === 'Caption') {
+        const value = topLevelBraceArguments(raw).at(-1)?.value ?? ''
+        if (value.trim()) {
+          result.captions.push({
+            value: value.trim(),
+            location: fullCommandLocation(source, lineStarts, doc, node),
+          })
         }
         return
       }
@@ -376,6 +388,7 @@ export function extractLatex(doc) {
           from: node.from,
           to: Math.min(node.to, node.from + raw.indexOf('}') + 1),
         }),
+        captions: [],
         labels: [],
         figures: [],
       })
@@ -396,6 +409,23 @@ export function extractLatex(doc) {
     if (containing) {
       containing.labels.push(label.key)
       label.environmentKind = containing.kind
+    }
+  }
+
+  for (const caption of result.captions) {
+    const containing = result.environments
+      .filter(
+        environment =>
+          caption.location.from >= environment.from &&
+          caption.location.to <= environment.to
+      )
+      .sort(
+        (left, right) =>
+          left.to - left.from - (right.to - right.from)
+      )[0]
+    if (containing) {
+      containing.captions.push(caption)
+      caption.environmentKind = containing.kind
     }
   }
 
