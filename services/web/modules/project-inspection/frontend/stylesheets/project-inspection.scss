@@ -9,12 +9,19 @@
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: auto;
+  inset: 0;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
+  position: absolute;
+
+  > .rail-panel-header {
+    flex: 0 0 auto;
+  }
 
   .project-inspection-content {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     font-size: var(--font-size-02);
     line-height: var(--line-height-02);
     min-height: 0;
@@ -125,11 +132,17 @@
     }
 
     > summary::before {
-      content: '▸';
+      border-block: 0.25rem solid transparent;
+      border-inline-start: 0.375rem solid currentColor;
+      content: '';
+      height: 0;
+      margin-block-start: 0.375rem;
+      transform-origin: center;
+      width: 0;
     }
 
     &[open] > summary::before {
-      content: '▾';
+      transform: rotate(90deg);
     }
   }
 

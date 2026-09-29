@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import Button from '@/shared/components/button/button'
+import Button from '@/shared/components/ol/ol-button'
 import MaterialIcon, {
   type AvailableUnfilledIcon,
 } from '@/shared/components/material-icon'
@@ -11,7 +11,7 @@ import RailPanelHeader from '@/features/ide-react/components/rail/rail-panel-hea
 import { useProjectContext } from '@/shared/context/project-context'
 import { useFileTreeData } from '@/shared/context/file-tree-data-context'
 import { useFileTreePathContext } from '@/features/file-tree/contexts/file-tree-path'
-import { newEditorIconTypeFromName } from '@/features/file-tree/util/icon-type-from-name'
+import newEditorIconTypeFromName from '@/features/file-tree/util/icon-type-from-name'
 import { useEditorManagerContext } from '@/features/ide-react/context/editor-manager-context'
 import { isValidTeXFile } from '@/main/is-valid-tex-file'
 import { signalWithTimeout } from '@/utils/abort-signal'
