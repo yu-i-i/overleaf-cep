@@ -68,6 +68,7 @@ async function refreshLinkedFile(
   parentFolderId,
   userId
 ) {
+  linkedFileData = _normalizeLegacyData(linkedFileData)
   logger.debug(
     { projectId, userId, linkedFileData },
     'refreshing Zotero linked file'
@@ -126,6 +127,24 @@ async function _getBibtex(linkedFileData) {
     }
     logger.error({ linkedFileData, err }, 'failed to retrieve bib file from Zotero')
     throw new LinkedFilesErrors.RemoteServiceError('Error retrieving bib file from Zotero').withCause(err)
+  }
+}
+
+// Files imported before "Zotero: fix for 6.3.0" use the old key names.
+function _normalizeLegacyData(data) {
+  const {
+    zoteroGroupId,
+    importedByUserId,
+    importedByName,
+    bibFormat,
+    ...rest
+  } = data
+  return {
+    ...rest,
+    group_id: rest.group_id ?? zoteroGroupId ?? null,
+    importer_id: rest.importer_id ?? importedByUserId,
+    importer_name: rest.importer_name ?? importedByName,
+    format: rest.format ?? bibFormat,
   }
 }
 
