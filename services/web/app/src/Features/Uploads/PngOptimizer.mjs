@@ -46,7 +46,7 @@ async function optimizeIfBeneficial({ fileName, filePath }) {
       [
         '--quiet',
         '--threads',
-        '1',
+        String(Settings.pngOptimization.threads),
         '-o',
         Settings.pngOptimization.level,
         '--out',

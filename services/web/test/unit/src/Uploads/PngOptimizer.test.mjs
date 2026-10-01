@@ -17,10 +17,16 @@ describe('PngOptimizer', function () {
     ctx.original = Buffer.concat([PNG_SIGNATURE, Buffer.alloc(100)])
     await fs.writeFile(ctx.filePath, ctx.original)
     ctx.settings = {
-      pngOptimization: { enabled: true, level: '2', timeoutMs: 30_000 },
+      pngOptimization: {
+        enabled: true,
+        level: '2',
+        timeoutMs: 30_000,
+        threads: 3,
+      },
     }
     ctx.execFile = sinon.stub().callsFake((command, args, options, callback) => {
-      fs.writeFile(args[4], Buffer.concat([PNG_SIGNATURE, Buffer.alloc(10)]))
+      const outputPath = args[args.indexOf('--out') + 1]
+      fs.writeFile(outputPath, Buffer.concat([PNG_SIGNATURE, Buffer.alloc(10)]))
         .then(() => callback(null, '', ''))
         .catch(callback)
     })
@@ -44,7 +50,7 @@ describe('PngOptimizer', function () {
     expect(ctx.execFile.firstCall.args[0]).to.equal('oxipng')
     expect(ctx.execFile.firstCall.args[1]).to.include.members([
       '--threads',
-      '1',
+      '3',
       '-o',
       '2',
     ])
@@ -56,7 +62,8 @@ describe('PngOptimizer', function () {
 
   it('keeps the original when the optimized file is not smaller', async function (ctx) {
     ctx.execFile.callsFake((command, args, options, callback) => {
-      fs.writeFile(args[4], Buffer.concat([ctx.original, Buffer.alloc(1)]))
+      const outputPath = args[args.indexOf('--out') + 1]
+      fs.writeFile(outputPath, Buffer.concat([ctx.original, Buffer.alloc(1)]))
         .then(() => callback(null, '', ''))
         .catch(callback)
     })

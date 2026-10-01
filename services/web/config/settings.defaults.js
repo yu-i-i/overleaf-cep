@@ -1,4 +1,5 @@
 const Path = require('node:path')
+const os = require('node:os')
 const { merge } = require('@overleaf/settings/merge')
 const {
   DEFAULT_TEXT_EXTENSIONS,
@@ -23,6 +24,18 @@ const pngOptimizationLevels = new Set([
 const pngOptimizationTimeout = Number(
   process.env.PNG_OPTIMIZATION_TIMEOUT ?? 30
 )
+const availablePngOptimizationThreads = os.availableParallelism()
+const configuredPngOptimizationThreads = Number(
+  process.env.PNG_OPTIMIZATION_THREADS
+)
+const pngOptimizationThreads =
+  Number.isSafeInteger(configuredPngOptimizationThreads) &&
+  configuredPngOptimizationThreads > 0
+    ? Math.min(
+        configuredPngOptimizationThreads,
+        availablePngOptimizationThreads
+      )
+    : Math.max(1, Math.floor(availablePngOptimizationThreads / 2))
 
 // These credentials are used for authenticating api requests
 // between services that may need to go over public channels
@@ -379,6 +392,7 @@ module.exports = {
       Number.isFinite(pngOptimizationTimeout) && pngOptimizationTimeout > 0
         ? pngOptimizationTimeout * seconds
         : 30 * seconds,
+    threads: pngOptimizationThreads,
   },
 
   notifyOnSystemMessageChanges:
