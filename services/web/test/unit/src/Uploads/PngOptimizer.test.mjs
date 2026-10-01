@@ -42,7 +42,12 @@ describe('PngOptimizer', function () {
     expect((await fs.stat(ctx.filePath)).size).to.equal(18)
     expect(ctx.execFile.calledOnce).to.equal(true)
     expect(ctx.execFile.firstCall.args[0]).to.equal('oxipng')
-    expect(ctx.execFile.firstCall.args[1]).to.include.members(['-o', '2'])
+    expect(ctx.execFile.firstCall.args[1]).to.include.members([
+      '--threads',
+      '1',
+      '-o',
+      '2',
+    ])
     expect(ctx.execFile.firstCall.args[2]).to.deep.include({
       timeout: 30_000,
       killSignal: 'SIGKILL',

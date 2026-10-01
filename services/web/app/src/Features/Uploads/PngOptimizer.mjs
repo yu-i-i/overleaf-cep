@@ -45,6 +45,8 @@ async function optimizeIfBeneficial({ fileName, filePath }) {
       'oxipng',
       [
         '--quiet',
+        '--threads',
+        '1',
         '-o',
         Settings.pngOptimization.level,
         '--out',

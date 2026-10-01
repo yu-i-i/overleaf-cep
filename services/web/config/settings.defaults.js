@@ -21,7 +21,7 @@ const pngOptimizationLevels = new Set([
   'max',
 ])
 const pngOptimizationTimeout = Number(
-  process.env.PNG_OPTIMIZATION_TIMEOUT ?? 60
+  process.env.PNG_OPTIMIZATION_TIMEOUT ?? 30
 )
 
 // These credentials are used for authenticating api requests
@@ -378,7 +378,7 @@ module.exports = {
     timeoutMs:
       Number.isFinite(pngOptimizationTimeout) && pngOptimizationTimeout > 0
         ? pngOptimizationTimeout * seconds
-        : 60 * seconds,
+        : 30 * seconds,
   },
 
   notifyOnSystemMessageChanges:
