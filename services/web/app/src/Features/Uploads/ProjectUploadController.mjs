@@ -5,6 +5,7 @@ import fsPromises from 'node:fs/promises'
 import Path from 'node:path'
 import FileSystemImportManager from './FileSystemImportManager.mjs'
 import ProjectUploadManager from './ProjectUploadManager.mjs'
+import PngOptimizer from './PngOptimizer.mjs'
 import SessionManager from '../Authentication/SessionManager.mjs'
 import EditorController from '../Editor/EditorController.mjs'
 import ProjectLocator from '../Project/ProjectLocator.mjs'
@@ -171,6 +172,15 @@ async function uploadFile(req, res) {
       logger.warn({ err: unlinkErr, path }, 'error unlinking uploaded file')
     })
     throw error
+  }
+
+  try {
+    await PngOptimizer.optimizeIfBeneficial({ fileName: name, filePath: path })
+  } catch (err) {
+    logger.warn(
+      { err, fileName: name },
+      'PNG optimization failed; continuing upload'
+    )
   }
 
   return FileSystemImportManager.addEntity(

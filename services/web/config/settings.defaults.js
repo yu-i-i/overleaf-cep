@@ -10,6 +10,19 @@ let defaultFeatures, siteUrl
 // Make time interval config easier.
 const seconds = 1000
 const minutes = 60 * seconds
+const pngOptimizationLevels = new Set([
+  '0',
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  'max',
+])
+const pngOptimizationTimeout = Number(
+  process.env.PNG_OPTIMIZATION_TIMEOUT ?? 60
+)
 
 // These credentials are used for authenticating api requests
 // between services that may need to go over public channels
@@ -356,6 +369,16 @@ module.exports = {
     : 50 * 1024 * 1024, // 50 MB
   multerOptions: {
     preservePath: process.env.MULTER_PRESERVE_PATH,
+  },
+  pngOptimization: {
+    enabled: process.env.PNG_OPTIMIZATION_ENABLED === 'true',
+    level: pngOptimizationLevels.has(process.env.PNG_OPTIMIZATION_LEVEL)
+      ? process.env.PNG_OPTIMIZATION_LEVEL
+      : '4',
+    timeoutMs:
+      Number.isFinite(pngOptimizationTimeout) && pngOptimizationTimeout > 0
+        ? pngOptimizationTimeout * seconds
+        : 60 * seconds,
   },
 
   notifyOnSystemMessageChanges:
