@@ -109,7 +109,7 @@ async function _getBibtex(linkedFileData) {
     return await ZoteroApiClient.getLibraryBibtex(
       userId,
       linkedFileData.group_id,  // == null for main library
-      linkedFileData.format || 'bibtex'
+      linkedFileData.format
     )
   } catch (err) {
 
