@@ -12,7 +12,7 @@ export default async function registerNewUserAndSendActivationEmail(userData) {
   let user
   try {
     const password = crypto.randomBytes(32).toString('hex')
-    user = await UserRegistrationHandler.promises.registerNewUser({ ...userData, password })
+    user = await UserRegistrationHandler.promises.registerNewUser({ ...userData, password, analyticsId: crypto.randomUUID() })
   } catch (error) {
     if (error.message === 'EmailAlreadyRegistered') {
       logger.debug({ email: userData.email }, 'user already registered')
