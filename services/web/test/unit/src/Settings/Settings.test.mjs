@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
+import os from 'node:os'
 
 const require = createRequire(import.meta.url)
 
@@ -48,6 +49,67 @@ function haveSameStructure(objects) {
 }
 
 describe('settings.defaults', function () {
+  describe('PNG optimization threads', function () {
+    const originalValue = process.env.PNG_OPTIMIZATION_THREADS
+
+    afterEach(function () {
+      if (originalValue === undefined) {
+        delete process.env.PNG_OPTIMIZATION_THREADS
+      } else {
+        process.env.PNG_OPTIMIZATION_THREADS = originalValue
+      }
+      clearSettingsCache()
+    })
+
+    it('defaults to half of the available CPUs', function () {
+      delete process.env.PNG_OPTIMIZATION_THREADS
+      clearSettingsCache()
+
+      const settings = require('@overleaf/settings')
+
+      expect(settings.pngOptimization.threads).to.equal(
+        Math.max(1, Math.floor(os.availableParallelism() / 2))
+      )
+    })
+
+    it('uses a configured positive integer up to the available CPUs', function () {
+      process.env.PNG_OPTIMIZATION_THREADS = '3'
+      clearSettingsCache()
+
+      const settings = require('@overleaf/settings')
+
+      expect(settings.pngOptimization.threads).to.equal(
+        Math.min(3, os.availableParallelism())
+      )
+    })
+
+    for (const value of ['0', '-1', '1.5', 'invalid']) {
+      it(`uses the default for invalid value ${value}`, function () {
+        process.env.PNG_OPTIMIZATION_THREADS = value
+        clearSettingsCache()
+
+        const settings = require('@overleaf/settings')
+
+        expect(settings.pngOptimization.threads).to.equal(
+          Math.max(1, Math.floor(os.availableParallelism() / 2))
+        )
+      })
+    }
+
+    it('caps the configured value at the available CPUs', function () {
+      process.env.PNG_OPTIMIZATION_THREADS = String(
+        os.availableParallelism() + 1
+      )
+      clearSettingsCache()
+
+      const settings = require('@overleaf/settings')
+
+      expect(settings.pngOptimization.threads).to.equal(
+        os.availableParallelism()
+      )
+    })
+  })
+
   it('additional text extensions can be added via config', function () {
     clearSettingsCache()
     process.env.ADDITIONAL_TEXT_EXTENSIONS = 'abc, xyz'
