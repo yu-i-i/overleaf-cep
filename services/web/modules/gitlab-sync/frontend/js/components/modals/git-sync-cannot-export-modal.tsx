@@ -1,5 +1,5 @@
 import { useTranslation, Trans } from 'react-i18next'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import {
   OLModalBody,
   OLModalFooter,
@@ -7,7 +7,7 @@ import {
 import OLButton from '@/shared/components/ol/ol-button'
 import { ProjectSyncState } from '../../types/git-sync-types'
 
-type GitSyncNeedPermissionModalProps = {
+type GitSyncCannotExportModalProps = {
   projectSyncState: ProjectSyncState
   handleHide: () => void
 }
@@ -17,7 +17,7 @@ const GitSyncCannotExportModal = ({ projectSyncState, handleHide }: GitSyncCanno
   return (
     <>
       <OLModalBody>
-        <OLNotification
+        <Notification
           type="warning"
           content={(
             <Trans

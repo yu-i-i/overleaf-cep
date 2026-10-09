@@ -10,7 +10,7 @@ import OLRow from '@/shared/components/ol/ol-row'
 import OLCol from '@/shared/components/ol/ol-col'
 import OLButton from '@/shared/components/ol/ol-button'
 import OLIconButton from '@/shared/components/ol/ol-icon-button'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import { debugConsole } from '@/utils/debugging'
 import { ProjectSyncState, GitSyncModalStatus } from '../../types/git-sync-types'
 import getMeta from '@/utils/meta'
@@ -114,7 +114,7 @@ const GitSyncMergeOverviewModal = ({
             <hr />
 
             {data.diverged && (
-              <OLNotification
+              <Notification
                 type="warning"
                 content={t('gitlab_repository_diverged')}
               />
@@ -194,7 +194,7 @@ const GitSyncMergeOverviewModal = ({
         )}
 
         {error && (
-          <OLNotification
+          <Notification
             type="error"
             content={t('generic_something_went_wrong')}
           />

@@ -3,7 +3,7 @@ import useAsync from '@/shared/hooks/use-async'
 import { deleteJSON } from '@/infrastructure/fetch-json'
 import { OLModalBody, OLModalFooter } from '@/shared/components/ol/ol-modal'
 import OLButton from '@/shared/components/ol/ol-button'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import { debugConsole } from '@/utils/debugging'
 import { ProjectSyncState, GitSyncModalStatus } from '../../types/git-sync-types'
 import getMeta from '@/utils/meta'
@@ -20,7 +20,7 @@ const GitSyncUnlinkModal = ({
   setModalStatus,
   projectSyncState,
   projectId,
-}: GitSyncInitModalProps) => {
+}: GitSyncUnlinkModalProps) => {
   const { t } = useTranslation()
 
   const {
@@ -55,12 +55,12 @@ const GitSyncUnlinkModal = ({
         <hr />
 
         {!error ? (
-          <OLNotification
+          <Notification
             type="warning"
             content={t('unlink_the_project_from_the_current_gitlab_repo')}
           />
         ) : (
-          <OLNotification
+          <Notification
             type="error"
             content={
               error.info?.statusCode === 403 ? (

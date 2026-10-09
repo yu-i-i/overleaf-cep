@@ -12,7 +12,7 @@ import {
   OLModalHeader,
   OLModalTitle,
 } from '@/shared/components/ol/ol-modal'
-import OLNotification from '@/shared/components/ol/ol-notification'
+import Notification from '@/shared/components/notification'
 import GitLabLogo from '@/shared/svgs/gitlab-logo'
 
 export const GitLabSyncWidget = function GitLabSyncWidget() {
@@ -89,14 +89,14 @@ export const GitLabSyncWidget = function GitLabSyncWidget() {
           </p>
 
           {isErrorConnCheck && (
-            <OLNotification
+            <Notification
               type="error"
               content={t('gitlab_sync_error')}
             />
           )}
 
           {isErrorUnlink && (
-            <OLNotification
+            <Notification
               type="error"
               content={t('generic_something_went_wrong')}
             />
