@@ -20,6 +20,7 @@ import SplitTestHandler from '../SplitTests/SplitTestHandler.mjs'
 import SplitTestUserGetter from '../SplitTests/SplitTestUserGetter.mjs'
 import ClsiCacheManager from '../Compile/ClsiCacheManager.mjs'
 import crypto from 'node:crypto'
+import { assertUserMayCreateProject } from '../../../../modules/authentication/guest-user/app/src/GuestUserProjectCreationGuard.mjs'
 
 const { ObjectId } = mongodb
 
@@ -236,6 +237,7 @@ async function _createBlankProject(
   attributes = {},
   { skipCreatingInTPDS = false } = {}
 ) {
+  await assertUserMayCreateProject(ownerId)
   metrics.inc('project-creation')
   const timer = new metrics.Timer('project-creation')
   await ProjectDetailsHandler.promises.validateProjectName(projectName)

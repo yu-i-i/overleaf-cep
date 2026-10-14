@@ -19,6 +19,7 @@ const OIDCModuleManager = {
       allowedOIDCEmailDomains: process.env.OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS === undefined
         ? null
         : process.env.OVERLEAF_OIDC_ALLOWED_EMAIL_DOMAINS.split(',').map(s => s.trim()).filter(Boolean),
+      guestUserRole: process.env.OVERLEAF_OIDC_GUEST_USER_ROLE || null,
     }
   },
   passportSetup(passport, callback) {
@@ -57,6 +58,7 @@ const OIDCModuleManager = {
 // in this case allow to change password if the user has a hashedPassword
       return user.externalAuth === 'oidc' || (user.externalAuth === undefined && !user.hashedPassword)
     }
+
     try {
     PermissionsManager.registerPolicy(
       'oidcPolicy',
