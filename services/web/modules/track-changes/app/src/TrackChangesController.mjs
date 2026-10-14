@@ -53,6 +53,9 @@ const TrackChangesController = {
 // provided here to assign names to authors who have left the project but still have unaccepted changes.
     try {
       const { project_id } = req.params
+      // Same as getAllRanges: a tracked change still in document-updater is
+      // not in docstore yet, so its author would be missing here.
+      await DocumentUpdaterHandler.promises.flushProjectToMongo(project_id)
       const memberIds = await DocstoreManager.promises.getTrackedChangesUserIds(project_id)
       const limit = pLimit(3)
       const users = await Promise.all(
