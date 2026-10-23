@@ -1,0 +1,93 @@
+server {
+	listen         80;
+	server_name    _; # Catch all, see http://nginx.org/en/docs/http/server_names.html
+
+	root /overleaf/services/web/public/;
+
+	# block external access to prometheus /metrics
+	location /metrics {
+		internal;
+	}
+
+	location / {
+		proxy_pass http://127.0.0.1:4000;
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection "upgrade";
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-Host $host;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_read_timeout 10m;
+		proxy_send_timeout 10m;
+	}
+
+	location /socket.io {
+		proxy_pass http://127.0.0.1:3026;
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection "upgrade";
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-Host $host;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_read_timeout 10m;
+		proxy_send_timeout 10m;
+	}
+
+	location /stylesheets {
+		expires 1y;
+	}
+
+	location /minjs {
+		expires 1y;
+	}
+
+	location /img {
+		expires 1y;
+	}
+
+  # handle output.zip, which clsi builds on demand rather than writing to disk
+  location ~ ^/project/[0-9a-f]+(/user/[0-9a-f]+)?/build/[0-9a-f-]+/output/output\.zip$ {
+		proxy_pass http://127.0.0.1:4000;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-Host $host;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_read_timeout 10m;
+		proxy_send_timeout 10m;
+  }
+
+  # handle output files for specific users
+  location ~ ^/project/([0-9a-f]+)/user/([0-9a-f]+)/build/([0-9a-f-]+)/output/output\.([a-z.]+)$ {
+		proxy_pass http://127.0.0.1:8080; # clsi-nginx.conf
+		proxy_http_version 1.1;
+  }
+  # handle output files for anonymous users
+  location ~ ^/project/([0-9a-f]+)/build/([0-9a-f-]+)/output/output\.([a-z.]+)$ {
+		proxy_pass http://127.0.0.1:8080; # clsi-nginx.conf
+		proxy_http_version 1.1;
+  }
+  # PDF range for specific users
+  location ~ ^/project/([0-9a-f]+)/user/([0-9a-f]+)/content/([0-9a-f-]+/[0-9a-f]+)$ {
+		proxy_pass http://127.0.0.1:8080; # clsi-nginx.conf
+		proxy_http_version 1.1;
+  }
+  # PDF range for anonymous users
+  location ~ ^/project/([0-9a-f]+)/content/([0-9a-f-]+/[0-9a-f]+)$ {
+		proxy_pass http://127.0.0.1:8080; # clsi-nginx.conf
+		proxy_http_version 1.1;
+  }
+
+  # block external access to metrics
+  location ~* ^/metrics/?$ {
+    return 404 'Not found';
+  }
+
+  # block external access to all health checks /health_check, /health_check/full, etc
+  location ~* ^/health_check {
+    return 404 'Not found';
+  }
+
+  # Load any extra configuration for this vhost
+  include /etc/nginx/vhost-extras/overleaf/*.conf;
+}
