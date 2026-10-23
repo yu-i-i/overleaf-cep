@@ -79,6 +79,8 @@ const safeCompilers = ['xelatex', 'pdflatex', 'latex', 'lualatex']
 
 module.exports = {
   env: 'server-ce',
+  // show the CE "free unsupported software" disclaimer in the footer; set SHOW_UNSUPPORT_WARNING=false to hide it
+  show_unsupport_warning: process.env.SHOW_UNSUPPORT_WARNING !== 'false',
 
   limits: {
     httpGlobalAgentMaxSockets: 300,
@@ -1232,6 +1234,8 @@ module.exports = {
   },
 
   enablePandocConversions: process.env.ENABLE_PANDOC_CONVERSIONS === 'true',
+  // local login form is shown by default; set ENABLE_LOCAL_LOGIN_MASK=false to hide it (e.g. SSO-only login)
+  enableLocalLoginMask: process.env.ENABLE_LOCAL_LOGIN_MASK !== 'false',
 
   oauthProviders: {
     ...(process.env.EXTERNAL_AUTH && process.env.EXTERNAL_AUTH.includes('oidc') && {

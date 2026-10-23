@@ -36,7 +36,7 @@ footer.site-footer
 							a(href=item.url class=item.class aria-label=item.label) !{item.text}
 						else
 							| !{item.text}
-		if settings.env === 'server-ce'
+		if settings.env === 'server-ce' && settings.show_unsupport_warning
 			.row
 				.col-12
 					p.copyright-notice
