@@ -14,23 +14,30 @@ export OVERLEAF_TAG ?= sharelatex/sharelatex:$(BRANCH_NAME_TAG_SAFE)-$(MONOREPO_
 export OVERLEAF_PANDOC_BRANCH ?= sharelatex/sharelatex-pandoc:$(BRANCH_NAME_TAG_SAFE)
 export OVERLEAF_PANDOC_LATEST ?= sharelatex/sharelatex-pandoc
 export OVERLEAF_PANDOC_TAG ?= sharelatex/sharelatex-pandoc:$(BRANCH_NAME_TAG_SAFE)-$(MONOREPO_REVISION)
+export OVERLEAF_PDFTOCAIRO ?= sharelatex/pdftocairo:24.02
+export OVERLEAF_PNG2PDF ?= sharelatex/png2pdf:2026-06-24
 
-all: build-base build-community build-pandoc 
+
+all: build-base build-community build-pandoc build-pdftocairo build-png2pdf
 
 clean:
-	-docker rmi --force $(OVERLEAF_BASE_TAG) $(OVERLEAF_TAG) $(OVERLEAF_PANDOC_TAG) 
+	-docker rmi --force $(OVERLEAF_BASE_TAG) $(OVERLEAF_TAG) $(OVERLEAF_PANDOC_TAG) $(OVERLEAF_PDFTOCAIRO) $(OVERLEAF_PNG2PDF)
 
 refresh-cache: refresh-cache-branch
 refresh-cache-branch:
 	docker inspect $(OVERLEAF_BASE_BRANCH) > /dev/null && docker pull $(OVERLEAF_BASE_BRANCH) || true
 	docker inspect $(OVERLEAF_BRANCH) > /dev/null && docker pull $(OVERLEAF_BRANCH) || true
 	docker inspect $(OVERLEAF_PANDOC_BRANCH) > /dev/null && docker pull $(OVERLEAF_PANDOC_BRANCH) || true
+	docker inspect $(OVERLEAF_PDFTOCAIRO) > /dev/null && docker pull $(OVERLEAF_PDFTOCAIRO) || true
+	docker inspect $(OVERLEAF_PNG2PDF) > /dev/null && docker pull $(OVERLEAF_PNG2PDF) || true
 
 refresh-cache: refresh-cache-latest
 refresh-cache-latest:
 	docker inspect $(OVERLEAF_BASE_LATEST) > /dev/null && docker pull $(OVERLEAF_BASE_LATEST) || true
 	docker inspect $(OVERLEAF_LATEST) > /dev/null && docker pull $(OVERLEAF_LATEST) || true
 	docker inspect $(OVERLEAF_PANDOC_LATEST) > /dev/null && docker pull $(OVERLEAF_PANDOC_LATEST) || true
+	docker inspect $(OVERLEAF_PDFTOCAIRO) > /dev/null && docker pull $(OVERLEAF_PDFTOCAIRO) || true
+	docker inspect $(OVERLEAF_PNG2PDF) > /dev/null && docker pull $(OVERLEAF_PNG2PDF) || true
 
 build-base:
 	cp .dockerignore $(MONOREPO_ROOT)
@@ -44,7 +51,6 @@ build-base:
 	  --tag $(OVERLEAF_BASE_TAG) \
 	  --tag $(OVERLEAF_BASE_BRANCH) \
 	  $(MONOREPO_ROOT)
-
 
 build-community:
 	cp .dockerignore $(MONOREPO_ROOT)
@@ -74,6 +80,30 @@ build-pandoc:
 	  --tag $(OVERLEAF_PANDOC_BRANCH) \
 	  $(MONOREPO_ROOT)
 
+build-pdftocairo:
+	cp .dockerignore $(MONOREPO_ROOT)
+	docker build \
+	  --build-arg BUILDKIT_INLINE_CACHE=1 \
+	  --progress=plain \
+	  --build-arg OVERLEAF_BASE_TAG \
+	  --label "com.overleaf.ce.revision=$(MONOREPO_REVISION)" \
+	  --cache-from $(OVERLEAF_PDFTOCAIRO) \
+	  --file Dockerfile-pdftocairo \
+	  --tag $(OVERLEAF_PDFTOCAIRO) \
+	  $(MONOREPO_ROOT)
+
+build-png2pdf:
+	cp .dockerignore $(MONOREPO_ROOT)
+	docker build \
+	  --build-arg BUILDKIT_INLINE_CACHE=1 \
+	  --progress=plain \
+	  --build-arg OVERLEAF_BASE_TAG \
+	  --label "com.overleaf.ce.revision=$(MONOREPO_REVISION)" \
+	  --cache-from $(OVERLEAF_PNG2PDF) \
+	  --file Dockerfile-png2pdf \
+	  --tag $(OVERLEAF_PNG2PDF) \
+	  $(MONOREPO_ROOT)
+
 push:
 	docker push $(OVERLEAF_BASE_TAG)
 	docker push $(OVERLEAF_BASE_BRANCH)
@@ -81,6 +111,8 @@ push:
 	docker push $(OVERLEAF_BRANCH)
 	docker push $(OVERLEAF_PANDOC_TAG)
 	docker push $(OVERLEAF_PANDOC_BRANCH)
+	docker push $(OVERLEAF_PDFTOCAIRO)
+	docker push $(OVERLEAF_PNG2PDF)
 
 SHELLCHECK_OPTS = \
 	--shell=bash \
@@ -102,5 +134,5 @@ shellcheck_fix:
 	done
 
 .PHONY: all \
-	build-base build-community build-pandoc\
+	build-base build-community build-pandoc build-pdftocairo build-png2pdf\
 	shellcheck shellcheck_fix

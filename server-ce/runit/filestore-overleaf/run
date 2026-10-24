@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Grant the service user access to the Docker socket group, same as the CLSI
+# run script. Needed for CONVERTER=pdftocairo-sandbox (filestore launches the
+# sibling conversion container through /var/run/docker.sock). Idempotent: a
+# fresh container may have no such group yet, and CLSI's run script does the
+# same thing, so just append to the membership if it exists.
+if [ -e '/var/run/docker.sock' ]; then
+  DOCKER_GROUP=$(stat -c '%g' /var/run/docker.sock)
+  if ! getent group dockeronhost >/dev/null; then
+    groupadd --non-unique --gid "${DOCKER_GROUP}" dockeronhost
+  fi
+  usermod -aG dockeronhost www-data
+fi
+
 source /etc/overleaf/env.sh
 export LISTEN_ADDRESS=127.0.0.1
 

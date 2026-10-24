@@ -172,7 +172,15 @@ if ((process.env.DOCKER_RUNNER || process.env.SANDBOXED_COMPILES) === 'true') {
       wordcount: { 'HostConfig.AutoRemove': true },
       synctex: { 'HostConfig.AutoRemove': true },
       'synctex-output': { 'HostConfig.AutoRemove': true },
-      conversions: { 'HostConfig.AutoRemove': true },
+      // The pdftocairo image is also built FROM scratch with no passwd file,
+      // so the default named user (www-data) fails at container create with
+      // "unable to find user ... no matching entries in passwd file". Run it
+      // as the numeric uid/gid of this clsi process (which owns the files it
+      // converts), same as the png2pdf image below.
+      conversions: {
+        'HostConfig.AutoRemove': true,
+        User: `${process.getuid()}:${process.getgid()}`,
+      },
       // The png2pdf image is built FROM scratch and has no 'tex' user, so run
       // it as the same uid/gid as this clsi process, which owns the cache files
       // it converts in place.

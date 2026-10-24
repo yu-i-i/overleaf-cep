@@ -99,7 +99,28 @@ const settings = {
 
   enableConversions: process.env.ENABLE_CONVERSIONS === 'true',
 
+  // PDF→image conversion backend (template gallery previews/thumbnails):
+  //   'imagemagick'        – local, via ImageMagick `convert` (default; binary required)
+  //   'pdftocairo'         – local, via the `pdftocairo` binary (poppler)
+  //   'pdftocairo-sandbox' – runs `pdftocairo` in a throwaway sibling container:
+  //                          no network, CapDrop ALL, no-new-privileges, memory
+  //                          cap (see app/js/SandboxConverterRunner.js).
+  //                          requires a Docker socket + a daemon-host-visible
+  //                          scratch dir (CONVERSION_SANDBOX_HOST_DIR).
   converter: process.env.CONVERTER || 'imagemagick',
+
+  sandboxConversion: {
+    image: process.env.CONVERSION_SANDBOX_IMAGE || 'sharelatex/pdftocairo:24.02',
+    dockerSocketPath: process.env.CONVERSION_DOCKER_SOCKET || '/var/run/docker.sock',
+    // The scratch dir has two views of the same path (the overleaf container
+    // mounts ./data): `containerDir` for this process, `hostDir` for the Docker
+    // daemon's bind mount. Both must be set when sandbox conversion is used.
+    hostDir: process.env.CONVERSION_SANDBOX_HOST_DIR || null,
+    containerDir: process.env.CONVERSION_SANDBOX_DIR || null,
+    memoryBytes:
+      parseInt(process.env.CONVERSION_SANDBOX_MEMORY_BYTES, 10) || 512 * 1024 * 1024,
+    timeoutMs: parseInt(process.env.CONVERSION_SANDBOX_TIMEOUT_MS, 10) || 40000,
+  },
 
   gracefulShutdownDelayInMs:
     parseInt(process.env.GRACEFUL_SHUTDOWN_DELAY_SECONDS ?? '30', 10) * 1000,

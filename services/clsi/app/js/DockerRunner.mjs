@@ -48,7 +48,20 @@ const DockerRunner = {
       image = `${Settings.texliveImageNameOveride}/${img}`
     }
 
-    if (compileGroup === 'synctex-output') {
+    if (
+      Settings.path.sandboxedCompilesHostDirCache &&
+      directory.startsWith(Settings.path.clsiCacheDir + Path.sep)
+    ) {
+      // In:   directory = '<clsiCacheDir>/projectId'
+      //  sandboxedCompilesHostDirCache = '/host/cache'
+      // Out:              directory = '/host/cache/projectId'
+      // (png2pdf & friends operate on CLSI's per-project cache dir, which
+      //  is not under the compiles dir)
+      directory = Path.join(
+        Settings.path.sandboxedCompilesHostDirCache,
+        Path.basename(directory)
+      )
+    } else if (compileGroup === 'synctex-output') {
       // In: directory = '/overleaf/services/clsi/output/projectId-userId/generated-files/buildId'
       //             directory.split('/').slice(-3) === 'projectId-userId/generated-files/buildId'
       //  sandboxedCompilesHostDirOutput = '/host/output'
@@ -93,32 +106,35 @@ const DockerRunner = {
     // logOptions = _.clone(options)
     // logOptions?.HostConfig?.SecurityOpt = "secomp used, removed in logging"
     logger.debug({ projectId }, 'running docker container')
-    DockerRunner._runAndWaitForContainer(
-      options,
-      volumes,
-      timeout,
-      (error, output) => {
-        if (error && error.statusCode === 500) {
-          logger.debug(
-            { err: error, projectId },
-            'error running container so destroying and retrying'
-          )
-          DockerRunner.destroyContainer(name, null, true, error => {
-            if (error != null) {
-              return callback(error)
-            }
-            DockerRunner._runAndWaitForContainer(
-              options,
-              volumes,
-              timeout,
-              callback
+    // Bounded retry: a permanent container create/start failure (e.g.
+    // "unable to find user" on a FROM-scratch image) must not busy-loop
+    // forever — surface the error to the caller after a couple of attempts.
+    let retriesLeft = 2
+    const runAttempt = () => {
+      DockerRunner._runAndWaitForContainer(
+        options,
+        volumes,
+        timeout,
+        (error, output) => {
+          if (error && error.statusCode === 500 && retriesLeft > 0) {
+            retriesLeft -= 1
+            logger.debug(
+              { err: error, projectId, retriesLeft },
+              'error running container so destroying and retrying'
             )
-          })
-        } else {
-          callback(error, output)
+            DockerRunner.destroyContainer(name, null, true, err => {
+              if (err != null) {
+                return callback(err)
+              }
+              runAttempt()
+            })
+          } else {
+            callback(error, output)
+          }
         }
-      }
-    )
+      )
+    }
+    runAttempt()
 
     // pass back the container name to allow it to be killed
     return name
