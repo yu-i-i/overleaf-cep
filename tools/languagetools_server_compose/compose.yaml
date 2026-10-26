@@ -1,0 +1,7 @@
+services:
+  languagetool:
+    extends:
+      file: ./languagetool/compose.yaml
+      service: languagetool
+
+
