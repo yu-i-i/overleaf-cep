@@ -13,6 +13,15 @@ type ProjectSettingsSetterContextValue = {
   setSpellCheckLanguage: (
     spellCheckLanguage: ProjectSettings['spellCheckLanguage']
   ) => void
+  setLanguageToolEnabled: (
+    languageToolEnabled: ProjectSettings['languageToolEnabled']
+  ) => void
+  setLanguageToolPicky: (
+    languageToolPicky: ProjectSettings['languageToolPicky']
+  ) => void
+  setLanguageToolLanguage: (
+    languageToolLanguage: ProjectSettings['languageToolLanguage']
+  ) => void
   setReferenceFormat: (
     referenceFormat: ProjectSettings['referenceFormat']
   ) => Promise<void>
@@ -72,6 +81,12 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
     setSpellCheckLanguage,
     referenceFormat,
     setReferenceFormat,
+    languageToolEnabled,
+    setLanguageToolEnabled,
+    languageToolPicky,
+    setLanguageToolPicky,
+    languageToolLanguage,
+    setLanguageToolLanguage,
   } = useProjectWideSettings()
 
   const {
@@ -135,6 +150,12 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
       setRootDocId,
       spellCheckLanguage,
       setSpellCheckLanguage,
+      languageToolEnabled,
+      setLanguageToolEnabled,
+      languageToolPicky,
+      setLanguageToolPicky,
+      languageToolLanguage,
+      setLanguageToolLanguage,
       autoComplete,
       setAutoComplete,
       autoPairDelimiters,
@@ -193,6 +214,12 @@ export const ProjectSettingsProvider: FC<React.PropsWithChildren> = ({
       setRootDocId,
       spellCheckLanguage,
       setSpellCheckLanguage,
+      languageToolEnabled,
+      setLanguageToolEnabled,
+      languageToolPicky,
+      setLanguageToolPicky,
+      languageToolLanguage,
+      setLanguageToolLanguage,
       autoComplete,
       setAutoComplete,
       autoPairDelimiters,

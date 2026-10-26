@@ -1034,7 +1034,12 @@ module.exports = {
       ),
     ],
     contactUsModal: [],
-    sourceEditorExtensions: [],
+    sourceEditorExtensions: [
+      Path.resolve(
+        __dirname,
+        '../modules/languagetool/frontend/js/languagetool-extension'
+      ),
+    ],
     sourceEditorVisualExtensions: [],
     sourceEditorComponents: [],
     pdfLogEntryHeaderActionComponents: [],
@@ -1175,7 +1180,12 @@ module.exports = {
     ],
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],
-    settingsModalSpellcheckSections: [],
+    settingsModalSpellcheckSections: [
+      Path.resolve(
+        __dirname,
+        '../modules/languagetool/frontend/js/languagetool-section'
+      ),
+    ],
     editorFloatingMenuActions: [],
     errorLogsComponents: [],
     referenceIndices: [
@@ -1198,6 +1208,7 @@ module.exports = {
     'symbol-palette',
     'reference-picker',
     'track-changes',
+    'languagetool',
     'authentication/ldap',
     'authentication/saml',
     'authentication/oidc',
@@ -1261,12 +1272,6 @@ module.exports = {
       'export-docx': 'enabled',
       'export-html': 'enabled',
       'export-markdown': 'enabled',
-    } : {}),
-    ...(process.env.ENABLE_PNG2PDF_CONVERSIONS === 'true' ? {
-      'png2pdf': 'enabled',
-      // compile-from-history is required for CLSI to record the "slow png" list
-      // (clsi CompileManager.js saveSlowPngList is gated on isCompileFromHistory)
-      'compile-from-history': 'enabled',
     } : {}),
     ...(process.env.OVERLEAF_HISTORY_RESTORE?.toLowerCase() === 'true' ? {
       'history-ranges-support': 'enabled',

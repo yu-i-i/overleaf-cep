@@ -8,3 +8,6 @@ server-ce/test
 services/web/scripts/plan-prices
 services/web/scripts/translations
 services/web/scripts/ukamf
+
+# local LanguageTool ngrams data (deploy-only, not part of the image)
+tools/languagetools_server_compose
