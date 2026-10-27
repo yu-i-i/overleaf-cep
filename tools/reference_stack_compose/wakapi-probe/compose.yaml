@@ -1,0 +1,25 @@
+services:
+  wakapi-probe:
+    image: ${PROBE_IMAGE}
+    container_name: wakapi-probe
+    restart: unless-stopped
+
+    networks:
+      - overleaf-network
+
+    # NOTE: probe /login, NOT / — wakapi's base path is /wakapi and the raw
+    # server's 302 for / points Location: /wakapi/login, which only exists
+    # behind nginx's prefix-stripping; inside the network the follow-up is a
+    # 404 and spider mode would report failure. /login is base-path
+    # independent and always a plain 200.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://wakapi:3000/login >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    entrypoint: ["sh", "-c", "sleep infinity"]
+
+networks:
+  overleaf-network:
+    external: true

@@ -1,0 +1,34 @@
+services:
+  git-bridge:
+    restart: always
+    image: quay.io/sharelatex/git-bridge:${GIT_BRIDE_VERSION}
+    volumes:
+        - ./data:/data/git-bridge
+    container_name: git-bridge
+    hostname: git-bridge
+    expose:
+        - "8000"
+    environment:
+        GIT_BRIDGE_API_BASE_URL: "http://overleaf:3000/api/v0/"
+        GIT_BRIDGE_OAUTH2_SERVER: "http://overleaf"
+        GIT_BRIDGE_POSTBACK_BASE_URL: "http://git-bridge:8000"
+        GIT_BRIDGE_ROOT_DIR: "/data/git-bridge"
+    user: root
+    command: ["/server-pro-start.sh"]
+
+    healthcheck:
+      # /status is git-bridge's liveness route (200 'ok'); the root path
+      # needs an Overleaf session (500) and /healthz wants auth (401).
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8000/status >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true
+

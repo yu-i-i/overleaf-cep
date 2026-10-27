@@ -1,0 +1,28 @@
+services:
+  wakapi-pg:
+    image: ${POSTGRES_IMAGE}
+    container_name: wakapi-pg
+    hostname: wakapi-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wakapi
+      POSTGRES_USER: wakapi
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+
+    networks:
+      - overleaf-network
+
+    volumes:
+      - ./data:/var/lib/postgresql
+      - ./backup:/backup
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${WAKAPI_DB_USER:-wakapi} -d ${WAKAPI_DB_NAME:-wakapi}"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+
+networks:
+  overleaf-network:
+    external: true

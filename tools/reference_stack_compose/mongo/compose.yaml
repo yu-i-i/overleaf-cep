@@ -1,0 +1,26 @@
+services:
+  mongo:
+    image: mongo:${MONGO_VERSION}
+    container_name: mongo
+    hostname: mongo
+    restart: always
+    healthcheck:
+      test: "mongosh --quiet --eval 'rs.hello().setName ? rs.hello().setName : rs.initiate({_id: \"overleaf\",members:[{_id: 0, host:\"mongo:27017\"}]})'"
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    command: "--replSet overleaf"
+    environment:
+      GLIBC_TUNABLES: glibc.cpu.hwcaps=-SHSTK
+    volumes:
+      - ./data_db:/data/db
+      - ./backup:/backup
+
+    networks:
+      - overleaf-network
+    extra_hosts:
+      - "mongo:127.0.0.1"
+
+networks:
+  overleaf-network:
+    external: true

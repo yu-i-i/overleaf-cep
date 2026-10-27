@@ -1,0 +1,87 @@
+services:
+  wakapi:
+    image: ${WAKA_API_IMAGE}
+    container_name: wakapi
+    hostname: wakapi
+    restart: unless-stopped
+
+    environment:
+      WAKAPI_DB_TYPE: postgres
+      WAKAPI_DB_HOST: wakapi-pg
+      WAKAPI_DB_PORT: "5432"
+      WAKAPI_DB_USER: wakapi
+      WAKAPI_DB_PASSWORD: ${PG_PASSWORD}
+      WAKAPI_DB_NAME: wakapi
+
+      # Public URL: used for outbound links (notably the password-reset
+      # email link). MUST be the public /wakapi route — the shipped default
+      # is http://localhost:3000, which would make every reset mail useless.
+      WAKAPI_PUBLIC_URL: "${OVERLEAF_SITE_URL}/wakapi"
+
+      # ============ e-mail (2026-10-26): self-service password reset ============
+      # Staff have no wakapi signup path (identity comes from Overleaf,
+      # see below); they obtain their UI password via "Forgot password?"
+      # on /wakapi/login → reset mail via the university SMTP relay
+      # (same OVERLEAF_EMAIL_* settings as Overleaf itself) → set-password
+      # link (built from WAKAPI_PUBLIC_URL) → password login.
+      # Prereq: users.auth_type is normalized to 'local' — applied
+      # automatically by 0_ensure_local_auth_type.sh (runs after up.sh /
+      # up_wakapi.sh; see its header for migration ordering + upgrade caveat).
+      # Reset rate limit ships at 5/hour (WAKAPI_PASSWORD_RESET_MAX_RATE)
+      # — fine for staff scale.
+      WAKAPI_MAIL_ENABLED: "true"
+      WAKAPI_MAIL_SENDER: "${OVERLEAF_EMAIL_FROM_ADDRESS}"
+      WAKAPI_MAIL_SMTP_HOST: "${OVERLEAF_EMAIL_SMTP_HOST}"
+      WAKAPI_MAIL_SMTP_PORT: "${OVERLEAF_EMAIL_SMTP_PORT}"
+      WAKAPI_MAIL_SMTP_USER: "${OVERLEAF_EMAIL_SMTP_USER}"
+      WAKAPI_MAIL_SMTP_PASS: "${OVERLEAF_EMAIL_PASSWORD}"
+      WAKAPI_MAIL_SMTP_TLS: "${WAKAPI_MAIL_SMTP_TLS}"
+
+      # ============ identity model (2026-10-25): Overleaf-driven ============
+      # Users are created AUTOMATICALLY from the Overleaf user base via
+      # trusted-header auth (see below) — NOT via signup. External
+      # registration is disabled on this box:
+      WAKAPI_ALLOW_SIGNUP: "false"
+      WAKAPI_OIDC_ALLOW_SIGNUP: "false"
+
+      # Frontpage off (2026-10-26): anonymous '/' goes straight to the login
+      # page (which already carries the 'Forgot password?' reset form)
+      # instead of the marketing landing. Logged-in users are unaffected
+      # (root redirects to their dashboard first — routes/home.go).
+      WAKAPI_DISABLE_FRONTPAGE: "true"
+
+      # Trusted-header auth (wakapi native, issue muety/wakapi#808): the
+      # Overleaf backend — the ONLY source IP listed below — asserts the
+      # logged-in Overleaf user's email in this header, and wakapi
+      # auto-creates the matching user on first use. Spoofing the header
+      # from any other IP is rejected (401).
+      WAKAPI_TRUSTED_HEADER_AUTH: "true"
+      WAKAPI_TRUSTED_HEADER_AUTH_KEY: "Remote-User"
+      WAKAPI_TRUSTED_HEADER_AUTH_ALLOW_SIGNUP: "true"
+
+      # Trusted source IPs: overleaf container's address on overleaf-network
+      # (kept in /data_1/docker/compose/.env as OVERLEAF_IP). wakapi parses
+      # single IPs or CIDRs but NOT hostnames (silently dropped —
+      # /data_1/compare/wakapi config.go:442-462). For recreate-durability
+      # use the subnet: 172.18.0.0/16.
+      WAKAPI_TRUST_REVERSE_PROXY_IPS: "${OVERLEAF_IP}"
+
+      # Served under /wakapi (nginx route in /data_1/docker/compose/nginx/nginx.conf):
+      # login, links, redirects and cookie paths all honor this base path.
+      WAKAPI_BASE_PATH: "/wakapi"
+
+    networks:
+      - overleaf-network
+
+    healthcheck:
+      # image has no shell/wget/ls (scratch family): liveness = the binary
+      # runs; HTTP serving is proven by wakapi-probe.
+      test: ["CMD", "/app/wakapi", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+networks:
+  overleaf-network:
+    external: true

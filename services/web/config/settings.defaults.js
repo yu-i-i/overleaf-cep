@@ -1039,6 +1039,10 @@ module.exports = {
         __dirname,
         '../modules/languagetool/frontend/js/languagetool-extension'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/wakatime/frontend/js/editor/wakatime-source-editor-extension.ts'
+      ),
     ],
     sourceEditorVisualExtensions: [],
     sourceEditorComponents: [],
@@ -1082,6 +1086,10 @@ module.exports = {
       Path.resolve(
         __dirname,
         '../modules/github-sync/frontend/js/components/github-sync-widget.tsx'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/wakatime/frontend/js/components/wakatime-widget.tsx'
       ),
     ],
     referenceLinkingWidgets: [
@@ -1177,6 +1185,10 @@ module.exports = {
         __dirname,
         '../modules/zotero/frontend/js/components/zotero-integration-card.tsx'
       ),
+      Path.resolve(
+        __dirname,
+        '../modules/wakatime/frontend/js/components/wakatime-integration-card.tsx'
+      ),
     ],
     referenceSearchSetting: [],
     settingsModalEditorTabSections: [],
@@ -1218,7 +1230,24 @@ module.exports = {
     'git-bridge',
     'github-sync',
     'zotero',
+    'wakatime',
   ],
+  wakatime: {
+    // global on/off (widget + routes); default: on (matches PR 249 behavior)
+    enabled: process.env.WAKATIME_ENABLED !== 'false',
+    debugLogging: process.env.WAKATIME_DEBUG_LOGGING === 'true',
+    // Deployment-managed identity (bundled Wakapi, see
+    // tools/wakapi_server_compose): NO per-user registration, NO API keys —
+    // the logged-in user's email is asserted to Wakapi via a trusted
+    // header (WAKAPI_TRUSTED_HEADER_AUTH on the Wakapi side) and Wakapi
+    // creates the user automatically on first use. A manually linked key
+    // (wakatime.com or any other WakaTime server) always takes priority.
+    sharedIdentity: process.env.WAKATIME_SHARED_IDENTITY === 'true',
+    sharedIdentityApiUrl:
+      process.env.WAKATIME_SHARED_IDENTITY_API_URL ||
+      'http://wakapi:3000/api/compat/wakatime/v1',
+    sharedIdentityHeader: process.env.WAKATIME_SHARED_IDENTITY_HEADER || 'Remote-User',
+  },
   viewIncludes: {},
 
   csp: {

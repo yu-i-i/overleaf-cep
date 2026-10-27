@@ -1,0 +1,30 @@
+services:
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: redis
+    hostname: redis
+    restart: always
+
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+
+    command: --save 60 1 --loglevel warning
+
+    volumes:
+      - ./data:/data
+      - ./backup:/backup
+
+    networks:
+      - overleaf-network
+
+    environment:
+      REDIS_AOF_PERSISTENCE: "true"
+
+networks:
+  overleaf-network:
+    external: true
+
