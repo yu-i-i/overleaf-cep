@@ -1,0 +1,52 @@
+# instance-sensor — the overleaf-cep "instance statistics" sensors,
+# exposed LIVE as Prometheus gauges (scrape-on-read) instead of the
+# hourly-cron-Mongo-snapshots of PR yu-i-i/overleaf-cep#178. Same sensor
+# definitions, prometheus-native delivery:
+#
+#   users      : total + active (last 24h), split standard/guest when
+#                INSTANCE_STATS_SEGMENTATION != false  (guest = user with
+#                'guest-user' in adminRoles — the PR#176/PR#178 definition)
+#   projects   : total + active (last 24h, projects.lastUpdated)
+#   files      : total documents (docs collection)
+#   storage    : mongodb (dbStats.totalSize), filestore (du of the SeaweedFS
+#                data dir — the S3 filestore content), redis RAM (used_memory)
+#                + redis disk (AOF current size)
+#
+# Self-contained node image (mongodb + ioredis drivers) — does NOT depend on
+# the overleaf image layout. Read-only on its inputs.
+services:
+  instance-sensor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${INSTANCE_SENSOR_IMAGE:-overleaf-instance-sensor:local}
+    container_name: instance-sensor
+    hostname: instance-sensor
+    restart: unless-stopped
+    environment:
+      MONGO_URL: "mongodb://${MONGO_HOSTNAME:-mongo}:${MONGO_PORT:-27017}/${MONGODB_DATABASE:-sharelatex}"
+      REDIS_ADDR: "redis://${REDIS_HOSTNAME:-redis}:${REDIS_PORT:-6379}"
+      # du() of the SeaweedFS volume data dir, mounted read-only below
+      # (mirror of PR#178's du-based overleaf_storage)
+      FILESTORE_DATA_DIR: /hostdata/filestore
+      # 'standard'/'guest' split (PR#178/PR#176): 'false' (default, per PR)
+      # or 'true'
+      SEGMENTATION: ${INSTANCE_STATS_SEGMENTATION:-false}
+      ACTIVE_WINDOW_HOURS: "24"
+      PORT: "9464"
+    expose:
+      - "9464"
+    volumes:
+      - ${COMPOSE_DIRECTORY:-/data_1/docker/compose}/seaweedfs-volume/data:/hostdata/filestore:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --timeout=5 http://127.0.0.1:9464/metrics >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true

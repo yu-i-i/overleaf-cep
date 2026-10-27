@@ -87,6 +87,83 @@ services:
       wakapi:
         condition: service_healthy
 
+  mongo-probe:
+    extends:
+      file: ./mongo-probe/compose.yaml
+      service: mongo-probe
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongodb-exporter:
+    extends:
+      file: ./mongodb-exporter/compose.yaml
+      service: mongodb-exporter
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongodb-exporter-probe:
+    extends:
+      file: ./mongodb-exporter-probe/compose.yaml
+      service: mongodb-exporter-probe
+    depends_on:
+      mongodb-exporter:
+        condition: service_healthy
+
+  redis-exporter:
+    extends:
+      file: ./redis-exporter/compose.yaml
+      service: redis-exporter
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis-exporter-probe:
+    extends:
+      file: ./redis-exporter-probe/compose.yaml
+      service: redis-exporter-probe
+    depends_on:
+      redis-exporter:
+        condition: service_healthy
+
+  instance-sensor:
+    extends:
+      file: ./instance-sensor/compose.yaml
+      service: instance-sensor
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  node-exporter:
+    extends:
+      file: ./node-exporter/compose.yaml
+      service: node-exporter
+
+  prometheus:
+    extends:
+      file: ./prometheus/compose.yaml
+      service: prometheus
+    depends_on:
+      mongodb-exporter:
+        condition: service_healthy
+      redis-exporter:
+        condition: service_healthy
+      instance-sensor:
+        condition: service_healthy
+      node-exporter:
+        condition: service_healthy
+
+  grafana:
+    extends:
+      file: ./grafana/compose.yaml
+      service: grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
   nginx:
     extends:
       file: ./nginx/compose.yaml
@@ -95,6 +172,8 @@ services:
       overleaf:
         condition: service_healthy
       wakapi-probe:
+        condition: service_healthy
+      grafana:
         condition: service_healthy
 
 networks:

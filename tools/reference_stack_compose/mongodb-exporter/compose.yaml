@@ -1,0 +1,37 @@
+# mongodb-exporter — percona/mongodb_exporter for the stack Mongo.
+# NOTE (verified 2026-10 against this stack's mongo:9.0 replset "overleaf"):
+# percona 0.43 ships the rich collectors OFF by default (default run answers
+# only mongodb_up + go/process self metrics). The --collector.* toggles are
+# therefore part of the supported surface here — keep them.
+services:
+  mongodb-exporter:
+    image: ${MONGODB_EXPORTER_IMAGE:-percona/mongodb_exporter:0.43.0}
+    container_name: mongodb-exporter
+    hostname: mongodb-exporter
+    restart: unless-stopped
+    command:
+      - "--mongodb.uri=mongodb://${MONGO_HOSTNAME:-mongo}:${MONGO_PORT:-27017}/${MONGODB_DATABASE:-sharelatex}"
+      # verified metric families: mongodb_ss_* (connections, oplog time, ...),
+      # mongodb_dbstats_dataSize/storageSize/collections per database,
+      # mongodb_replicasetstatus_*, mongodb_fs_*
+      - "--collector.diagnosticdata"
+      - "--collector.dbstats"
+      - "--collector.dbstatsfreestorage"
+      - "--collector.replicasetstatus"
+    expose:
+      - "9216"
+    # scratch image: single binary, no shell — liveness = the binary still
+    # starts. The HTTP SERVING proof lives in mongodb-exporter-probe
+    # (same proven pattern as wakapi-probe).
+    healthcheck:
+      test: ["CMD", "/mongodb_exporter", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true

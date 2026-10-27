@@ -1,0 +1,22 @@
+# redis-exporter-probe — HTTP serving proof for the redis exporter.
+# Same sidecar contract as mongodb-exporter-probe:
+# busybox spider on the exporter's in-container /metrics (9121).
+services:
+  redis-exporter-probe:
+    image: ${PROBE_IMAGE:-busybox:1.36}
+    container_name: redis-exporter-probe
+    hostname: redis-exporter-probe
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --timeout=5 http://redis-exporter:9121/metrics >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true

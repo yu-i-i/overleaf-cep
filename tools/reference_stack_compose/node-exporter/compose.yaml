@@ -1,0 +1,29 @@
+# node-exporter — host-level signals (CPU, memory, filesystem, ...).
+# Reads the HOST's /proc, / and /sys read-only into the container
+# (same flags as the OlliTeX toolkit node-exporter).
+services:
+  node-exporter:
+    image: ${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.9.1}
+    container_name: node-exporter
+    hostname: node-exporter
+    restart: unless-stopped
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/host"
+      - "--path.sysfs=/host/sys"
+    ports:
+      - "127.0.0.1:${NODE_EXPORTER_PORT:-9100}:9100"   # host admin only (SSH tunnel)
+    volumes:
+      - /:/host:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9100/metrics"]
+      start_period: 15s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true

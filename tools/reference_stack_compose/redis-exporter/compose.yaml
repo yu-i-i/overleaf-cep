@@ -1,0 +1,28 @@
+# redis-exporter — oliver006/redis_exporter for the stack Redis.
+# Rich out of the box (verified live: redis_up, redis_memory_used_bytes,
+# redis_connected_clients, redis_commands_processed_total, redis_aof_current_size,
+# redis_keyspace_*_total, ...).
+services:
+  redis-exporter:
+    image: ${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:v1.58.0-alpine}
+    container_name: redis-exporter
+    hostname: redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://${REDIS_HOSTNAME:-redis}:${REDIS_PORT:-6379}"
+    expose:
+      - "9121"
+    # alpine edition has no wget/nc applets — liveness = the exporter binary
+    # itself still runs (image entrypoint is /redis_exporter).
+    healthcheck:
+      test: ["CMD", "/redis_exporter", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true

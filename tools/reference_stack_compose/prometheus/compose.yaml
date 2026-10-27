@@ -1,0 +1,34 @@
+# prometheus — Prometheus for the overleaf-cep stack.
+# Static scrape config (prometheus.yml, mounted ro) — all targets live on
+# the shared `overleaf-network`, so no host port publishing is needed for
+# scraping; the 127.0.0.1:9090 binding is for local admin/SSH-tunnel only.
+# Retention 15d (reference: OlliTeX toolkit compose).
+services:
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.53.5}
+    container_name: prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    entrypoint: ["/bin/prometheus"]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_LISTEN_IP:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/healthy"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true

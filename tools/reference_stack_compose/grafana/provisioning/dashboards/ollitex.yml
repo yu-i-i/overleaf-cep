@@ -1,0 +1,14 @@
+# file-based dashboard provider (shared/deterministic: no in-UI editing
+# required; dashboards ship with this compose tree) — reference:
+# build-images/grafana/provisioning/dashboards/ollitex.yml
+apiVersion: 1
+providers:
+  - name: overleaf
+    folder: Overleaf
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

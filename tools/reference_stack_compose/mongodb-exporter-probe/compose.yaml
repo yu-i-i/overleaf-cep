@@ -1,0 +1,22 @@
+# mongodb-exporter-probe — HTTP serving proof for the mongodb exporter.
+# The exporter image has no shell, so its /metrics reachability is checked
+# here (busybox spider). healthy == /metrics answers.
+services:
+  mongodb-exporter-probe:
+    image: ${PROBE_IMAGE:-busybox:1.36}
+    container_name: mongodb-exporter-probe
+    hostname: mongodb-exporter-probe
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --timeout=5 http://mongodb-exporter:9216/metrics >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true

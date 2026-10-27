@@ -1,0 +1,54 @@
+services:
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana-oss:11.6.0}
+    container_name: grafana
+    hostname: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      # Admin ACCOUNT EMAIL — reuses the Overleaf admin mailbox (line ~61 of
+      # .env). NOTE: like the password, this env is honored ONLY when Grafana
+      # CREATES the admin user (fresh grafana-data); it never rewrites an
+      # existing user row. Default (Grafana shipped default) is
+      # admin@localhost — see MONITORING.md for the reset-mail gotcha.
+      GF_SECURITY_ADMIN_EMAIL: ${OVERLEAF_ADMIN_EMAIL:-overleaf@uni-bremen.de}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_USERS_SIGNUP_ENABLED: "false"
+      # SMTP — reuses the stack's Overleaf relay settings (OVERLEAF_EMAIL_* in
+      # .env / env.sample): single source of truth, no Grafana-specific mail vars.
+      # GF_SMTP_FROM_NAME is the only grafana-local piece (display label).
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: ${OVERLEAF_EMAIL_SMTP_HOST}:${OVERLEAF_EMAIL_SMTP_PORT}
+      GF_SMTP_USER: ${OVERLEAF_EMAIL_SMTP_USER}
+      GF_SMTP_PASSWORD: ${OVERLEAF_EMAIL_PASSWORD}
+      GF_SMTP_FROM_ADDRESS: ${OVERLEAF_EMAIL_FROM_ADDRESS}
+      GF_SMTP_FROM_NAME: "Overleaf Monitoring"
+      GF_SMTP_SKIP_VERIFY: "false"
+      # AJ-3 style subpath serving (owner 2026-10-08, reference toolkit):
+      # URLs/route generation relative to the /grafana/ root
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-https://psintern.neuro.uni-bremen.de/grafana/}"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      # x-frame-options deny -> sameorigin (iframe embedding from the same
+      # origin stays possible; the fine-grained allowlist is the CSP below)
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_CSP_FRAME_ANCESTORS: "'self'"
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+      - ./dashboards:/var/lib/grafana/dashboards
+      - ./grafana-data:/var/lib/grafana
+    expose:
+      - "3000"   # nginx is the sole facade (see nginx/nginx.conf location /grafana/)
+    healthcheck:
+      # grafana-oss ships wget (verified on the reference stack)
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    networks:
+      - overleaf-network
+
+networks:
+  overleaf-network:
+    external: true
