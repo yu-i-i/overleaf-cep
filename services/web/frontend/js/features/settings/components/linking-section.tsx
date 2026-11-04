@@ -20,10 +20,12 @@ const availableLangFeedbackLinkingWidgets = importOverleafModules(
 const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
 const githubSyncEnabled = getMeta('ol-ExposedSettings').githubSyncEnabled
 const zoteroEnabled = getMeta('ol-ExposedSettings').zoteroEnabled
+const wakaTimeEnabled = getMeta('ol-ExposedSettings').wakaTimeEnabled
 
 const availableIntegrationLinkingWidgets = allAvailableIntegrationLinkingWidgets.filter(
   ({ path }) =>
-    (githubSyncEnabled || !path.includes('github-sync'))
+    (githubSyncEnabled || !path.includes('github-sync')) &&
+    (wakaTimeEnabled || !path.includes('wakatime'))
 )
 
 function LinkingSection() {
@@ -55,7 +57,7 @@ function LinkingSection() {
   }[]
 
   const renderSyncSection =
-    getMeta('ol-isSaas') || gitBridgeEnabled || githubSyncEnabled
+    getMeta('ol-isSaas') || gitBridgeEnabled || githubSyncEnabled || wakaTimeEnabled
 
   const allIntegrationLinkingWidgets = integrationLinkingWidgets.concat(
     oauth2ServerComponents
