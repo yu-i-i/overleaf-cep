@@ -1,0 +1,70 @@
+/* Keep the works heading visible while only the results area scrolls. */
+.modal-dialog-scrollable .orcid-picker-works-body.modal-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.orcid-picker-works-summary {
+  flex: none;
+  padding-bottom: var(--spacing-04);
+}
+
+.orcid-picker-works-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Author search cards are buttons; keep the preview-card appearance. */
+.orcid-picker-author-card {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.orcid-picker-author-card:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* One child in OLButton's flex layout; the spinner overlays the label's
+   grid cell, so it cannot add a second flex item or change the button width. */
+.orcid-picker-import-content {
+  display: inline-grid;
+  place-items: center;
+}
+
+.orcid-picker-import-content > * {
+  grid-area: 1 / 1;
+}
+
+/* Keep Close at the right edge, including after all works are imported. */
+.orcid-picker-footer-buttons {
+  margin-left: auto;
+}
+
+.orcid-picker-enrichment-titles {
+  margin: var(--spacing-02) 0;
+  padding: var(--spacing-06);
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.orcid-picker-enrichment-warning {
+  margin-top: var(--spacing-03);
+}
+
+.orcid-picker-enrichment-danger {
+  color: var(--content-danger-themed);
+}
+
+/* Keep the final import report comfortably spaced. */
+.orcid-picker-import-summary {
+  padding: var(--spacing-04) 0;
+}

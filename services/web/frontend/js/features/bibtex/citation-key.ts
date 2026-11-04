@@ -21,7 +21,7 @@ export function generateBaseCitationKey({
 }): string {
   const firstAuthor = authors.names[0]
   if (!firstAuthor) return ''
-  const surname = firstAuthor.toLast().replace(/[^A-Za-z0-9]/g, '')
+  const surname = firstAuthor.toLast().replace(/[^\p{L}\p{N}]/gu, '')
   if (!surname) return ''
   if (!YEAR_REGEX.test(year.trim())) return ''
   return surname + year.trim()
