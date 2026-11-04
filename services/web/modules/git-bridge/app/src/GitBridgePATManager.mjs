@@ -101,14 +101,14 @@ const GitBridgePATManager = {
 
     if (!objToken?.user_id) return null
 
-// does the user still exists and not deleted?
+// does the user still exists, not deleted and not suspended?
 // tokens of a deleted user are not deleted until user expires
     const user = await db.users.findOne(
       { _id: new ObjectId(objToken.user_id) },
-      { projection: { _id: 1 } }
+      { projection: { _id: 1, suspended: 1 } }
     )
 
-    if (!user) return null
+    if (!user || user.suspended) return null
 
     // non-blocking
     db.oauthAccessTokens.updateOne(
