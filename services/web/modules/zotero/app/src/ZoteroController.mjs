@@ -13,6 +13,7 @@ async function oauth(req, res) {
     const isPopup = req.query.popup === '1'
 
     req.session.zoteroOAuth = {
+      userId: String(SessionManager.getLoggedInUserId(req.session)),
       token: requestToken.oauth_token,
       tokenSecret: requestToken.oauth_token_secret,
       isPopup
@@ -42,7 +43,7 @@ async function oauthCallback(req, res) {
   const saved = req.session.zoteroOAuth
   delete req.session.zoteroOAuth
 
-  if (!saved || saved.token !== oauthToken) {
+  if (!saved || saved.token !== oauthToken || saved.userId !== String(userId)) {
     HttpErrorHandler.forbidden(req, res, 'Invalid OAuth token')
     return
   }
@@ -58,19 +59,28 @@ async function oauthCallback(req, res) {
   } catch (err) {
     logger.error(OError.getFullStack(err))
     const info = OError.getFullInfo(err)
-    logger.error({ info }, "Failed to obtain Zotero access token'")
+    logger.error({ info }, 'Failed to obtain Zotero access token')
 
     HttpErrorHandler.badRequest(req, res, 'Failed to obtain Zotero access token')
     return
   }
 
   const nonce = crypto.randomBytes(16).toString('base64')
-  const csp = res.getHeader('Content-Security-Policy')
+  const scriptNonce = `'nonce-${nonce}'`
+  const directives = String(res.getHeader('Content-Security-Policy') || '')
+    .split(';')
+    .map(directive => directive.trim())
+    .filter(Boolean)
 
-  res.setHeader(
-    'Content-Security-Policy',
-    `${csp}; script-src 'nonce-${nonce}'`
-  )
+  let hasScriptDirective = false
+  for (let i = 0; i < directives.length; i++) {
+    if (/^script-src(?:-elem)?(?:\s|$)/i.test(directives[i])) {
+      directives[i] += ` ${scriptNonce}`
+      hasScriptDirective = true
+    }
+  }
+  if (!hasScriptDirective) directives.push(`script-src ${scriptNonce}`)
+  res.setHeader('Content-Security-Policy', directives.join('; '))
 
   res.send(`
     <!doctype html>
@@ -128,7 +138,28 @@ async function getGroups(req, res) {
 }
 
 /**
- * DELETE /user/zotero/unlink
+ * GET /user/zotero/collections?group_id=<group ID>
+ * Returns all collections in the personal library or selected group.
+ */
+async function getCollections(req, res) {
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  try {
+    const collections = await ZoteroApiClient.getCollectionsForLibrary(
+      userId,
+      req.query.group_id
+    )
+    res.json(collections)
+  } catch (err) {
+    const info = OError.getFullInfo(err)
+    const errStatus = info?.status || 500
+    logger.error(OError.getFullStack(err))
+    logger.error({ info }, 'failed to get Zotero collections')
+    return res.status(errStatus).json({ message: err.message })
+  }
+}
+
+/**
+ * DELETE /user/zotero
  * Unlinks the user's Zotero account.
  */
 async function unlink(req, res) {
@@ -150,5 +181,6 @@ export default {
   oauthCallback,
   getConnectionStatus,
   getGroups,
+  getCollections,
   unlink
 }

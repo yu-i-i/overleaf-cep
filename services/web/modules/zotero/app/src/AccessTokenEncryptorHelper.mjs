@@ -1,5 +1,4 @@
 import logger from '@overleaf/logger'
-import Settings from '@overleaf/settings'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import Path from 'node:path'
@@ -13,7 +12,7 @@ let encryptorInstance = null
 /**
  * Get or create a stable encryptor data that persists across container
  * recreations. Priority:
- *   1. ZOTERO_CIPHER_PASSWORD env var (explicit user config)
+ *   1. ZOTERO_TOKEN_CIPHER_PASSWORD env var (explicit user config)
  *   2. JSON file with encryptor data in the persistent volume (/var/lib/overleaf/data/)
  *      — auto-generated on first use, survives container rebuilds
  */

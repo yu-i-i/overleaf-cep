@@ -10,6 +10,12 @@ export default {
       ZoteroController.getGroups
     )
 
+    webRouter.get(
+      '/user/zotero/collections',
+      AuthenticationController.requireLogin(),
+      ZoteroController.getCollections
+    )
+
     // Unlink Zotero account
     webRouter.delete(
       '/user/zotero',

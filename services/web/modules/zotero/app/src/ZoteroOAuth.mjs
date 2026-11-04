@@ -31,8 +31,12 @@ function buildAuthorizationHeader(requestData, tokenData) {
   return oauth.toHeader(authData).Authorization
 }
 
-function parseOAuthResponse(body) {
-  return Object.fromEntries(new URLSearchParams(body).entries())
+function parseOAuthResponse(body, requiredFields) {
+  const data = Object.fromEntries(new URLSearchParams(body).entries())
+  if (requiredFields.some(field => !data[field]?.trim())) {
+    throw new OError('Invalid Zotero OAuth response')
+  }
+  return data
 }
 
 function getAuthorizationUrl(oauthToken) {
@@ -44,11 +48,6 @@ function getAuthorizationUrl(oauthToken) {
 
   return `${ZOTERO_OAUTH_URL}/authorize?${params}`
 }
-/*
-function getAuthorizationUrl(oauthToken) {
-  return `${ZOTERO_OAUTH_URL}/authorize?oauth_token=${oauthToken}`
-}
-*/
 
 async function getRequestToken() {
   const url = `${ZOTERO_OAUTH_URL}/request`
@@ -67,7 +66,7 @@ async function getRequestToken() {
       },
     })
 
-    return parseOAuthResponse(body)
+    return parseOAuthResponse(body, ['oauth_token', 'oauth_token_secret'])
   } catch (err) {
     throw OError.tag(err, 'error obtaining Zotero request token')
   }
@@ -100,16 +99,17 @@ async function exchangeRequestTokenForAccessToken(
       },
     })
 
-    const data = parseOAuthResponse(body)
+    const data = parseOAuthResponse(body, ['oauth_token', 'userID'])
+    if (!/^\d+$/.test(data.userID)) {
+      throw new OError('Invalid Zotero user ID in OAuth response')
+    }
 
     return {
       accessToken: data.oauth_token,
-      apiKeySecret: data.oauth_token_secret,
       zoteroUserId: data.userID,
-      username: data.username,
     }
   } catch (err) {
-    logger.err(
+    logger.error(
       { err, oauthToken },
       'error obtaining Zotero access token'
     )

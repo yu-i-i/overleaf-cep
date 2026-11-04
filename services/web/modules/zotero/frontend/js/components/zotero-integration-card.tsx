@@ -15,20 +15,22 @@ const ZoteroLinkCard = () => {
   const {
     isError,
     runAsync,
-    data: isConnected
+    isLoading
   } = useAsync<boolean>()
 
   const handleClick = () => {
+    if (isLoading) return
     runAsync(getJSON('/user/zotero/status'))
       .then(isConnected => {
         if (isConnected) {
           setShowModal(true)
         } else {
-          window.open(
+          const popup = window.open(
             '/user/zotero/oauth?popup=1',
             '_blank',
             'width=600,height=700'
           )
+          if (!popup) window.location.assign('/user/zotero/oauth?popup=0')
         }
       })
       .catch(err => {

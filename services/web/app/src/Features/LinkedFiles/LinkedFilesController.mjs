@@ -112,6 +112,10 @@ const createLinkedFileSchema = z.object({
       data: z.strictObject({
         format: z.enum(['bibtex', 'biblatex']).optional(),
         group_id: zz.routeSegment().optional(),
+        collection_key: z.union([
+          z.literal('publications'),
+          z.string().regex(/^[A-Za-z0-9]{8}$/),
+        ]).optional(),
       }),
     }),
     z.strictObject({

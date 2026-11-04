@@ -13,7 +13,7 @@ if (Settings.enabledLinkedFileTypes?.includes('zotero')) {
     clientKey: process.env.ZOTERO_CLIENT_KEY,
     clientSecret: process.env.ZOTERO_CLIENT_SECRET,
     callbackURL: `${siteUrl}/user/zotero/oauth/callback`,
-  },
+  }
 
   ZoteroModule = {
     router: ZoteroRouter,

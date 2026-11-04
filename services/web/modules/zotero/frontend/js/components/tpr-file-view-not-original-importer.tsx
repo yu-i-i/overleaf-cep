@@ -1,12 +1,11 @@
 import type { LinkedFile, LinkedFileData } from '@/features/file-view/types/binary-file'
 
-type TPRFileViewInfoProps = {
+type TPRFileViewNotOriginalImporterProps = {
   file: LinkedFile<keyof LinkedFileData>
 }
 
-export function TPRFileViewNotOriginalImporter({
-  file,
-}: TPRFileViewNotOriginalImporterProps) {
+// Keep the exported hook until its host registration can be removed together.
+export function TPRFileViewNotOriginalImporter(_props: TPRFileViewNotOriginalImporterProps) {
 
   return null
 }

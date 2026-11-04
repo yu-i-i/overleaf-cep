@@ -18,6 +18,7 @@ export type LinkedFileData = {
   zotero: {
     provider: 'zotero'
     group_id: string | null
+    collection_key?: string | null
     format: 'bibtex' | 'biblatex'
     importedAt: Date | string
     importer_id: string
