@@ -1,8 +1,5 @@
 import ChatApiHandler from '../../../../app/src/Features/Chat/ChatApiHandler.mjs'
 import ChatManager from '../../../../app/src/Features/Chat/ChatManager.mjs'
-import AuthorizationManager from '../../../../app/src/Features/Authorization/AuthorizationManager.mjs'
-import TokenAccessHandler from '../../../../app/src/Features/TokenAccess/TokenAccessHandler.mjs'
-import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandler.mjs'
 import EditorRealTimeController from '../../../../app/src/Features/Editor/EditorRealTimeController.mjs'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
 import UserInfoManager from '../../../../app/src/Features/User/UserInfoManager.mjs'
@@ -115,15 +112,6 @@ const TrackChangesController = {
   async deleteMessage(req, res, next) {
     try {
       const { project_id, thread_id, message_id } = req.params
-      const user_id = SessionManager.getLoggedInUserId(req.session)
-      const token = TokenAccessHandler.getRequestToken(req, project_id)
-      // Reviewers may only delete their own messages, like the review panel
-      if (!(await AuthorizationManager.promises.canUserWriteProjectContent(user_id, project_id, token))) {
-        const message = await ChatApiHandler.promises.getThreadMessage(project_id, thread_id, message_id)
-        if (message.user_id !== user_id) {
-          return HttpErrorHandler.forbidden(req, res)
-        }
-      }
       await ChatApiHandler.promises.deleteMessage(project_id, thread_id, message_id)
       EditorRealTimeController.emitToRoom(project_id, 'delete-message', thread_id, message_id)
       res.sendStatus(204)
