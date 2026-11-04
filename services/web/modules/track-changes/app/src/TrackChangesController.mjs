@@ -37,8 +37,11 @@ const TrackChangesController = {
   async getAllRanges(req, res, next) {
     try {
       const { project_id } = req.params
-      const ranges = await DocumentUpdaterHandler.promises.getProjectRanges(project_id)
-      res.json(ranges)
+      // document-updater only knows the docs loaded in Redis. Flush them to
+      // docstore (without unloading) and read every non-deleted doc from there.
+      await DocumentUpdaterHandler.promises.flushProjectToMongo(project_id)
+      const docs = await DocstoreManager.promises.getAllRanges(project_id)
+      res.json(docs.map(doc => ({ id: doc._id, ranges: doc.ranges ?? {} })))
     } catch (err) {
       next(err)
     }
@@ -50,6 +53,9 @@ const TrackChangesController = {
 // provided here to assign names to authors who have left the project but still have unaccepted changes.
     try {
       const { project_id } = req.params
+      // Same as getAllRanges: a tracked change still in document-updater is
+      // not in docstore yet, so its author would be missing here.
+      await DocumentUpdaterHandler.promises.flushProjectToMongo(project_id)
       const memberIds = await DocstoreManager.promises.getTrackedChangesUserIds(project_id)
       const limit = pLimit(3)
       const users = await Promise.all(
