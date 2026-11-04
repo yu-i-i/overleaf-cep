@@ -21,7 +21,14 @@ server {
 		proxy_send_timeout 10m;
 	}
 
-	location ^~ /git/ {
+	# Only the git smart-HTTP endpoints of a project (/git/<project id>[.git]/...) are
+	# public. git-bridge's other routes (/status, /health_check, /metrics, /diags,
+	# /api/...) are meant for the internal network only and must not be reachable.
+	location /git/ {
+		return 404;
+	}
+
+	location ~ "^/git/[0-9a-f]{24}(\.git)?(/|$)" {
 		resolver_timeout 2s;
 		resolver 127.0.0.11 valid=10s;
 		set $git_upstream http://${GIT_BRIDGE_HOST}:${GIT_BRIDGE_PORT};
