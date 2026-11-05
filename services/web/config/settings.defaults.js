@@ -1065,7 +1065,7 @@ module.exports = {
     mainEditorLayoutModals: [
       Path.resolve(
         __dirname,
-        '../modules/reference-picker/frontend/components/reference-picker-controller.tsx'
+        '../modules/reference-picker/frontend/js/components/reference-picker-controller.tsx'
       ),
       Path.resolve(
         __dirname,
@@ -1140,7 +1140,7 @@ module.exports = {
     autoCompleteExtensions: [
       Path.resolve(
         __dirname,
-        '../modules/reference-picker/frontend/extensions/reference-picker-keybinding.ts'
+        '../modules/reference-picker/frontend/js/extensions/reference-picker-keybinding.ts'
       ),
     ],
     sectionTitleGenerators: [],
@@ -1194,7 +1194,7 @@ module.exports = {
     referenceIndices: [
       Path.resolve(
         __dirname,
-        '../modules/reference-picker/frontend/reference-index/advanced-reference-index.ts'
+        '../modules/reference-picker/frontend/js/reference-index/advanced-reference-index.ts'
       ),
     ],
     railEntries: [],
