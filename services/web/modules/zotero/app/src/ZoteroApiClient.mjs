@@ -1,10 +1,8 @@
 import logger from '@overleaf/logger'
 import OError from '@overleaf/o-error'
-import AbortError from 'node-fetch'
 import {
   fetchNothing,
   fetchJson,
-  fetchString,
   fetchStringWithResponse,
   RequestFailedError,
 } from '@overleaf/fetch-utils'
@@ -61,38 +59,107 @@ async function getGroupsForUser(userId) {
   if (!credentials) return null
 
   const { apiKey, zoteroUserId } = credentials
+  const groups = []
+  const limit = 100
+
   try {
-    const groups = await fetchJson(`${ZOTERO_API_URL}/users/${zoteroUserId}/groups`, {
-      headers: buildHeaders(apiKey),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-    })
-    return groups.map(g => ({
-      id: String(g.id),
-      name: g.data?.name || `Group ${g.id}`,
-    }))
+    for (let start = 0; ; start += limit) {
+      const page = await fetchJson(`${ZOTERO_API_URL}/users/${zoteroUserId}/groups?limit=${limit}&start=${start}`, {
+        headers: buildHeaders(apiKey),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      })
+      groups.push(...page.map(g => ({
+        id: String(g.id),
+        name: g.data?.name || `Group ${g.id}`,
+      })))
+      if (page.length < limit) break
+    }
+    return groups
+
   } catch (err) {
     normalizeApiError(err, 'getGroupsForUser')
   }
 }
 
 /**
- * Export a library as BibTeX / BibLaTeX.
+ * Return the Zotero path for a personal or group library.
+ * Identifiers are validated before they become URL path components.
  */
-async function getLibraryBibtex(userId, groupId, format) {
+function getLibraryPath(zoteroUserId, groupId) {
+  const id = groupId || zoteroUserId
+  if (!/^\d+$/.test(String(id))) {
+    throw new OError('Invalid Zotero library ID', { status: 400 })
+  }
+  return groupId ? `/groups/${id}` : `/users/${id}`
+}
+
+/**
+ * List all collections, including nested collections, in a library.
+ */
+async function getCollectionsForLibrary(userId, groupId) {
+  const credentials = await TokenManager.getCredentials(userId)
+  if (!credentials) return null
+
+  const libraryPath = getLibraryPath(credentials.zoteroUserId, groupId)
+  const collections = []
+  const limit = 100
+
+  try {
+    for (let start = 0; ; start += limit) {
+      const page = await fetchJson(
+        `${ZOTERO_API_URL}${libraryPath}/collections?limit=${limit}&start=${start}`,
+        {
+          headers: buildHeaders(credentials.apiKey),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        }
+      )
+      if (!Array.isArray(page)) throw new OError('Invalid Zotero collections response', { status: 500 })
+
+      collections.push(...page.map(collection => ({
+        key: collection.key,
+        name: collection.data.name,
+        parentCollection: collection.data.parentCollection || null,
+      })))
+      if (page.length < limit) break
+    }
+  } catch (err) {
+    normalizeApiError(err, 'getCollectionsForLibrary')
+  }
+
+  return collections
+}
+
+/**
+ * Export a library, collection, or personal My Publications view as BibTeX / BibLaTeX.
+ */
+async function getLibraryBibtex(userId, groupId, format, collectionKey) {
   const credentials = await TokenManager.getCredentials(userId)
   if (!credentials) {
     throw new ServiceNotConfiguredError({
-      message: 'RefProvider credentials missed',
+      message: 'RefProvider credentials missing',
       info: { userId, status: 400 }
     })
   }
 
-  // Main library or group?
-  let basePath
-  if (groupId) basePath = `/groups/${groupId}/items`
-  else basePath = `/users/${credentials.zoteroUserId}/items`
+  const libraryPath = getLibraryPath(credentials.zoteroUserId, groupId)
+  // "publications" is a local selector value, not a Zotero collection key.
+  const isPublications = collectionKey === 'publications'
+  if (isPublications && groupId) {
+    throw new OError('My Publications is only available in personal libraries', { status: 400 })
+  }
+  if (collectionKey != null && !isPublications &&
+      (typeof collectionKey !== 'string' || !/^[A-Za-z0-9]{8}$/.test(collectionKey))) {
+    throw new OError('Invalid Zotero collection key', { status: 400 })
+  }
 
-  return _fetchBibtex(credentials.apiKey, basePath, format)
+  let basePath = `${libraryPath}/items`
+  if (isPublications) {
+    basePath = `${libraryPath}/publications/items`
+  } else if (collectionKey) {
+    basePath = `${libraryPath}/collections/${collectionKey}/items`
+  }
+
+  return _fetchBibtex(credentials.apiKey, basePath, format === 'biblatex' ? 'biblatex' : 'bibtex')
 }
 
 /**
@@ -107,7 +174,7 @@ async function _fetchBibtex(apiKey, basePath, format) {
     let start = 0
     const headers = buildHeaders(apiKey)
     while (true) {
-      const url = `${ZOTERO_API_URL}${basePath}?format=${format}&limit=${limit}&start=${start}`
+      const url = `${ZOTERO_API_URL}${basePath}?format=${format}&limit=${limit}&start=${start}&includeTrashed=0`
       const { body: bibtexFetched, response } = await fetchStringWithResponse(url, {
         headers,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
@@ -116,7 +183,12 @@ async function _fetchBibtex(apiKey, basePath, format) {
 
       if (bibtex.trim()) allBibtex += bibtex
 
-      const totalResults = parseInt(response.headers.get('Total-Results') || '0', 10)
+      const totalResultsHeader = response.headers.get('Total-Results')
+      const totalResults = Number(totalResultsHeader)
+      if (totalResultsHeader === null || !/^\d+$/.test(totalResultsHeader) ||
+          !Number.isSafeInteger(totalResults)) {
+        throw new OError('Missing or invalid Zotero Total-Results header', { status: 500 })
+      }
       start += limit
       if (start >= totalResults) {
         break
@@ -133,12 +205,13 @@ async function _fetchBibtex(apiKey, basePath, format) {
  */
 async function unlinkAccount(userId) {
   const credentials = await TokenManager.getCredentials(userId)
-  if (!credentials) return
 
   await User.updateOne(
     { _id: userId },
     { $unset: { 'refProviders.zotero': 1 } }
   ).exec()
+
+  if (!credentials) return
 
   try {
     const { apiKey } = credentials
@@ -148,9 +221,8 @@ async function unlinkAccount(userId) {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
   } catch (err) {
-     logger.error({ err }, 'failed to detete key from Zotero account')
+     logger.error({ err }, 'failed to delete key from Zotero account')
   }
-
 }
 
 function normalizeApiError(err, operation) {
@@ -182,7 +254,7 @@ function normalizeApiError(err, operation) {
 
   if (status === 429) {
     throw new TooManyRequestsError({
-      message: 'Rate limit exeeded',
+      message: 'Rate limit exceeded',
       info: { operation, status }
     }).withCause(err)
   }
@@ -193,6 +265,7 @@ function normalizeApiError(err, operation) {
 export default {
   getConnectionStatus,
   getGroupsForUser,
+  getCollectionsForLibrary,
   getLibraryBibtex,
   unlinkAccount,
 }

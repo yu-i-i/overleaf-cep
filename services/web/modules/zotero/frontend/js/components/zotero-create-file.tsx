@@ -8,7 +8,7 @@ import Notification from '@/shared/components/notification'
 import { useFileTreeActionable } from '@/features/file-tree/contexts/file-tree-actionable'
 import FileTreeModalCreateFileMode from '@/features/file-tree/components/file-tree-create/file-tree-modal-create-file-mode'
 import FileTreeCreateNameProvider from '@/features/file-tree/contexts/file-tree-create-name'
-import FileTreeImportFromZotero from './file-tree-import-from-zotero'
+import FileTreeImportFromZotero, { type ZoteroGroup } from './file-tree-import-from-zotero'
 
 export function CreateFileMode() {
   const { t } = useTranslation()
@@ -93,11 +93,12 @@ export function CreateFilePane() {
             <OLButton
               variant="primary"
               onClick={() => {
-                window.open(
+                const popup = window.open(
                   '/user/zotero/oauth?popup=1',
                   '_blank',
                   'width=600,height=700'
                 )
+                if (!popup) window.location.assign('/user/zotero/oauth?popup=0')
               }}
             >
               {t('link_to_zotero')}

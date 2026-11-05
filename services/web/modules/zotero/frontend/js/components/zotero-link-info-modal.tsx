@@ -2,7 +2,7 @@ import { useTranslation, Trans } from 'react-i18next'
 import useAsync from '@/shared/hooks/use-async'
 import { deleteJSON } from '@/infrastructure/fetch-json'
 import { debugConsole } from '@/utils/debugging'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   OLModal,
   OLModalHeader,
@@ -13,11 +13,9 @@ import {
 import OLButton from '@/shared/components/ol/ol-button'
 import Notification from '@/shared/components/notification'
 
-import { ProjectSyncState, GitSyncModalStatus } from '../../types/git-sync-types'
-
-type ZoteroLinkInfoModalModalProps = {
+type ZoteroLinkInfoModalProps = {
   show: boolean
-  isError: any
+  isError: boolean
   handleHide: () => void
 }
 
@@ -29,18 +27,20 @@ const ZoteroLinkInfoModal = ({ show, isError, handleHide }: ZoteroLinkInfoModalP
     isLoading: isUnlinking,
     isError: isErrorUnlink,
     runAsync: runAsyncUnlink,
+    reset: resetUnlink,
   } = useAsync<void>()
 
   const handleUnlink = () => {
     runAsyncUnlink(deleteJSON('/user/zotero'))
+      .then(handleHide)
       .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
-    handleHide()
   }
 
   useEffect(() => {
     if (!show) return
     setShowUnlinkInfo(false)
-  }, [show])
+    resetUnlink()
+  }, [show, resetUnlink])
 
   return (
     <OLModal show={show} onHide={handleHide} backdrop="static" themed="true">
@@ -49,6 +49,9 @@ const ZoteroLinkInfoModal = ({ show, isError, handleHide }: ZoteroLinkInfoModalP
       </OLModalHeader>
 
       <OLModalBody>
+        {isErrorUnlink && (
+          <Notification type="error" content={t('generic_something_went_wrong')} />
+        )}
         {showUnlinkInfo ? (
           <Notification
             type="warning"

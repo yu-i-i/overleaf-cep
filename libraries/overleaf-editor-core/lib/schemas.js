@@ -139,6 +139,10 @@ const rawLinkedFileData = z.discriminatedUnion('provider', [
     // default this to 'bibtex' (ZoteroAgent `_getFormat`)
     format: z.enum(['bibtex', 'biblatex']).optional(),
     group_id: zz.routeSegment().nullish(),
+    collection_key: z.union([
+      z.literal('publications'),
+      z.string().regex(/^[A-Za-z0-9]{8}$/),
+    ]).optional(),
     importer_id: z.string().optional(),
     importer_name: z.string().optional(),
     v1_importer_id: z.number().optional(),

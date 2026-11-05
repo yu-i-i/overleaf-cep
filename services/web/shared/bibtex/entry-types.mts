@@ -67,7 +67,7 @@ entryTypes.set('book', {
   key: 'book',
   label: 'Book',
   fields: ['author', 'editor', 'title', 'publisher', 'year', 'date'],
-  requiredFields: [['author', 'editor'], 'title', ['year', 'date']],
+  requiredFields: [['author', 'editor'], 'title', 'publisher', ['year', 'date']],
   optionalFields: [],
 })
 entryTypes.set('bookinbook', {
@@ -162,14 +162,14 @@ entryTypes.set('inbook', {
     'year',
     'date',
   ],
-  requiredFields: [['author', 'editor'], 'title', ['year', 'date']],
+  requiredFields: [['author', 'editor'], 'title', ['chapter', 'pages'], 'publisher', ['year', 'date']],
   optionalFields: [],
 })
 entryTypes.set('incollection', {
   key: 'incollection',
   label: 'In collection',
   fields: ['author', 'title', 'booktitle', 'publisher', 'year', 'date'],
-  requiredFields: ['author', 'title', 'booktitle', ['year', 'date']],
+  requiredFields: ['author', 'title', 'booktitle', 'publisher', ['year', 'date']],
   optionalFields: [],
 })
 entryTypes.set('inreference', {
@@ -411,7 +411,7 @@ entryTypes.set('unpublished', {
   key: 'unpublished',
   label: 'Unpublished',
   fields: ['author', 'title', 'year', 'date', 'note'],
-  requiredFields: ['author', 'title'],
+  requiredFields: ['author', 'title', 'note'],
   optionalFields: [],
 })
 entryTypes.set('video', {

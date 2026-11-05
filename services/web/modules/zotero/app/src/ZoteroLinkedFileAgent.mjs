@@ -1,11 +1,8 @@
 import logger from '@overleaf/logger'
 import { callbackify } from '@overleaf/promise-utils'
-import { Project } from '../../../../app/src/models/Project.mjs'
-import ProjectLocator from '../../../../app/src/Features/Project/ProjectLocator.mjs'
 import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import {
    NotFoundError,
-   TooManyRequestsError,
    ServiceNotConfiguredError,
    ForbiddenError
 } from '../../../../app/src/Features/Errors/Errors.js'
@@ -20,6 +17,7 @@ import ZoteroApiClient from './ZoteroApiClient.mjs'
  *   {
  *     provider: 'zotero'
  *     group_id: string | null
+ *     collection_key?: string | null
  *     importedAt: Date | string
  *     importer_id: string
  *     importer_name: string
@@ -28,6 +26,9 @@ import ZoteroApiClient from './ZoteroApiClient.mjs'
  *
  *  - If group_id is present, export that group's library.
  *  - Otherwise, export the user's personal library ("My Library").
+ *  - If collection_key is present, export only items in that collection.
+ *  - The reserved collection_key "publications" exports My Publications.
+ *  - Trash is excluded from all exports.
  */
 async function createLinkedFile(
   projectId,
@@ -45,17 +46,7 @@ async function createLinkedFile(
     'creating Zotero linked file'
   )
 
-  const bibtex = await _getBibtex(linkedFileData)
-
-  const file = await LinkedFilesHandler.promises.importContent(
-    projectId,
-    bibtex,
-    _sanitizeData(linkedFileData),
-    name,
-    parentFolderId,
-    userId
-  )
-  return file._id
+  return _importLinkedFile(projectId, linkedFileData, name, parentFolderId, userId)
 }
 
 /**
@@ -73,22 +64,17 @@ async function refreshLinkedFile(
     'refreshing Zotero linked file'
   )
 
-// refresh importer's displayed name
-// if the importer is the owner, name is not displayed, refresh is not needed
-// if the importer is not available, the old name is preserved
+  // Preserve the old name if the importer is unavailable. Persist the refreshed
+  // name with the bibliography through importContent(), not a separate write.
   const userName = await _getUserName(linkedFileData.importer_id)
-  if (userName && linkedFileData.importer_id != userId) {
+  if (userName) {
     linkedFileData.importer_name = userName
-    const { element, path } = await ProjectLocator.promises.findElement({
-      project_id: projectId,
-      element_id: parentFolderId,
-      type: 'folders'
-    })
-    const fileIndex = element.fileRefs.findIndex(file => file.name === name)
-    const updatePath = `${path.mongo}.fileRefs.${fileIndex}.linkedFileData.importer_name`
-    await Project.updateOne({ _id: projectId }, { $set: { [updatePath]: userName } })
   }
 
+  return _importLinkedFile(projectId, linkedFileData, name, parentFolderId, userId)
+}
+
+async function _importLinkedFile(projectId, linkedFileData, name, parentFolderId, userId) {
   const bibtex = await _getBibtex(linkedFileData)
 
   const file = await LinkedFilesHandler.promises.importContent(
@@ -108,7 +94,8 @@ async function _getBibtex(linkedFileData) {
     return await ZoteroApiClient.getLibraryBibtex(
       userId,
       linkedFileData.group_id,  // == null for main library
-      linkedFileData.format || 'bibtex'
+      linkedFileData.format || 'bibtex',
+      linkedFileData.collection_key
     )
   } catch (err) {
 
@@ -121,8 +108,8 @@ async function _getBibtex(linkedFileData) {
       throw new LinkedFilesErrors.AccessDeniedError('Zotero account not linked').withCause(err)
     }
     if (err instanceof NotFoundError) {
-      logger.debug({ group: linkedFileData.group_id, err }, 'Zotero group is not found')
-      throw new LinkedFilesErrors.SourceFileNotFoundError('Zotero group is not found').withCause(err)
+      logger.debug({ group: linkedFileData.group_id, collection: linkedFileData.collection_key, err }, 'Zotero library or collection is not found')
+      throw new LinkedFilesErrors.SourceFileNotFoundError('Zotero library or collection is not found').withCause(err)
     }
     logger.error({ linkedFileData, err }, 'failed to retrieve bib file from Zotero')
     throw new LinkedFilesErrors.RemoteServiceError('Error retrieving bib file from Zotero').withCause(err)
@@ -133,6 +120,9 @@ function _sanitizeData(data) {
   return {
     provider: 'zotero',
     group_id: data.group_id ?? null,
+    ...(data.collection_key && {
+      collection_key: data.collection_key,
+    }),
     importedAt: data.importedAt,
     ...(data.importer_id && {
       importer_id: data.importer_id,

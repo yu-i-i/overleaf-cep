@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { FormEventHandler, useEffect, useState } from 'react'
+import { FormEventHandler, useEffect, useMemo, useState } from 'react'
+import { getJSON } from '@/infrastructure/fetch-json'
+import useAsync from '@/shared/hooks/use-async'
+import { debugConsole } from '@/utils/debugging'
 import * as eventTracking from '@/infrastructure/event-tracking'
 import { useFileTreeActionable } from '@/features/file-tree/contexts/file-tree-actionable'
 import { useFileTreeCreateForm } from '@/features/file-tree/contexts/file-tree-create-form'
@@ -11,24 +14,71 @@ import OLFormLabel from '@/shared/components/ol/ol-form-label'
 import OLFormSelect from '@/shared/components/ol/ol-form-select'
 import Notification from '@/shared/components/notification'
 
-type ZoteroGroup = {
+export type ZoteroGroup = {
   id: string
   name: string
+}
+
+type ZoteroCollection = {
+  key: string
+  name: string
+  parentCollection: string | null
+}
+
+function collectionOptions(collections: ZoteroCollection[]) {
+  const byKey = new Map(collections.map(c => [c.key, c]))
+  return collections.map(collection => {
+    const path = [collection.name]
+    const visited = new Set([collection.key])
+    let parentKey = collection.parentCollection
+    while (parentKey && !visited.has(parentKey)) {
+      const parent = byKey.get(parentKey)
+      if (!parent) break
+      path.unshift(parent.name)
+      visited.add(parentKey)
+      parentKey = parent.parentCollection
+    }
+    return { key: collection.key, label: path.join(' / ') }
+  }).sort((a, b) => a.label.localeCompare(b.label))
 }
 
 type FileTreeImportFromZoteroProps = { groups: ZoteroGroup[] }
 
 export default function FileTreeImportFromZotero({ groups }: FileTreeImportFromZoteroProps) {
   const { t } = useTranslation()
-  const { name, setName } = useFileTreeCreateName()
+  const { name } = useFileTreeCreateName()
   const { setValid } = useFileTreeCreateForm()
   const { finishCreatingLinkedFile, error, inFlight } = useFileTreeActionable()
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("")
-  const [selectedFormat, setSelectedFormat] = useState<string>('bibtex')
+  const [selectedGroupId, setSelectedGroupId] = useState('')
+  const [selectedCollectionKey, setSelectedCollectionKey] = useState('')
+  const {
+    runAsync,
+    reset,
+    data: collections,
+    isLoading: collectionsLoading,
+    isError: collectionsError,
+  } = useAsync<ZoteroCollection[]>({ status: 'pending' })
+  const [selectedFormat, setSelectedFormat] = useState('bibtex')
+  const sortedCollections = useMemo(() => collectionOptions(collections || []), [collections])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    reset()
+
+    const query = selectedGroupId ? `?group_id=${encodeURIComponent(selectedGroupId)}` : ''
+    runAsync(getJSON<ZoteroCollection[]>(`/user/zotero/collections${query}`, {
+      signal: controller.signal,
+    }))
+      .catch(err => {
+        debugConsole.error(err?.data?.message || err?.message || err)
+      })
+
+    return () => controller.abort()
+  }, [selectedGroupId, runAsync, reset])
 
   useEffect(() => {
     setValid(!!name)
-  }, [name])
+  }, [name, setValid])
 
   const handleSubmit: FormEventHandler = event => {
     event.preventDefault()
@@ -42,6 +92,7 @@ export default function FileTreeImportFromZotero({ groups }: FileTreeImportFromZ
       provider: 'zotero',
       data: {
         group_id: selectedGroupId || undefined,
+        collection_key: selectedCollectionKey || undefined,
         format: selectedFormat,
       }
     })
@@ -62,9 +113,10 @@ export default function FileTreeImportFromZotero({ groups }: FileTreeImportFromZ
             id="zotero-library-select"
             value={selectedGroupId}
             disabled={inFlight}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
               setSelectedGroupId(e.target.value)
-            }
+              setSelectedCollectionKey('')
+            }}
           >
             <option value="">{t('my_library')}</option>
             {groups?.map(g => (
@@ -74,6 +126,32 @@ export default function FileTreeImportFromZotero({ groups }: FileTreeImportFromZ
             ))}
           </OLFormSelect>
       </OLFormGroup>
+
+      <OLFormGroup controlId="zotero-collection-select">
+        <OLFormLabel>{t('collection')}</OLFormLabel>
+        <OLFormSelect
+          id="zotero-collection-select"
+          value={selectedCollectionKey}
+          disabled={inFlight || collectionsLoading}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            setSelectedCollectionKey(e.target.value)
+          }
+        >
+          <option value="">{t('all_collections')}</option>
+          {!selectedGroupId && (
+            <option value="publications">{t('my_publications')}</option>
+          )}
+          {sortedCollections.map(collection => (
+            <option key={collection.key} value={collection.key}>
+              {collection.label}
+            </option>
+          ))}
+        </OLFormSelect>
+      </OLFormGroup>
+
+      {collectionsError && (
+        <Notification type="error" content={t('zotero_could_not_load_collections')} />
+      )}
 
       <FileTreeCreateNameInput
         label={t('file_name_in_this_project')}

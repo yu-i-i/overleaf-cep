@@ -1,0 +1,837 @@
+:root {
+  --author-btn-hover-bg: var(--neutral-70);
+  --bibtex-preview-input-border: var(--neutral-70);
+  --bibtex-card-hover-bg: var(--neutral-85);
+  --bibtex-card-selected-bg:var(--green-70);
+  --bibtex-card-selected-border:var(--green-60);
+  --bibtex-card-selected-hover-bg:var(--green-65);
+  --bibtex-card-secondary-text:var(--neutral-40);
+  --bibtex-card-previewing-bg:var(--green-70);
+  --bibtex-card-previewing-border:var(--green-60);
+  --bibtex-card-previewing-accent:var(--green-30);
+  --wide-target-checkbox-ring: 255 255 255;
+}
+
+[data-theme='light'] {
+  --author-btn-hover-bg: var(--green-10);
+  --bibtex-preview-input-border: var(--neutral-30);
+  --bibtex-card-hover-bg: var(--neutral-05);
+  --bibtex-card-selected-bg:var(--bg-accent-03);
+  --bibtex-card-selected-border:var(--green-20);
+  --bibtex-card-selected-hover-bg:var(--green-15);
+  --bibtex-card-secondary-text:var(--content-secondary);
+  --bibtex-card-previewing-bg:var(--bg-accent-03);
+  --bibtex-card-previewing-border:var(--green-20);
+  --bibtex-card-previewing-accent:var(--green-50);
+  --wide-target-checkbox-ring: 27 34 44;
+}
+
+.bibtex-entry-list-body {
+  position:relative;
+}
+
+.bibtex-entry-card-row:has(.bibtex-entry-card-previewing),
+.bibtex-entry-card-row:has(.bibtex-entry-card-selected),
+.bibtex-entry-card-row:hover {
+  z-index: 1;
+}
+.bibtex-entry-card-row:has(.dropdown-menu.show) {
+  z-index: 2;
+}
+.bibtex-entry-card {
+  background-color: var(--bg-primary-themed);
+  border: 1px solid var(--border-divider-themed);
+  border-radius: var(--border-radius-medium);
+  color: var(--content-secondary-themed);
+  display: flex;
+  gap: var(--spacing-05);
+  padding: var(--spacing-05);
+  position: relative;
+}
+.bibtex-entry-card:focus-visible {
+  box-shadow: 0 0 0 2px var(--border-active-dark);
+  outline: none;
+}
+.bibtex-entry-card:hover {
+  background-color: var(--bibtex-card-hover-bg);
+}
+.bibtex-entry-card.bibtex-entry-card-selected {
+  background-color: var(--bibtex-card-selected-bg);
+  border-color: var(--bibtex-card-selected-border);
+}
+.bibtex-entry-card.bibtex-entry-card-selected:hover {
+  background-color: var(--bibtex-card-selected-hover-bg);
+}
+.bibtex-entry-card.bibtex-entry-card-previewing {
+  background-color: var(--bibtex-card-previewing-bg);
+  border-color: var(--bibtex-card-previewing-border);
+}
+.bibtex-entry-card.bibtex-entry-card-previewing:before {
+  background-color: var(--bibtex-card-previewing-accent);
+  border-radius: var(--border-radius-medium) 0 0 var(--border-radius-medium);
+  bottom: 0;
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 6px;
+}
+.bibtex-entry-card.bibtex-entry-card-clickable {
+  cursor: pointer;
+}
+.bibtex-entry-card-compact {
+  border: 0;
+  border-bottom: 1px solid var(--border-divider-themed);
+  border-radius: 0;
+  gap: var(--spacing-04);
+  padding: var(--spacing-04);
+}
+.bibtex-entry-card-compact.bibtex-entry-card-previewing:before {
+  border-radius: 0;
+}
+.bibtex-entry-card-compact .bibtex-entry-card-content {
+  gap: var(--spacing-01);
+  justify-content: center;
+}
+.bibtex-entry-card-compact .bibtex-entry-card-checkbox {
+  padding-left: var(--spacing-03);
+  padding-right: var(--spacing-03);
+}
+.bibtex-entry-card-compact .bibtex-entry-card-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.bibtex-entry-card-checkbox {
+  padding: var(--spacing-02);
+}
+.bibtex-entry-card-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-02);
+  min-width: 0;
+}
+.bibtex-entry-card-header {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-04);
+  padding-bottom: var(--spacing-02);
+}
+.bibtex-entry-card-key {
+  background-color: var(--bg-tertiary-themed);
+  border-radius: var(--border-radius-base);
+  color: var(--content-primary-themed);
+  font-family: DM Mono,monospace;
+  font-feature-settings: "ss05";
+  font-size: var(--font-size-02);
+  line-height: var(--line-height-02);
+  min-width: 0;
+  overflow-wrap: break-word;
+  padding: var(--spacing-01) var(--spacing-02);
+}
+.bibtex-entry-card-key mark {
+  padding: 0;
+}
+.bibtex-entry-card-details {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-02);
+  gap: var(--spacing-02);
+  line-height: var(--line-height-02);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.bibtex-entry-card-details mark {
+  padding: 0;
+}
+.bibtex-entry-card-meta {
+  display: flex;
+  gap: var(--spacing-02) var(--spacing-06);
+  min-width: 0;
+}
+.bibtex-entry-card-title {
+  color: var(--content-primary-themed);
+  font-weight: 600;
+}
+.bibtex-entry-card-author,
+.bibtex-entry-card-year {
+  color: var(--bibtex-card-secondary-text);
+}
+.bibtex-entry-card-author {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bibtex-entry-card-year {
+  flex-shrink: 0;
+}
+
+.bibtex-entry-error-icon {
+  align-items: center;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--red-50);
+  cursor: pointer;
+  display: inline-flex;
+  height: var(--line-height-03);
+  padding: 0;
+}
+.bibtex-entry-error-icon-warning {
+  color: var(--content-warning-themed);
+}
+
+.bibtex-tooltip-errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-04);
+  text-align: left;
+}
+.bibtex-tooltip-errors ul {
+  margin-bottom: 0;
+}
+.bibtex-tooltip-errors blockquote {
+  margin-left: var(--spacing-06);
+  white-space: pre-wrap;
+}
+
+.wide-target-checkbox {
+  align-items: flex-start;
+  display: flex;
+  flex-shrink: 0;
+}
+.wide-target-checkbox-box {
+  display: flex;
+  position: relative;
+}
+.wide-target-checkbox-box .form-checkbox {
+  display: flex;
+  margin: 0;
+  min-height: auto;
+  padding-left: 0;
+}
+.wide-target-checkbox-box .form-check-input {
+  cursor: pointer;
+  float: none;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+.wide-target-checkbox-box:hover .wide-target-checkbox-target {
+  background-color: rgb(var(--wide-target-checkbox-ring)/8%);
+}
+.wide-target-checkbox-box:has(.form-check-input:disabled) .wide-target-checkbox-target {
+  cursor: default;
+}
+.wide-target-checkbox-box:has(.form-check-input:disabled):hover .wide-target-checkbox-target {
+  background-color: transparent;
+}
+.wide-target-checkbox-target {
+  border-radius: 50%;
+  cursor: pointer;
+  height: 40px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  width: 40px;
+}
+
+.button-autocomplete-container {
+  background-color: var(--bg-primary-themed);
+  border: 1px solid var(--border-divider-themed);
+  left: 0;
+  margin-top: var(--spacing-02);
+  top: 100%;
+  z-index: 1000;
+}
+.button-autocomplete-container:not(.expand-up) .form-control {
+  margin-bottom: var(--spacing-03);
+}
+.button-autocomplete-container.expand-up {
+  bottom: 100%;
+  margin-bottom: var(--spacing-02);
+  margin-top: 0;
+  top: auto;
+}
+.button-autocomplete-container .dropdown-item {
+  border-radius: var(--border-radius-base);
+  padding: var(--spacing-02) var(--spacing-04);
+}
+.button-autocomplete-container .dropdown-item:focus,
+.button-autocomplete-container .dropdown-item:hover {
+  background-color: var(--bg-secondary-themed);
+}
+.button-autocomplete-container .dropdown-menu {
+  border: none;
+  box-shadow: none;
+  margin: 0;
+  max-height: 290px;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.bibtex-collapsible-heading {
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  gap: var(--spacing-02);
+  margin-bottom: var(--spacing-04);
+  padding: var(--spacing-02) 0;
+  text-decoration: none;
+  width: auto;
+}
+.bibtex-collapsible-heading:hover {
+  opacity: 0.8;
+}
+.bibtex-collapsible-heading:focus {
+  outline: 2px solid var(--border-active-themed);
+  outline-offset: 2px;
+}
+.bibtex-collapsible-heading-icon {
+  align-items: center;
+  color: var(--content-secondary-themed);
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-left: var(--spacing-01);
+}
+
+.bibtex-entry-form .form-label,
+.bibtex-entry-form .form-text {
+  color: var(--content-secondary-themed);
+}
+.bibtex-entry-form .form-control[readonly],
+.bibtex-entry-form .form-control[readonly]:focus,
+.bibtex-entry-form .form-control[readonly]:focus-visible {
+  background-color: var(--bg-disabled-themed);
+  border-color: var(--border-disabled-themed);
+} 
+.bibtex-entry-form .form-control,
+.bibtex-entry-form textarea.form-control,
+.bibtex-entry-form input.form-control {
+  border-color: var(--bibtex-preview-input-border);
+  background-color: var(--bg-primary-themed);
+  color: var(--color-primary-themed);
+  &.is-invalid:focus-visible {
+    background: var(--bg-primary-themed);
+    color: var(--color-primary-themed);
+  }
+}
+.bibtex-form-required {
+  color: var(--content-danger);
+}
+
+.bibtex-entry-preview-panel {
+  background-color: var(--bg-primary-themed);
+  color: var(--content-primary-themed);
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  transform: translateX(100%);
+  transition: transform .3s ease;
+  z-index: 20;
+  min-height: 0;
+}
+.bibtex-entry-preview-panel.bibtex-entry-preview-panel-open {
+  transform: none;
+}
+.bibtex-entry-preview-header {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-05);
+}
+.bibtex-entry-preview-header-nav {
+  display: flex;
+}
+.bibtex-entry-preview-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bibtex-entry-preview-summary {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--spacing-05);
+  padding: 0 var(--spacing-08) var(--spacing-04);
+}
+:root .bibtex-entry-preview-header .btn.btn-ghost,
+:root .bibtex-entry-preview-summary .btn.btn-ghost {
+  --btn-ghost-background: var(--bg-primary-themed);
+  --btn-ghost-hover-background: var(--bg-secondary-themed);
+  --bs-btn-disabled-color: var(--content-disabled-themed);
+  --bs-btn-disabled-bg: var(--bg-disabled-themed);
+}
+.bibtex-entry-preview-summary-actions {
+  margin-right: calc(var(--spacing-05) - var(--spacing-08));
+}
+.bibtex-entry-preview-summary-actions .dropdown-toggle:after {
+  content: none !important;
+}
+.bibtex-entry-preview-summary-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-02);
+  min-width: 0;
+}
+.bibtex-entry-preview-summary-key-row {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-04);
+  justify-content: space-between;
+  padding-right: var(--spacing-04);
+}
+.bibtex-entry-preview-summary-key {
+  background-color: var(--bg-tertiary-themed);
+  border-radius: var(--border-radius-base);
+  color: var(--content-primary-themed);
+  font-family: DM Mono,monospace;
+  font-feature-settings: "ss05";
+  font-size: var(--font-size-02);
+  line-height: var(--line-height-02);
+  padding: var(--spacing-01) var(--spacing-02);
+}
+.bibtex-entry-preview-summary-title {
+  color: var(--content-primary-themed);
+  font-weight: 600;
+}
+.bibtex-entry-preview-summary-meta {
+  color: var(--content-secondary-themed);
+  display: flex;
+  font-size: var(--font-size-02);
+  gap: var(--spacing-06);
+  line-height: var(--line-height-02);
+}
+
+.bibtex-entry-preview-tabs {
+  background-color: var(--bg-primary-themed);
+  border-bottom: 1px solid var(--border-divider-themed);
+  display: flex;
+  gap: var(--spacing-04);
+  margin-bottom: var(--spacing-06);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.bibtex-entry-preview-tab {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: var(--content-secondary-themed);
+  cursor: pointer;
+  font-size: var(--font-size-02);
+  line-height: var(--line-height-02);
+  padding: var(--spacing-04);
+}
+.bibtex-entry-preview-tab.bibtex-entry-preview-tab-active {
+  border-bottom-color: var(--green-50);
+  color: var(--content-primary-themed);
+}
+.bibtex-entry-preview-tab:focus-visible {
+  box-shadow: 0 0 0 2px var(--border-active-dark);
+  outline: none;
+}
+.bibtex-entry-preview-tab:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.bibtex-entry-preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--spacing-08) var(--spacing-08);
+}
+.bibtex-entry-preview-body .form-group {
+  scroll-margin-top: 4rem;
+}
+.bibtex-entry-preview-body .form-label,
+.bibtex-entry-preview-body .form-text {
+  color: var(--content-secondary-themed);
+}
+.bibtex-entry-preview-body-abstract {
+  display: flex;
+  flex-direction: column;
+}
+.bibtex-abstract-form-group,
+.bibtex-entry-preview-body-abstract #bibtex-entry-form,
+.bibtex-entry-preview-body-abstract .bibtex-entry-preview-fields,
+.bibtex-entry-preview-body-abstract #bibtex-entry-preview-panel-abstract {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.bibtex-abstract-textarea {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+}
+
+.bibtex-import-textarea {
+  font-family: DM Mono,monospace;
+  font-feature-settings: "ss05";
+}
+.bibtex-import-form .form-label,
+.bibtex-import-form .form-text {
+  color: var(--content-secondary-themed);
+}
+.bibtex-import-preview-card-check {
+  padding-top: var(--spacing-05);
+}
+
+.bibtex-import-preview-card {
+  border: 1px solid var(--border-divider-themed);
+  border-radius: var(--border-radius-large);
+  display: flex;
+  gap: var(--spacing-06);
+  padding: var(--spacing-04) var(--spacing-06);
+}
+
+.bibtex-import-preview-card:hover {
+  background-color: var(--bg-secondary-themed);
+}
+
+.bibtex-import-preview-card-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.bibtex-import-preview-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-03);
+  padding-top: var(--spacing-04);
+}
+.bibtex-import-preview-card-heading {
+  font-weight: 600;
+}
+.bibtex-import-preview-card-field {
+  color: var(--bibtex-card-secondary-text);
+}
+.bibtex-import-preview-card-error {
+  font-size: var(--font-size-01);
+  color: var(--content-danger-themed);
+  font-style: italic;
+}
+.bibtex-import-preview-card-key {
+  background-color: var(--bg-tertiary-themed);
+  border-radius: var(--border-radius-base);
+  color: var(--content-primary-themed);
+  font-family: DM Mono,monospace;
+  font-feature-settings: "ss05";
+  font-size: var(--spacing-05);
+  font-weight: 500;
+  margin-top: var(--spacing-04);
+  padding: var(--spacing-01) var(--spacing-02);
+  width: -moz-fit-content;
+  width: fit-content;
+}
+.bibtex-import-preview-count {
+  font-weight: 600;
+  margin-bottom: var(--spacing-04);
+  padding: var(--spacing-04) 0;
+}
+.bibtex-import-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-04);
+}
+.bibtex-import-preview-check-all {
+  padding: var(--spacing-05) var(--spacing-06) var(--spacing-04);
+}
+.bibtex-import-preview-footer {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+}
+.bibtex-import-preview-footer-buttons {
+  display: flex;
+  gap: var(--spacing-04);
+}
+.bibtex-import-preview-footer-count {
+  font-weight: 600;
+}
+.bibtex-import-preview-footer-warning {
+  align-items: center;
+  color: var(--content-danger-themed);
+  display: flex;
+  justify-content: flex-start;
+  padding-bottom: var(--spacing-04);
+}
+.bibtex-import-preview-footer-warning span {
+  margin-bottom: var(--spacing-02);
+  margin-left: var(--spacing-02);
+}
+.bibtex-import-preview-footer-actions {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+.bibtex-import-preview-empty {
+  color: var(--content-secondary-themed);
+  padding: var(--spacing-10) var(--spacing-09);
+  text-align: center;
+}
+.bibtex-import-preview-header {
+  display: flex;
+}
+
+.bibtex-add-button {
+  margin-left: auto;
+}
+
+.bibtex-bulk-actions-bar {
+  align-items: center;
+  background-color: var(--bg-secondary-themed);
+  border: 2px solid transparent;
+  border-bottom-color: var(--border-divider-themed);
+  border-radius: 0;
+  box-sizing: border-box;
+  display: flex;
+  margin-bottom: var(--spacing-05);
+  margin-top: var(--spacing-05);
+  padding: var(--spacing-04) var(--spacing-05);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+.bibtex-bulk-actions-bar.bibtex-bulk-actions-bar-selected {
+  background-color: var(--bibtex-card-selected-bg);
+  border-color: var(--bibtex-card-selected-border);
+  border-radius: var(--border-radius-medium);
+}
+.bibtex-bulk-actions-bar .btn-ghost {
+  --bs-btn-bg: transparent;
+}
+.bibtex-bulk-actions-select-all {
+  margin-right: var(--spacing-05);
+  padding: var(--spacing-02);
+}
+.bibtex-bulk-actions-count {
+  color: var(--content-primary-themed);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-02);
+  font-style: normal;
+  font-weight: 600;
+  line-height: var(--line-height-05);
+  margin-right: var(--spacing-04);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bibtex-bulk-actions-close {
+  margin-left: auto;
+}
+
+.bibtex-toolbar {
+  align-items: center;
+  box-shadow: inset 0 -1px 0 var(--border-divider-themed);
+  display: flex;
+  height: 32px;
+  padding: 0 5px;
+} 
+
+.bibtex-visual-editor {
+  background-color: var(--bg-primary-themed);
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  inset: 0;
+  position: absolute;
+}
+.bibtex-visual-editor .bibtex-list-and-preview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+.bibtex-visual-editor .bibtex-scroll-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.bibtex-visual-editor .bibtex-entry-list {
+  flex-grow: 1;
+  overflow: hidden auto;
+}
+.bibtex-visual-editor .bibtex-search {
+  width: 320px;
+}
+.bibtex-visual-editor .bibtex-bulk-actions-bar.bibtex-bulk-actions-bar-selected {
+  border-left-color: transparent;
+  border-radius: 0;
+  border-right-color: transparent;
+}
+.bibtex-visual-editor .bibtex-bulk-actions-bar {
+  border-width: 1px;
+  border-left: none;
+  border-right: none;
+  margin-bottom: 0;
+  margin-top: 0;
+  padding-left: var(--spacing-04);
+  padding-right: var(--spacing-04);
+}
+.bibtex-visual-editor .bibtex-bulk-actions-bar .bibtex-bulk-actions-select-all {
+  padding-left: var(--spacing-03);
+  padding-right: var(--spacing-03);
+}
+.bibtex-visual-editor .bibtex-bulk-actions-bar:not(.bibtex-bulk-actions-bar-selected) {
+  background-color: var(--bg-primary-themed);
+  border-bottom-color: var(--border-divider-themed);
+  border-top-color: var(--border-divider-themed);
+}
+
+
+.bibtex-entry-list-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-04);
+  padding:var(--spacing-04) var(--spacing-04) var(--spacing-05);
+}
+
+.bibtex-entry-syntax-disabled {
+  opacity: .40;
+}
+.bibtex-entry-syntax-disabled input.form-control:disabled,
+.bibtex-entry-syntax-disabled textarea.form-control:disabled,
+.bibtex-entry-syntax-disabled .btn:disabled {
+  color: var(--content-primary-themed);
+  background-color: var(--bg-primary-themed);
+}
+
+.bibtex-field-with-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0rem 1rem;
+  .bibtex-form-input {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .bibtex-form-actions {
+    grid-column: 2;
+    grid-row: 1;
+    .btn {
+      padding: 0.4em 1em;
+      align-self: flex-end;
+    }
+  }
+  > .invalid-feedback {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+
+.bibtex-form-names {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  .bibtex-field-with-actions {
+    gap: 0rem 0.6rem;
+  }
+  .bibtex-name-add {
+    padding: 0 1em;
+    align-self: flex-end;
+  }
+}
+
+.bibtex-optional-field-row:has(> .bibtex-form-names) {
+  grid-template-columns: minmax(0, 1fr);
+
+  > .bibtex-form-actions {
+    display: none;
+  }
+}
+.bibtex-form-names .bibtex-field-with-actions .bibtex-form-actions .btn,
+.bibtex-optional-field-row .bibtex-form-actions .btn {
+  background: transparent;
+  padding: 0;
+  .icon-small {
+    font-size: 18px;
+  }
+  &:hover {
+    background-color: var(--author-btn-hover-bg);
+  }
+}
+
+.bibtex-optional-field-row .bibtex-abstract-textarea {
+  height: auto !important;
+  min-height: calc(4.5em + 0.4rem + 2px) !important;
+}
+
+.bibtex-editor-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 24px;
+  color: var(--content-secondary-themed);
+}
+
+.bibtex-list-empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--content-secondary-themed);
+  font-size: var(--font-size-02);
+}
+
+.bibtex-write-failure-banner {
+  align-items: center;
+  display: flex;
+  color: var(--content-danger-themed);
+  background: var(--bg-tertiary-themed);
+  padding: 0.4rem 0.8rem;
+  margin-bottom: 0.5rem;
+  font-size: var(--font-size-02);
+}
+.bibtex-write-failure-banner-text {
+  flex: 1 1 auto;
+}
+
+.bibtex-vertical-resize-controls {
+  position: relative;
+  flex: 0 0 6px;
+}
+.bibtex-vertical-resize-controls .custom-toggler-vertical {
+  width: 50px !important;
+  height: 6px;
+  top: 0;
+  left: 50%;
+  margin: 0;
+  padding: 0;
+  border-width: 0;
+  transform: translateX(-50%);
+  z-index: 12;
+  cursor: pointer !important;
+}
+.bibtex-vertical-resize-controls .custom-toggler-vertical::before {
+  inset: -3px 0;
+}
+
+/* Viewer controls are blocked by the fieldset, but values keep normal colors. */
+.bibtex-entry-read-only .form-control:disabled {
+  color: var(--color-primary-themed);
+  -webkit-text-fill-color: var(--color-primary-themed);
+  background-color: var(--bg-primary-themed);
+  border-color: var(--bibtex-preview-input-border);
+  opacity: 1;
+}

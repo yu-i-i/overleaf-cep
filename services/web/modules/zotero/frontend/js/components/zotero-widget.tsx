@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import getMeta from '@/utils/meta'
-import { getJSON, deleteJSON } from '@/infrastructure/fetch-json'
+import { getJSON, deleteJSON, isForbidden, type FetchError } from '@/infrastructure/fetch-json'
 import useAsync from '@/shared/hooks/use-async'
 import { debugConsole } from '@/utils/debugging'
 import OLButton from '@/shared/components/ol/ol-button'
@@ -17,10 +17,7 @@ import ZoteroLogo from '@/shared/svgs/zotero-logo'
 
 /**
  * Zotero account linking widget for the Account Settings page.
- * Instead of OAuth, users paste their Zotero API key directly.
- * Create one at https://www.zotero.org/settings/keys with:
- *   - "Allow library access"
- *   - "Allow read access to all groups" (for group library imports)
+ * Links the account through the Zotero OAuth flow.
  *
  * Registered via overleafModuleImports.referenceLinkingWidgets.
  */
@@ -31,10 +28,11 @@ export const ZoteroWidget = function ZoteroWidget() {
   const {
     isLoading: isCheckingConn,
     isError: isErrorConnCheck,
+    error: connCheckError,
     runAsync: runAsyncConnCheck,
     data: isConnected,
     setData: setConnState,
-  } = useAsync<boolean>()
+  } = useAsync<boolean, FetchError>()
 
   const {
     isLoading: isUnlinking,
@@ -43,6 +41,8 @@ export const ZoteroWidget = function ZoteroWidget() {
   } = useAsync<void>()
 
   const [showUnlinkModal, setShowUnlinkModal] = useState(false)
+
+  const needsRelink = isForbidden(connCheckError)
 
   const handleConnCheck = useCallback(() => {
     runAsyncConnCheck(getJSON('/user/zotero/status'))
@@ -58,7 +58,7 @@ export const ZoteroWidget = function ZoteroWidget() {
       .then(() => setConnState(false))
       .catch(err => debugConsole.error(err?.data?.message || err?.message || err))
       .finally(() => setShowUnlinkModal(false))
-  }, [runAsyncUnlink])
+  }, [runAsyncUnlink, setConnState])
 
   if (isCheckingConn) {
     return (
@@ -69,7 +69,7 @@ export const ZoteroWidget = function ZoteroWidget() {
 
         <div className="description-container">
           <div className="title-row">
-            <h4>GitHub</h4>
+            <h4>{t('zotero')}</h4>
           </div>
 
           <p className="small">
@@ -96,7 +96,7 @@ export const ZoteroWidget = function ZoteroWidget() {
             {t('zotero_sync_description', { appName })}
           </p>
 
-          {isErrorConnCheck && (
+          {(isErrorConnCheck && !needsRelink) && (
             <Notification
               type="error"
               content={t('problem_checking_connection_with_provider', { provider: t('zotero') })}
@@ -120,7 +120,7 @@ export const ZoteroWidget = function ZoteroWidget() {
             >
               {isUnlinking ? t('unlinking') : t('unlink')}
             </OLButton>
-          ) : isErrorConnCheck ? (
+          ) : isErrorConnCheck && !needsRelink ? (
             <OLButton
               variant="secondary"
               onClick={handleConnCheck}
