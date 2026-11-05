@@ -100,6 +100,10 @@ export const GitIntegrationWidget = function GitIntegrationWidget() {
           )}
         </ul>
 
+        <p className="small">
+          {t('your_git_access_info_review_comments_api')}
+        </p>
+
         <TokenTable
           tokens={tokens}
           onCreateToken={handleCreateToken}
