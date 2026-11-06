@@ -39,6 +39,21 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       /etc/nginx/nginx.conf \
       /etc/nginx/sites-enabled/default
 
+# Install oxipng
+ARG OXIPNG_VERSION=10.2.1
+ARG OXIPNG_AMD64_SHA256=4c3e7440c3ebf94b0d5a67d3add25b9a40897c7f14678ecdb5db3c7b77ff816f
+ARG OXIPNG_ARM64_SHA256=747d02dbcab66804fd2540c16f58bcbd0a2244abe0523e219da2fe8d48b7ec87
+RUN ARCH="$(dpkg --print-architecture)" \
+&&  case "$ARCH" in \
+      amd64) OXIPNG_SHA256="$OXIPNG_AMD64_SHA256" ;; \
+      arm64) OXIPNG_SHA256="$OXIPNG_ARM64_SHA256" ;; \
+      *) echo "Unsupported oxipng architecture: $ARCH" >&2; exit 1 ;; \
+    esac \
+&&  curl -fsSL -o /tmp/oxipng.deb "https://github.com/oxipng/oxipng/releases/download/v${OXIPNG_VERSION}/oxipng_${OXIPNG_VERSION}-1_${ARCH}.deb" \
+&&  echo "${OXIPNG_SHA256}  /tmp/oxipng.deb" | sha256sum -c - \
+&&  dpkg -i /tmp/oxipng.deb \
+&&  rm /tmp/oxipng.deb
+
 # Install TexLive
 # ---------------
 # CTAN mirrors occasionally fail, in that case install TexLive using a
