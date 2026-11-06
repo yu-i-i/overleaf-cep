@@ -62,11 +62,139 @@ describe('ThirdPartyIdentityManager', function () {
 
     ctx.ThirdPartyIdentityManager = (await import(modulePath)).default
   })
+
+  describe('login', function () {
+    it('replaces oidc.roles with null', async function (ctx) {
+      ctx.user.thirdPartyIdentifiers = [
+        {
+          externalUserId: ctx.externalUserId,
+          providerId: 'google',
+          externalData: { oidc: { roles: ['old1', 'old2'] } },
+        },
+      ]
+
+      ctx.User.findOne.returns({
+        exec: sinon.stub().resolves(ctx.user),
+      })
+
+      await ctx.ThirdPartyIdentityManager.promises.login(
+        'google',
+        ctx.externalUserId,
+        { oidc: { roles: null } }
+      )
+
+      const updateArg = ctx.User.findOneAndUpdate.getCall(0).args[1]
+      const updatedTpi = updateArg['thirdPartyIdentifiers.$']
+      expect(updatedTpi.externalData.oidc.roles).to.equal(null)
+    })
+
+    it('replaces oidc.roles with a smaller list encoded as a primitive', async function (ctx) {
+      ctx.user.thirdPartyIdentifiers = [
+        {
+          externalUserId: ctx.externalUserId,
+          providerId: 'google',
+          externalData: { oidc: { roles: ['a', 'b'] } },
+        },
+      ]
+
+      ctx.User.findOne.returns({
+        exec: sinon.stub().resolves(ctx.user),
+      })
+
+      await ctx.ThirdPartyIdentityManager.promises.login(
+        'google',
+        ctx.externalUserId,
+        { oidc: { roles: JSON.stringify(['a']) } }
+      )
+
+      const updateArg = ctx.User.findOneAndUpdate.getCall(0).args[1]
+      const updatedTpi = updateArg['thirdPartyIdentifiers.$']
+      expect(updatedTpi.externalData.oidc.roles).to.equal(JSON.stringify(['a']))
+    })
+  })
+
+
+  describe('login', function () {
+    it('populates externalData when existing externalData is null', async function (ctx) {
+      ctx.user.thirdPartyIdentifiers = [
+        {
+          externalUserId: ctx.externalUserId,
+          providerId: 'google',
+          externalData: null,
+        },
+      ]
+
+      ctx.User.findOne.returns({
+        exec: sinon.stub().resolves(ctx.user),
+      })
+
+      await ctx.ThirdPartyIdentityManager.promises.login(
+        'google',
+        ctx.externalUserId,
+        { oidc: { roles: JSON.stringify(['access-overleaf']) } }
+      )
+
+      const updateArg = ctx.User.findOneAndUpdate.getCall(0).args[1]
+      const updatedTpi = updateArg['thirdPartyIdentifiers.$']
+      expect(updatedTpi.externalData).to.deep.equal({
+        oidc: { roles: JSON.stringify(['access-overleaf']) },
+      })
+    })
+
+    it('replaces oidc.roles with null', async function (ctx) {
+      ctx.user.thirdPartyIdentifiers = [
+        {
+          externalUserId: ctx.externalUserId,
+          providerId: 'google',
+          externalData: { oidc: { roles: ['old1', 'old2'] } },
+        },
+      ]
+
+      ctx.User.findOne.returns({
+        exec: sinon.stub().resolves(ctx.user),
+      })
+
+      await ctx.ThirdPartyIdentityManager.promises.login(
+        'google',
+        ctx.externalUserId,
+        { oidc: { roles: null } }
+      )
+
+      const updateArg = ctx.User.findOneAndUpdate.getCall(0).args[1]
+      const updatedTpi = updateArg['thirdPartyIdentifiers.$']
+      expect(updatedTpi.externalData.oidc.roles).to.equal(null)
+    })
+
+    it('replaces oidc.roles with a smaller list encoded as a primitive', async function (ctx) {
+      ctx.user.thirdPartyIdentifiers = [
+        {
+          externalUserId: ctx.externalUserId,
+          providerId: 'google',
+          externalData: { oidc: { roles: ['a', 'b'] } },
+        },
+      ]
+
+      ctx.User.findOne.returns({
+        exec: sinon.stub().resolves(ctx.user),
+      })
+
+      await ctx.ThirdPartyIdentityManager.promises.login(
+        'google',
+        ctx.externalUserId,
+        { oidc: { roles: JSON.stringify(['a']) } }
+      )
+
+      const updateArg = ctx.User.findOneAndUpdate.getCall(0).args[1]
+      const updatedTpi = updateArg['thirdPartyIdentifiers.$']
+      expect(updatedTpi.externalData.oidc.roles).to.equal(JSON.stringify(['a']))
+    })
+  })
+
   describe('getUser', function () {
     it('should throw an error when missing providerId or externalUserId', async function (ctx) {
       await expect(
         ctx.ThirdPartyIdentityManager.promises.getUser(undefined, undefined)
-      ).to.be.rejectedWith(OError, `invalid SSO arguments`)
+      ).to.be.rejectedWith(`invalid SSO arguments`)
     })
 
     describe('when user linked', function () {

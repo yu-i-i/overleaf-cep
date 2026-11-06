@@ -17,7 +17,13 @@ type UserListTableRowProps = {
 }
 function UserListTableRow({ user, selected, filter }: UserListTableRowProps) {
   const fullName = getUserName(user)
-  const rowClassName = `${selected ? 'table-active' : ''} ${user.isAdmin ? 'dash-row-admin' : ''}`.trim()
+  const rowClassName = [
+    selected ? 'table-active' : '',
+    user.isAdmin ? 'dash-row-admin' : '',
+    filter === 'all' && user.isGuestUser ? 'dash-row-guest' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
   const { showProjects } = useUsersPageContext()
 
   return (
