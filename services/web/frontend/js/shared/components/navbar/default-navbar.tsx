@@ -30,6 +30,7 @@ function DefaultNavbar(
     canDisplaySplitTestMenu,
     canDisplaySurveyMenu,
     canDisplayScriptLogMenu,
+    canDisplayInstanceStats,
     enableUpgradeButton,
     suppressNavbarRight,
     suppressNavContentLinks,
@@ -117,6 +118,7 @@ function DefaultNavbar(
                       canDisplaySplitTestMenu={canDisplaySplitTestMenu}
                       canDisplaySurveyMenu={canDisplaySurveyMenu}
                       canDisplayScriptLogMenu={canDisplayScriptLogMenu}
+                      canDisplayInstanceStats={canDisplayInstanceStats}
                       adminUrl={adminUrl}
                     />
                   ) : null}
