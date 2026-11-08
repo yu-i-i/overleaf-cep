@@ -67,7 +67,7 @@ function WelcomeMessageCreateNewProjectDropdown({
     useFeatureFlag('import-markdown') &&
     getMeta('ol-ExposedSettings').enablePandocConversions
 
-  const { isOverleaf, githubSyncEnabled, gitlabSyncEnabled } = getMeta('ol-ExposedSettings')
+  const { isOverleaf, githubSyncEnabled, gitlabSyncEnabled, giteaSyncEnabled } = getMeta('ol-ExposedSettings')
 
   const handleDropdownItemClick = useCallback(
     (
@@ -198,6 +198,23 @@ function WelcomeMessageCreateNewProjectDropdown({
               tabIndex={-1}
             >
               {t('import_from_gitlab')}
+            </DropdownItem>
+          </li>
+        )}
+        {(isOverleaf || giteaSyncEnabled) && (
+          <li role="none">
+            <DropdownItem
+              as="button"
+              onClick={e =>
+                handleDropdownItemClick(
+                  e,
+                  'import_from_gitea',
+                  'import-from-gitea'
+                )
+              }
+              tabIndex={-1}
+            >
+              {t('import_from_gitea')}
             </DropdownItem>
           </li>
         )}

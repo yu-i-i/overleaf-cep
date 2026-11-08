@@ -64,6 +64,8 @@ const Features = {
         return Boolean(Settings.enableGithubSync)
       case 'gitlab-sync':
         return Boolean(Settings.enableGitLabSync)
+      case 'gitea-sync':
+        return Boolean(Settings.enableGiteaSync)
       case 'git-bridge':
         return Boolean(Settings.enableGitBridge)
       case 'oauth':

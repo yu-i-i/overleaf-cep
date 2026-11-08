@@ -71,7 +71,7 @@ export const RailLayout = () => {
   const { features } = useProjectContext()
   const { isRestrictedTokenMember } = useEditorContext()
   const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
-  const { isOverleaf, githubSyncEnabled, gitlabSyncEnabled, zoteroEnabled } = getMeta('ol-ExposedSettings')
+  const { isOverleaf, githubSyncEnabled, gitlabSyncEnabled, giteaSyncEnabled, zoteroEnabled } = getMeta('ol-ExposedSettings')
 
   const { view, setSettingsShown, focusMode } = useLayoutContext()
 
@@ -119,7 +119,7 @@ export const RailLayout = () => {
         icon: 'integration_instructions',
         title: t('integrations'),
         component: <IntegrationsPanel />,
-        hide: !isOverleaf && !gitBridgeEnabled && !githubSyncEnabled && !gitlabSyncEnabled && !zoteroEnabled,
+        hide: !isOverleaf && !gitBridgeEnabled && !githubSyncEnabled && !gitlabSyncEnabled && !giteaSyncEnabled && !zoteroEnabled,
       },
       {
         key: 'review-panel',
@@ -150,6 +150,7 @@ export const RailLayout = () => {
       gitBridgeEnabled,
       githubSyncEnabled,
       gitlabSyncEnabled,
+      giteaSyncEnabled,
       zoteroEnabled,
     ]
   )

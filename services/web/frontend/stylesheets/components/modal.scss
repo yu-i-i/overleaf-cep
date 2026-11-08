@@ -126,6 +126,9 @@
         background-color: var(--bg-disabled-themed);
       }
     }
+    .form-check-label-description.form-text {
+      color: var(--content-secondary-themed);
+    }
     button.btn-link, a {
       color: var(--link-ui-themed) !important;
       &:hover {

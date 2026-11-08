@@ -20,7 +20,8 @@ export interface Meta {
           | 'upload'
           | 'git-bridge'
           | 'github'
-		  | 'gitlab'
+          | 'gitlab'
+          | 'gitea'
           | 'history-resync'
           | 'history-migration'
       }

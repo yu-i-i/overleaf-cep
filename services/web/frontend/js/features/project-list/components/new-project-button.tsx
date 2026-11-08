@@ -58,7 +58,7 @@ function NewProjectButton({
   align = 'start',
 }: NewProjectButtonProps) {
   const { t } = useTranslation()
-  const { templateLinks, githubSyncEnabled, gitlabSyncEnabled } = getMeta('ol-ExposedSettings')
+  const { templateLinks, githubSyncEnabled, gitlabSyncEnabled, giteaSyncEnabled } = getMeta('ol-ExposedSettings')
   const [modal, setModal] =
     useState<Nullable<NewProjectButtonModalVariant>>(null)
   const portalTemplates = getMeta('ol-portalTemplates') || []
@@ -172,6 +172,10 @@ function NewProjectButton({
     'importProjectFromGitLabMenu'
   )
 
+  const [importProjectFromGiteaMenu] = !giteaSyncEnabled ? [] : importOverleafModules(
+    'importProjectFromGiteaMenu'
+  )
+
   const ImportProjectFromGithubMenu: JSXElementConstructor<{
     onClick: (e: React.MouseEvent) => void
   }> = importProjectFromGithubMenu?.import.default
@@ -179,6 +183,10 @@ function NewProjectButton({
   const ImportProjectFromGitLabMenu: JSXElementConstructor<{
 	onClick: (e: React.MouseEvent) => void
   }> = importProjectFromGitLabMenu?.import.default
+
+  const ImportProjectFromGiteaMenu: JSXElementConstructor<{
+	onClick: (e: React.MouseEvent) => void
+  }> = importProjectFromGiteaMenu?.import.default
 
   return (
     <>
@@ -274,6 +282,18 @@ function NewProjectButton({
                     handleModalMenuClick(e, {
                       modalVariant: 'import_from_gitlab',
                       dropdownMenuEvent: 'import-from-gitlab',
+                    })
+                  }
+                />
+              </li>
+            )}
+            {ImportProjectFromGiteaMenu && (
+              <li role="none">
+                <ImportProjectFromGiteaMenu
+                  onClick={e =>
+                    handleModalMenuClick(e, {
+                      modalVariant: 'import_from_gitea',
+                      dropdownMenuEvent: 'import-from-gitea',
                     })
                   }
                 />
