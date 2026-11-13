@@ -3624,7 +3624,7 @@
   "field_is_required": "__a__ is required",
   "generate": "Generate",
   "import_failed": "Import failed",
-  "import_from_orcid_org": "Import from ORCID.org",
+  "import_from_provider": "Import from __provider__",
   "invalid_doi_format": "Invalid DOI format (expected 10.xxxx/…)",
   "invalid_response_from_server": "Invalid response from server",
   "load_works": "Load works",

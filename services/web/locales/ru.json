@@ -976,7 +976,7 @@
   "field_is_required": "Поле __a__ обязательно",
   "generate": "Генерировать",
   "import_failed": "Ошибка импорта",
-  "import_from_orcid_org": "Импортировать из ORCID.org",
+  "import_from_provider": "Импортировать из __provider__",
   "invalid_doi_format": "Неверный формат DOI (ожидается 10.xxxx/…)",
   "invalid_response_from_server": "Некорректный ответ сервера",
   "load_works": "Загрузить публикации",

@@ -1,9 +1,8 @@
 /** Name-list editor with local invalid drafts and stable focus behavior. */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import OLButton from '@/shared/components/ol/ol-button'
 import OLIconButton from '@/shared/components/ol/ol-icon-button'
-import OLTooltip from '@/shared/components/ol/ol-tooltip'
 import OLFormControl from '@/shared/components/ol/ol-form-control'
 import OLFormText from '@/shared/components/ol/ol-form-text'
 import BibEntryFeedback from './bib-entry-feedback'
@@ -21,14 +20,6 @@ import {
 import type { BibAuthorDraft } from '../utils/bib-author-draft'
 import type { BibHistoryUserEvent } from '../context/bib-editor-context'
 
-/** Resize an auto-growing field with a small height allowance. */
-export const resizeTextarea = (textarea: HTMLTextAreaElement | null) => {
-  if (!textarea) return
-  textarea.style.height = 'auto'
-  textarea.style.height = `${textarea.scrollHeight + 4}px`
-}
-
-
 /**
  * Name-list inputs and the raw text editor share one draft model. An invalid name
  * never blocks writes of valid neighboring rows: each row retains its own last
@@ -41,6 +32,8 @@ export default function BibNameField({
   initialDraft,
   onChange,
   error,
+  hideBraceErrors,
+  onDraggingChange,
   idPrefix = '',
 }: {
   fieldName: string
@@ -52,6 +45,8 @@ export default function BibNameField({
     fieldIsValid?: boolean,
     draft?: BibAuthorDraft
   ) => void
+  hideBraceErrors: boolean
+  onDraggingChange: (dragging: boolean) => void
   error?: boolean
   idPrefix?: string
 }) {
@@ -59,6 +54,15 @@ export default function BibNameField({
   const [nameDraft, setNameDraft] = useState<BibAuthorDraft>(
     () => initialDraft ?? createAuthorDraft(value)
   )
+  const press = useRef<{ index: number; pointer: number; y: number; centerOffset: number; textOffset: number } | null>(null)
+  const [drag, setDrag] = useState<{ from: number; to: number; x: number; y: number } | null>(null)
+  const dragging = drag !== null
+  useLayoutEffect(() => {
+    if (!dragging) return
+    onDraggingChange(true)
+    return () => onDraggingChange(false)
+  }, [dragging, onDraggingChange])
+
   const nameDraftRef = useRef(nameDraft)
   // The parent supplies canonical BibTeX field text. Track the canonical value
   // of our last edit so its echo is not mistaken for an external source change.
@@ -74,9 +78,7 @@ export default function BibNameField({
   // Match the label target in both row and textarea modes.
   const inputId = (index: number) => `${idPrefix}${fieldName}${index ? `-${index}` : ''}`
 
-  const handleTextareaRef = useCallback((element: HTMLInputElement | null) => {
-    const textarea = element as HTMLTextAreaElement | null
-    resizeTextarea(textarea)
+  const handleTextareaMount = useCallback((textarea: HTMLInputElement | null) => {
     if (!textarea || !focusTextEndRef.current) return
     focusTextEndRef.current = false
     textarea.focus()
@@ -88,6 +90,8 @@ export default function BibNameField({
   // different source value replaces the local name draft.
   useEffect(() => {
     if (value === expectedValueRef.current) return
+    press.current = null
+    setDrag(null)
     const next = createAuthorDraft(value)
     if (next.mode === 'rows') {
       rowIdsRef.current = next.rows.map((_, index) =>
@@ -132,11 +136,10 @@ export default function BibNameField({
     })
   }
 
-  const addName = () => {
+  const addName = (after: number) => {
     const current = nameDraftRef.current
     if (current.mode !== 'rows') return
-    const filled = current.rows.filter(row => row.value.trim())
-    if (filled.length >= MAX_AUTHOR_ROWS) {
+    if (current.rows.length >= MAX_AUTHOR_ROWS) {
       // Mode is a presentation choice, not a validation result. Retain the
       // writable projection while showing the entire (possibly invalid) text.
       focusNameIndexRef.current = null
@@ -154,16 +157,10 @@ export default function BibNameField({
     }
 
     const rows = current.rows.slice()
-    let index = rows.findIndex(row => !row.value.trim())
-    if (index === -1) {
-      index = rows.length
-      rows.push({ value: '', saved: '' })
-      rowIdsRef.current.push(nextRowIdRef.current++)
-      focusNameIndexRef.current = index
-    } else {
-      focusNameIndexRef.current = null
-      document.getElementById(inputId(index))?.focus()
-    }
+    const index = after + 1
+    rows.splice(index, 0, { value: '', saved: '' })
+    rowIdsRef.current.splice(index, 0, nextRowIdRef.current++)
+    focusNameIndexRef.current = index
     update({ mode: 'rows', rows }, 'input.complete')
   }
 
@@ -181,21 +178,37 @@ export default function BibNameField({
     }, 'input.complete')
   }
 
-  const moveName = (index: number, direction: -1 | 1) => {
+  const moveName = (index: number, target: number) => {
     const current = nameDraftRef.current
-    if (current.mode !== 'rows') return
-    const target = index + direction
-    if (target < 0 || target >= current.rows.length) return
+    if (current.mode !== 'rows' || index < 0 || index === target ||
+        target < 0 || target >= current.rows.length) return
     const rows = current.rows.slice()
-    const row = rows[index]
-    rows[index] = rows[target]
-    rows[target] = row
-    const rowIds = rowIdsRef.current.slice()
-    const rowId = rowIds[index]
-    rowIds[index] = rowIds[target]
-    rowIds[target] = rowId
-    rowIdsRef.current = rowIds
+    const [row] = rows.splice(index, 1)
+    rows.splice(target, 0, row)
+    const ids = rowIdsRef.current
+    const [id] = ids.splice(index, 1)
+    ids.splice(target, 0, id)
     update({ mode: 'rows', rows }, 'input.complete')
+  }
+
+  function endDrag() {
+    press.current = null
+    setDrag(null)
+  }
+
+  function targetIndex(handle: HTMLElement, centerY: number) {
+    const list = handle.closest('.bibtex-name-rows')!
+    let nearest = 0
+    let distance = Infinity
+    list.querySelectorAll('.bibtex-name-handle').forEach((slot, index) => {
+      const rect = slot.getBoundingClientRect()
+      const delta = Math.abs(centerY - (rect.top + rect.height / 2))
+      if (delta < distance) {
+        nearest = index
+        distance = delta
+      }
+    })
+    return nearest
   }
 
   if (nameDraft.mode === 'text') {
@@ -203,9 +216,9 @@ export default function BibNameField({
       <>
         <OLFormControl
           as="textarea"
-          ref={handleTextareaRef}
+          ref={handleTextareaMount}
           id={`${idPrefix}${fieldName}`}
-          className={`bibtex-name-textarea bibtex-form-input ${error || !isAuthorDraftValid(nameDraft) ? 'is-invalid' : ''}`}
+          className={`bibtex-auto-textarea bibtex-name-textarea bibtex-form-input ${error || (!hideBraceErrors && !isAuthorDraftValid(nameDraft)) ? 'is-invalid' : ''}`}
           maxLength="4096"
           autoComplete="off"
           value={nameDraft.value}
@@ -219,9 +232,8 @@ export default function BibNameField({
           }}
           placeholder="Doe, Jane and Mustermann, Max"
           rows={1}
-          onInput={event => resizeTextarea(event.currentTarget)}
         />
-        {!isAuthorDraftValid(nameDraft) && (
+        {!hideBraceErrors && !isAuthorDraftValid(nameDraft) && (
           <BibEntryFeedback
             message={t('curly_braces_must_be_balanced')}
           />
@@ -233,78 +245,124 @@ export default function BibNameField({
 
   return (
     <div className="bibtex-form-names">
-      {nameDraft.rows.map((name, index) => (
-        <div key={rowIdsRef.current[index]} className="bibtex-field-with-actions">
-          <OLFormControl
-            ref={
-              focusNameIndexRef.current === index
-                ? element => {
-                    if (!element) return
-                    focusNameIndexRef.current = null
-                    element.focus()
-                  }
-                : undefined
-            }
-            className={`bibtex-form-input ${error || !hasBalancedCurlyBraces(name.value) ? 'is-invalid' : ''}`}
-            maxLength="128"
-            type="text"
-            id={inputId(index)}
-            value={name.value}
-            onChange={event => setNameAt(index, event.target.value)}
-            placeholder="Doe, Jane"
-          />
+      <div className="bibtex-name-rows">
+        {nameDraft.rows.map((name, index) => {
+          // Preview the name order in the existing input slots.
+          let displayed = name
+          if (drag) {
+            if (index === drag.to) displayed = { value: '', saved: '' }
+            else if (index >= drag.from && index < drag.to) displayed = nameDraft.rows[index + 1]
+            else if (index <= drag.from && index > drag.to) displayed = nameDraft.rows[index - 1]
+          }
+          return (
+            <div key={rowIdsRef.current[index]} className="bibtex-field-with-actions">
+              <OLFormControl
+                ref={
+                  focusNameIndexRef.current === index
+                    ? element => {
+                        if (!element) return
+                        focusNameIndexRef.current = null
+                        element.focus()
+                      }
+                    : undefined
+                }
+                className={`bibtex-form-input ${error || (!hideBraceErrors && !hasBalancedCurlyBraces(displayed.value)) ? 'is-invalid' : ''}`}
+                maxLength="128"
+                type="text"
+                id={inputId(index)}
+                value={displayed.value}
+                onChange={event => setNameAt(index, event.target.value)}
+                placeholder={drag?.to === index ? '' : 'Doe, Jane'}
+                prepend={
+                  <OLIconButton
+                    type="button"
+                    icon="drag_indicator"
+                    className="bibtex-name-handle"
+                    variant="ghost"
+                    size="sm"
+                    accessibilityLabel={`${t('move_up')} / ${t('move_down')}: ${name.value}`}
+                    disabled={nameDraft.rows.length < 2 || !name.value.trim()}
+                    onPointerDown={event => {
+                      if (!event.isPrimary || event.button !== 0 || event.currentTarget.matches(':disabled')) return
+                      const handle = event.currentTarget
+                      const rect = handle.getBoundingClientRect()
+                      const input = handle.closest('.bibtex-field-with-actions')!.querySelector('input')!
+                      const textLeft = input.getBoundingClientRect().left + input.clientLeft +
+                        parseFloat(getComputedStyle(input).paddingLeft)
+                      press.current = { index, pointer: event.pointerId, y: event.clientY,
+                        centerOffset: rect.top + rect.height / 2 - event.clientY,
+                        textOffset: textLeft - event.clientX }
+                      handle.setPointerCapture(event.pointerId)
+                    }}
+                    onPointerMove={event => {
+                      const start = press.current
+                      if (!start || start.index !== index || start.pointer !== event.pointerId) return
+                      if (!drag && Math.abs(event.clientY - start.y) < 3) return
+                      const y = event.clientY + start.centerOffset
+                      setDrag({ from: index, to: targetIndex(event.currentTarget, y),
+                        x: event.clientX + start.textOffset, y })
+                    }}
+                    onPointerUp={event => {
+                      const start = press.current
+                      if (!start || start.pointer !== event.pointerId) return
+                      const list = event.currentTarget.closest('.bibtex-name-rows')!
+                      if (drag && list.contains(document.elementFromPoint(event.clientX, event.clientY))) {
+                        moveName(index, targetIndex(event.currentTarget, event.clientY + start.centerOffset))
+                      }
+                      endDrag()
+                    }}
+                    onLostPointerCapture={endDrag}
+                    onPointerCancel={endDrag}
+                    onKeyDown={event => {
+                      if (event.key === 'Escape') endDrag()
+                      if (press.current || !['ArrowUp', 'ArrowDown'].includes(event.key)) return
+                      event.preventDefault()
+                      moveName(index, index + (event.key === 'ArrowUp' ? -1 : 1))
+                    }}
+                  />
+                }
+                append={
+                  <OLIconButton
+                    type="button"
+                    icon="add"
+                    className="bibtex-name-add"
+                    variant="ghost"
+                    size="sm"
+                    accessibilityLabel={t('add_name', { name: fieldName })}
+                    onMouseDown={event => event.preventDefault()}
+                    onClick={() => addName(index)}
+                  />
+                }
+              />
 
-          {!hasBalancedCurlyBraces(name.value) && (
-            <BibEntryFeedback message={t('curly_braces_must_be_balanced')} />
-          )}
+              {!hideBraceErrors && !hasBalancedCurlyBraces(displayed.value) && (
+                <BibEntryFeedback message={t('curly_braces_must_be_balanced')} />
+              )}
 
-          <div className="bibtex-form-actions">
-            <OLIconButton
-              icon="arrow_upward"
-              variant="ghost"
-              accessibilityLabel={t('move_up')}
-              onMouseDown={event => event.preventDefault()}
-              onClick={() => moveName(index, -1)}
-              disabled={index === 0}
-            />
-            <OLIconButton
-              icon="arrow_downward"
-              variant="ghost"
-              accessibilityLabel={t('move_down')}
-              onMouseDown={event => event.preventDefault()}
-              onClick={() => moveName(index, +1)}
-              disabled={index === nameDraft.rows.length - 1}
-            />
-            <OLIconButton
-              icon="close"
-              unfilled
-              variant="ghost"
-              accessibilityLabel={fieldName === 'author'
-                ? t('remove_author')
-                : t('remove_field', { a: fieldLabel(fieldName) })}
-              onMouseDown={event => event.preventDefault()}
-              onClick={() => removeName(index)}
-              disabled={nameDraft.rows.length === 1 && !name.value.trim()}
-            />
-          </div>
-        </div>
-      ))}
-      <OLTooltip
-        key={`tooltip-add-${fieldName}`}
-        id={`${idPrefix}tooltip-add-${fieldName}`}
-        description={t('add_name', { name: fieldName })}
-        overlayProps={{ placement: 'top', trigger: ['hover', 'focus'] }}
-      >
-        <OLButton
-          leadingIcon="add"
-          variant="secondary"
-          size="sm"
-          className="bibtex-name-add"
-          onMouseDown={event => event.preventDefault()}
-          onClick={addName}
-          aria-label={t('add_name', { name: fieldName })}
-        />
-      </OLTooltip>
+              <div className="bibtex-form-actions">
+                <OLIconButton
+                  icon="close"
+                  unfilled
+                  variant="ghost"
+                  accessibilityLabel={fieldName === 'author'
+                    ? t('remove_author')
+                    : t('remove_field', { a: fieldLabel(fieldName) })}
+                  onMouseDown={event => event.preventDefault()}
+                  onClick={() => removeName(index)}
+                  disabled={nameDraft.rows.length === 1 && !name.value.trim()}
+                />
+              </div>
+            </div>
+          )
+        })}
+        {drag && createPortal(
+          <span aria-hidden="true" className="bibtex-dragged-name"
+            style={{ left: drag.x, top: drag.y }}>
+            {nameDraft.rows[drag.from]?.value}
+          </span>,
+          document.body
+        )}
+      </div>
     </div>
   )
 }

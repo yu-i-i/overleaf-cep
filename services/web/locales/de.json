@@ -2008,7 +2008,7 @@
   "field_is_required": "__a__ ist erforderlich",
   "generate": "Generieren",
   "import_failed": "Import fehlgeschlagen",
-  "import_from_orcid_org": "Von ORCID.org importieren",
+  "import_from_provider": "Von __provider__ importieren",
   "invalid_doi_format": "Ungültiges DOI-Format (erwartet: 10.xxxx/…)",
   "invalid_response_from_server": "Ungültige Antwort vom Server",
   "load_works": "Publikationen laden",

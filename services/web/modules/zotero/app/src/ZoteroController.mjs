@@ -158,6 +158,25 @@ async function getCollections(req, res) {
   }
 }
 
+async function exportReferences(req, res) {
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  const { group_id: groupId, collection_key: collectionKey, format } = req.query
+  res.set('Cache-Control', 'private, no-store')
+  if (!['bibtex', 'biblatex'].includes(format) ||
+      (groupId !== undefined && (typeof groupId !== 'string' || !/^\d+$/.test(groupId)))) {
+    return res.status(400).json({ message: 'Invalid Zotero export options' })
+  }
+
+  try {
+    const bibliography = await ZoteroApiClient.getLibraryBibtex(userId, groupId, format, collectionKey)
+    return res.json({ bibliography })
+  } catch (err) {
+    const info = OError.getFullInfo(err)
+    logger.error({ info }, 'failed to export Zotero references')
+    return res.status(info?.status || 500).json({ message: 'Failed to export Zotero references' })
+  }
+}
+
 /**
  * DELETE /user/zotero
  * Unlinks the user's Zotero account.
@@ -182,5 +201,6 @@ export default {
   getConnectionStatus,
   getGroups,
   getCollections,
+  exportReferences,
   unlink
 }

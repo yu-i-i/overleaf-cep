@@ -57,6 +57,7 @@ export default function BibOrcidImportModal({ show, onHide }: Props) {
 
   return (
     <OLModal
+      backdrop="static"
       data-bib-editor-dialog
       show={show}
       onHide={handleClose}
@@ -77,10 +78,10 @@ export default function BibOrcidImportModal({ show, onHide }: Props) {
             >
               {t('back')}
             </OLButton>
-            <OLModalTitle className="visually-hidden">{t('import_from_orcid_org')}</OLModalTitle>
+            <OLModalTitle className="visually-hidden">{t('import_from_provider', { provider: 'ORCID.org' })}</OLModalTitle>
           </>
         ) : (
-          <OLModalTitle>{t('import_from_orcid_org')}</OLModalTitle>
+          <OLModalTitle>{t('import_from_provider', { provider: 'ORCID.org' })}</OLModalTitle>
         )}
       </OLModalHeader>
 

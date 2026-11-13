@@ -2897,7 +2897,7 @@
   "field_is_required": "",
   "generate": "",
   "import_failed": "",
-  "import_from_orcid_org": "",
+  "import_from_provider": "",
   "invalid_doi_format": "",
   "invalid_response_from_server": "",
   "load_works": "",
