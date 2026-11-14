@@ -9,6 +9,20 @@ server {
 		internal;
 	}
 
+	# 翻訳の進捗を蓄積せず転送します。認証・認可は web 側のルーターで確認します。
+	location ~ "^/project/[0-9a-fA-F]{24}/local-llm/translate$" {
+		proxy_pass http://127.0.0.1:4000;
+		proxy_http_version 1.1;
+		proxy_set_header Connection "";
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-Host $host;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_buffering off;
+		proxy_cache off;
+		proxy_read_timeout 10m;
+		proxy_send_timeout 10m;
+	}
+
 	location / {
 		proxy_pass http://127.0.0.1:4000;
 		proxy_http_version 1.1;
