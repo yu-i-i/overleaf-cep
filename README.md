@@ -1,3 +1,7 @@
+## このプロジェクトについて
+
+本プロジェクトは、[Overleaf](https://github.com/overleaf/overleaf) と [Overleaf CE+](https://github.com/yu-i-i/overleaf-cep) を基に、研究室での利用に合わせてカスタマイズした fork です。元の開発者・貢献者の皆さまの成果に感謝します。
+
 <h1 align="center">
   <br>
   <a href="https://www.overleaf.com"><img src="doc/logo.png" alt="Overleaf" width="300"></a>
