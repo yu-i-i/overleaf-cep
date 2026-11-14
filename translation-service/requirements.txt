@@ -1,0 +1,4 @@
+# 翻訳サービスの依存関係（固定バージョン・pip install 用）
+fastapi==0.115.12
+httpx==0.28.1
+uvicorn[standard]==0.34.2
