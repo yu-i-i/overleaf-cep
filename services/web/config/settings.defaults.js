@@ -1054,7 +1054,10 @@ module.exports = {
     ],
     sourceEditorToolbarStartButtons: [],
     sourceEditorToolbarButtonGroups: [],
-    sourceEditorToolbarComponents: [],
+    // 研究室向けの翻訳パネルを、既存のツールバー拡張点へ登録します。
+    sourceEditorToolbarComponents: [
+      '../../../../../modules/local-llm-translation/frontend/js/TranslationToolbar',
+    ],
     sourceEditorToolbarEndButtons: [],
     rootContextProviders: [
       Path.resolve(
@@ -1221,6 +1224,7 @@ module.exports = {
     'github-sync',
     'zotero',
     'bib-editor',
+    'local-llm-translation',
   ],
   viewIncludes: {},
 
