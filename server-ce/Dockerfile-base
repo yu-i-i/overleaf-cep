@@ -47,8 +47,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # # docker build \
 #     --build-arg TEXLIVE_MIRROR=https://ctan.crest.fr/tex-archive/systems/texlive/tlnet \
 #     -f Dockerfile-base -t sharelatex/sharelatex-base .
-ARG TEXLIVE_MIRROR=https://mirror.ox.ac.uk/sites/ctan.org/systems/texlive/tlnet
+# 研究室でのビルドは国内の JAIST ミラーを既定にします。
+# 接続先は --build-arg TEXLIVE_MIRROR=... で変更できます。
+ARG TEXLIVE_MIRROR=https://ftp.jaist.ac.jp/pub/CTAN/systems/texlive/tlnet
 
+# 日本語クラス・フォントを含むフル構成を導入します。
+# 文書・ソースも含むため、初回ビルド時間とイメージサイズは増加します。
 RUN mkdir /install-tl-unx \
 &&  wget --quiet https://tug.org/texlive/files/texlive.asc \
 &&  gpg --import texlive.asc \
@@ -61,9 +65,9 @@ RUN mkdir /install-tl-unx \
 &&  tar -xz -C /install-tl-unx --strip-components=1 -f install-tl-unx.tar.gz \
 &&  rm install-tl-unx.tar.gz* \
 &&  echo "tlpdbopt_autobackup 0" >> /install-tl-unx/texlive.profile \
-&&  echo "tlpdbopt_install_docfiles 0" >> /install-tl-unx/texlive.profile \
-&&  echo "tlpdbopt_install_srcfiles 0" >> /install-tl-unx/texlive.profile \
-&&  echo "selected_scheme scheme-basic" >> /install-tl-unx/texlive.profile \
+&&  echo "tlpdbopt_install_docfiles 1" >> /install-tl-unx/texlive.profile \
+&&  echo "tlpdbopt_install_srcfiles 1" >> /install-tl-unx/texlive.profile \
+&&  echo "selected_scheme scheme-full" >> /install-tl-unx/texlive.profile \
     \
 &&  /install-tl-unx/install-tl \
       -profile /install-tl-unx/texlive.profile \

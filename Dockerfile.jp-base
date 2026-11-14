@@ -1,0 +1,40 @@
+# 日本語 LaTeX 用のベースイメージです。
+# ~/overleaf の a17f094（Shunsuke Ito による実装）を基にしています。
+# 先にリポジトリのルートで土台を作成してください。
+# docker build -f server-ce/Dockerfile-base -t local/overleaf-base:latest .
+# docker build -f Dockerfile.jp-base -t local/overleaf-ja-base:latest .
+
+ARG OVERLEAF_BASE_IMAGE=local/overleaf-base:latest
+FROM ${OVERLEAF_BASE_IMAGE}
+
+# FROM より後で宣言し、RUN からビルド引数を参照できるようにします。
+# 空の場合は導入済み TeX Live の年から取得先を選びます。
+# 年をまたぐ移行期や独自ミラーを使う場合は、対応する取得先を指定してください。
+ARG TEXLIVE_MIRROR=""
+
+# tlmgr のリビジョンの日付ではなく、TeX Live 本体のリリース年を取得します。
+# 年が取得できなければ、不正な URL で更新を続けずに失敗させます。
+# 過年度版は当該年の最終アーカイブを使い、異なる年のパッケージ混在を避けます。
+RUN set -eu; \
+    texlive_version="$(tlmgr --version)"; \
+    texlive_year="$(printf '%s\n' "$texlive_version" | sed -n 's/^TeX Live .* version \([0-9][0-9][0-9][0-9]\)$/\1/p')"; \
+    case "$texlive_year" in \
+      [0-9][0-9][0-9][0-9]) ;; \
+      *) echo "TeX Live のリリース年を取得できませんでした" >&2; exit 1 ;; \
+    esac; \
+    if [ -n "$TEXLIVE_MIRROR" ]; then \
+      repository="$TEXLIVE_MIRROR"; \
+    elif [ "$texlive_year" -lt "$(date -u +%Y)" ]; then \
+      repository="https://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${texlive_year}/tlnet-final"; \
+    else \
+      repository="https://ftp.jaist.ac.jp/pub/CTAN/systems/texlive/tlnet"; \
+    fi; \
+    tlmgr option repository "$repository"; \
+    tlmgr update --self; \
+    tlmgr install collection-latexrecommended collection-fontsrecommended \
+      luatex bxjscls jlreq luatexja fontspec haranoaji ipaex; \
+    tlmgr path add
+
+# scheme-full の土台でも、必要な日本語クラスとフォントを明示しておくことで、
+# OVERLEAF_BASE_IMAGE を最小構成のイメージに変えた場合にも導入対象が分かります。
+# 書体のキャッシュはコンパイル時に Overleaf の TEXMFVAR 以下に作成されます。
