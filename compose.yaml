@@ -1,0 +1,123 @@
+# ローカル セルフホスト用の Compose 定義です（公式開発用 docker-compose.yml とは別物）。
+#
+# 起動:  ./scripts/build-images.sh
+#        docker compose -f compose.yaml up -d
+#
+# 構成:  Overleaf(sharelatex) / MongoDB 8 (replica set) / Redis 7.4 / 翻訳サービス
+# 公開:  既定では Overleaf だけをホストの loopback に公開します。
+# 設定:  .env（.env.example をコピーして作成）。秘密値は .env のみ。
+name: overleaf-iisec
+
+services:
+  # Overleaf 本体（日本語対応ベースイメージ + このソースの CE アプリ）。
+  sharelatex:
+    image: local/overleaf-iisec:latest
+    build:
+      context: .
+      dockerfile: server-ce/Dockerfile
+      args:
+        OVERLEAF_BASE_TAG: local/overleaf-iisec-ja-base:latest
+    restart: unless-stopped
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      translation-service:
+        condition: service_healthy
+    ports:
+      - "${OVERLEAF_LISTEN_IP:-127.0.0.1}:${OVERLEAF_PORT:-8080}:80"
+    # セッション中の編集内容を flush する時間を確保するため、停止猶予を長めにします。
+    stop_grace_period: 60s
+    volumes:
+      - overleaf_data:/var/lib/overleaf
+    environment:
+      OVERLEAF_APP_NAME: Overleaf CE+ (Japanese + Local LLM)
+      OVERLEAF_SITE_URL: ${OVERLEAF_SITE_URL:-http://localhost:8080}
+      OVERLEAF_ADMIN_EMAIL: ${OVERLEAF_ADMIN_EMAIL:-admin@example.com}
+      OVERLEAF_INVITE_TOKEN_SECRET: ${OVERLEAF_INVITE_TOKEN_SECRET:?Set OVERLEAF_INVITE_TOKEN_SECRET in .env}
+      OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex?replicaSet=overleaf
+      OVERLEAF_REDIS_HOST: redis
+      REDIS_HOST: redis
+      # LuaTeX/fontspec の実行時フォントキャッシュは、root 所有の TeX Live システム
+      # 領域ではなく、www-data 所有の永続 volume 内へ置きます（再起動後も再利用可）。
+      TEXMFVAR: /var/lib/overleaf/data/cache/texmf-var
+      TEXMFCACHE: /var/lib/overleaf/data/cache/texmf-var
+      # CE+ の自己登録は明示的に有効にした場合だけ許可します。
+      OVERLEAF_ENABLE_REGISTRATION_PAGE: ${OVERLEAF_ENABLE_REGISTRATION_PAGE:-false}
+      EMAIL_CONFIRMATION_DISABLED: "true"
+      ENABLE_CONVERSIONS: "true"
+      # CE モジュール（local-llm-translation）が翻訳サービスへ接続する内部 URL。
+      LOCAL_LLM_SERVICE_URL: http://translation-service:8000
+
+  # Overleaf が要求する単一ノードの MongoDB replica set。
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    command: ["mongod", "--replSet", "overleaf"]
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ping: 1}).ok' | grep -q 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  # Mongo 起動後に一度だけ実行され、replica set を初期化（primary 選出待ち）します。
+  mongo-init:
+    image: mongo:8.0
+    restart: "no"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/scripts/init-mongodb-replica-set.sh"]
+    volumes:
+      - ./scripts/init-mongodb-replica-set.sh:/scripts/init-mongodb-replica-set.sh:ro
+
+  # Overleaf のリアルタイム同期・ジョブキュー用。AOF で永続化します。
+  redis:
+    image: redis:7.4
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # 日本語→英語翻訳サービス（FastAPI）。ホストポートは意図的に公開せず、
+  # Overleaf からの内部リクエストだけを受け付けます。
+  translation-service:
+    image: local/overleaf-iisec-translation:latest
+    build:
+      context: ./translation-service
+    restart: unless-stopped
+    # ホスト上の推論サーバーは http://host.docker.internal:<port>/v1 で指定できます。
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - translation_data:/data
+    environment:
+      LOCAL_LLM_BASE_URL: ${LOCAL_LLM_BASE_URL:-}
+      LOCAL_LLM_API_KEY: ${LOCAL_LLM_API_KEY:-}
+      LOCAL_LLM_MAX_CONCURRENT_REQUESTS: ${LOCAL_LLM_MAX_CONCURRENT_REQUESTS:-2}
+      TRANSLATION_CHUNK_CHARS: ${TRANSLATION_CHUNK_CHARS:-3600}
+      TRANSLATION_MAX_DOCUMENT_CHARS: ${TRANSLATION_MAX_DOCUMENT_CHARS:-500000}
+      TRANSLATION_DB_PATH: /data/translation.sqlite3
+      LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+# 名前付き volume。コンテナを消してもデータ（プロジェクト・DB・用語集）は残ります。
+volumes:
+  overleaf_data:
+  mongo_data:
+  redis_data:
+  translation_data:
