@@ -2,9 +2,11 @@
 !start.sh
 !server-pro-start.sh
 !dev-env-start.sh
+!start-local.sh
+!render-config.py
 !/conf
 !/lib
-!/src/main
+!/src
 !/pom.xml
 !/Makefile
 !/LICENSE

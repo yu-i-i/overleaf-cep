@@ -1,5 +1,21 @@
 # writelatex-git-bridge
 
+## このプロジェクトでの利用
+
+`./scripts/build-images.sh` と `docker compose -f compose.yaml up -d` で Git 連携も起動します。Maven・JDK はビルド用コンテナに含まれます。
+
+アカウント設定で Git 認証トークンを発行し、エディタの Git 連携画面に表示される URL を clone します。ユーザー名は `git`、パスワードには発行したトークンを指定します。ローカルの変更は通常の commit・push で反映できます。アカウントのパスワードは使用しません。
+
+Git からのアクセスにもプロジェクトの閲覧・編集権限が適用されます。トークンはアカウント設定から失効できます。リポジトリは Compose の `git_bridge_data` ボリュームに保存されます。
+
+検証コマンド（リポジトリのルートで実行）:
+
+```sh
+python3 -B -m unittest discover -s services/git-bridge/tests -v
+node --test services/web/modules/git-bridge/test/snapshot-validation.test.mjs
+docker build --target test -f services/git-bridge/Dockerfile.local services/git-bridge
+```
+
 ## Docker
 
 The `Dockerfile` contains all the requirements for building and running the

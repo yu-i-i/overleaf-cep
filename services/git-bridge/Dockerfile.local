@@ -1,0 +1,27 @@
+# Git 連携をリポジトリ内のソースからビルドする。ホスト側の Maven/JDK は不要。
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /build
+COPY pom.xml ./
+COPY src ./src
+# テストは別途 mvn test で実行する。依存キャッシュはイメージへ含めない。
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -DskipTests -Dfmt.skip package
+
+# CI・手元の検証では --target test で Java の既存テストを実行できる。
+FROM build AS test
+RUN --mount=type=cache,target=/root/.m2 mvn -B -Dfmt.skip test
+
+FROM eclipse-temurin:21-jre-jammy
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 curl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /build/target/writelatex-git-bridge-1.0-SNAPSHOT-jar-with-dependencies.jar /app/git-bridge.jar
+COPY conf/envsubst_template.json /app/envsubst_template.json
+COPY LICENSE /app/LICENSE
+COPY render-config.py start-local.sh /app/
+RUN chmod +x /app/start-local.sh && mkdir -p /data/git-bridge \
+    && python3 /app/render-config.py /app/envsubst_template.json > /dev/null
+ENV GIT_BRIDGE_ROOT_DIR=/data/git-bridge
+EXPOSE 8000
+ENTRYPOINT ["/app/start-local.sh"]

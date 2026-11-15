@@ -49,6 +49,12 @@ services:
       ENABLE_CONVERSIONS: "true"
       # CE モジュール（local-llm-translation）が翻訳サービスへ接続する内部 URL。
       LOCAL_LLM_SERVICE_URL: http://translation-service:8000
+      # CE+ の Git 連携を有効化する。公開経路は既存 nginx の /git/<project-id>。
+      GIT_BRIDGE_ENABLED: "true"
+      GIT_BRIDGE_HOST: git-bridge
+      GIT_BRIDGE_PORT: "8000"
+      # ダウンロード URL をブリッジへ渡す際は、ブリッジから到達可能な名前にする。
+      V1_HISTORY_URL_FOR_GIT_BRIDGE: http://sharelatex:3100/api
 
   # Overleaf が要求する単一ノードの MongoDB replica set。
   mongo:
@@ -115,9 +121,37 @@ services:
       retries: 5
       start_period: 10s
 
+  # Git 自体の認証は CE+ の Git 認証トークンとプロジェクト権限で検証する。
+  # ホストへポートを公開せず、管理用 API は内部ネットワークからのみ使う。
+  git-bridge:
+    image: local/overleaf-iisec-git-bridge:latest
+    build:
+      context: ./services/git-bridge
+      dockerfile: Dockerfile.local
+    restart: unless-stopped
+    # 本体も起動時にブリッジを要求すると循環するため、依存はこの方向だけにする。
+    depends_on:
+      - sharelatex
+    volumes:
+      - git_bridge_data:/data/git-bridge
+    environment:
+      GIT_BRIDGE_ROOT_DIR: /data/git-bridge
+      # スナップショット API は web-api プロセス（3000）にあり、web（80）にはない。
+      GIT_BRIDGE_API_BASE_URL: http://sharelatex:3000/api/v0
+      GIT_BRIDGE_OAUTH2_SERVER: http://sharelatex
+      GIT_BRIDGE_POSTBACK_BASE_URL: http://git-bridge:8000
+      GIT_BRIDGE_ALLOWED_CORS_ORIGINS: ${OVERLEAF_SITE_URL:-http://localhost:8080}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/status"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
 # 名前付き volume。コンテナを消してもデータ（プロジェクト・DB・用語集）は残ります。
 volumes:
   overleaf_data:
   mongo_data:
   redis_data:
   translation_data:
+  git_bridge_data:
