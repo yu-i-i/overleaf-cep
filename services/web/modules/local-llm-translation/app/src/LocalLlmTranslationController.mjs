@@ -20,6 +20,7 @@ import {
   zz,
 } from '../../../../app/src/infrastructure/Validation.mjs'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
+import AuthorizationManager from '../../../../app/src/Features/Authorization/AuthorizationManager.mjs'
 import EditorController from '../../../../app/src/Features/Editor/EditorController.mjs'
 import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
 import ProjectLocator from '../../../../app/src/Features/Project/ProjectLocator.mjs'
@@ -58,6 +59,47 @@ const settingsSchema = z.object({
       .max(200),
     model: z.string().max(256).nullable().optional(),
     context: z.string().max(4000).optional(),
+    prompt_instructions: z.string().max(4000).optional(),
+    endpoint_id: z
+      .string()
+      .regex(/^[a-f0-9]{16}$/)
+      .nullable()
+      .optional(),
+  }),
+})
+// 翻訳エンドポイントの保存 body（キーの空文字は作成時「なし」・更新時「変更なし」）。
+const endpointSchema = z.object({
+  body: z.strictObject({
+    name: z.string().min(1).max(100),
+    base_url: z.string().min(1).max(500),
+    api_key: z.string().max(500).optional(),
+    extra_params: z.record(z.string(), z.unknown()).optional(),
+    set_default: z.boolean().optional(),
+    clear_api_key: z.boolean().optional(),
+    minimal_prompt: z.boolean().optional(),
+    chunk_chars: z.number().int().min(200).max(200000).nullable().optional(),
+  }),
+})
+const endpointParamsSchema = z.object({
+  params: z.strictObject({ Endpoint_id: z.string().regex(/^[a-f0-9]{16}$/) }),
+})
+const modelsSchema = z.object({
+  query: z.object({
+    endpoint_id: z
+      .string()
+      .regex(/^[a-f0-9]{16}$/)
+      .optional(),
+  }),
+})
+const endpointTestSchema = z.object({
+  body: z.strictObject({
+    base_url: z.string().min(1).max(500),
+    api_key: z.string().max(500).optional(),
+    endpoint_id: z
+      .string()
+      .regex(/^[a-f0-9]{16}$/)
+      .optional(),
+    clear_api_key: z.boolean().optional(),
   }),
 })
 const englishDocumentSchema = z.object({
@@ -216,9 +258,80 @@ async function streamTranslation(req, res, { path, body, projectId }) {
 // ---- API ハンドラ -------------------------------------------------------------
 
 export default {
+  /** 管理画面用のリダイレクトを使わず、API の権限拒否を JSON の 403 で返します。 */
+  requireSiteAdmin: expressify(async (req, res, next) => {
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    if (!(await AuthorizationManager.promises.isUserSiteAdmin(userId))) {
+      return res
+        .status(403)
+        .json({ detail: '接続先の管理にはサイト管理者権限が必要です。' })
+    }
+    next()
+  }),
+
   /** 翻訳サービスのモデル一覧をそのまま返します。 */
   getModels: expressify(async (req, res) => {
-    return proxy(req, res, { path: '/models' })
+    const { query } = parseReq(req, modelsSchema)
+    const path = query.endpoint_id
+      ? `/models?endpoint_id=${encodeURIComponent(query.endpoint_id)}`
+      : '/models'
+    return proxy(req, res, { path })
+  }),
+
+  /** 翻訳エンドポイントの一覧を返します。 */
+  getEndpoints: expressify(async (req, res) => {
+    return proxy(req, res, { path: '/endpoints' })
+  }),
+
+  /** 翻訳エンドポイントを 1 件追加します。 */
+  createEndpoint: expressify(async (req, res) => {
+    const { body } = parseReq(req, endpointSchema)
+    return proxy(req, res, { path: '/endpoints', method: 'POST', body })
+  }),
+
+  /** 翻訳エンドポイントを 1 件更新します。 */
+  updateEndpoint: expressify(async (req, res) => {
+    const { params, body } = parseReq(
+      req,
+      z.object({
+        params: endpointParamsSchema.shape.params,
+        body: endpointSchema.shape.body,
+      })
+    )
+    return proxy(req, res, {
+      path: `/endpoints/${params.Endpoint_id}`,
+      method: 'PUT',
+      body,
+    })
+  }),
+
+  /** 翻訳エンドポイントを 1 件削除します。 */
+  deleteEndpoint: expressify(async (req, res) => {
+    const { params } = parseReq(req, endpointParamsSchema)
+    return proxy(req, res, {
+      path: `/endpoints/${params.Endpoint_id}`,
+      method: 'DELETE',
+    })
+  }),
+
+  /** 翻訳エンドポイントを標準に設定します。 */
+  setEndpointDefault: expressify(async (req, res) => {
+    const { params } = parseReq(req, endpointParamsSchema)
+    return proxy(req, res, {
+      path: `/endpoints/${params.Endpoint_id}/default`,
+      method: 'POST',
+    })
+  }),
+
+  /** 標準エンドポイント指定を解除します。 */
+  clearEndpointDefault: expressify(async (req, res) => {
+    return proxy(req, res, { path: '/endpoints/default/clear', method: 'POST' })
+  }),
+
+  /** 保存せずに接続を確認します。保存済みキーの利用判断は翻訳サービスが行います。 */
+  testEndpoint: expressify(async (req, res) => {
+    const { body } = parseReq(req, endpointTestSchema)
+    return proxy(req, res, { path: '/endpoints/test', method: 'POST', body })
   }),
 
   /** プロジェクトの翻訳設定を取得します。 */
