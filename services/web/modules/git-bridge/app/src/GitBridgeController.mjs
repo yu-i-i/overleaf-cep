@@ -11,9 +11,11 @@ import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mj
 import HistoryController from '../../../../app/src/Features/History/HistoryController.mjs'
 import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import GitBridgeHandler from './GitBridgeHandler.mjs'
+import { isValidSnapshot } from './GitBridgeSnapshotValidation.mjs'
 
 const PROJECT_HISTORY = settings.apis.project_history.url
-const V1_HISTORY = settings.apis.v1_history.url
+// コンテナをまたぐダウンロードでは、本体内の loopback URL をブリッジへ渡さない。
+const V1_HISTORY = settings.apis.v1_history.urlForGitBridge || settings.apis.v1_history.url
 
 /*
   Entrypoint (GET): /api/v0/docs/:project_id
@@ -216,12 +218,13 @@ async function getSnapshot(req, res, next) {
 async function postSnapshot(req, res) {
 
   const projectId = req.params.project_id
-  const { latestVerId, files, postbackUrl } = req.body
-	
-  if (!postbackUrl) {
-    logger.error({ projectId }, 'postSnapshot: empty postbackUrl')
+  const bridgeBaseUrl = process.env.GIT_BRIDGE_POSTBACK_BASE_URL ||
+    `http://${process.env.GIT_BRIDGE_HOST || 'git-bridge'}:${process.env.GIT_BRIDGE_PORT || '8000'}`
+  // PAT を持つ利用者が直接この API を呼んでも、任意の内部 URL に通信させない。
+  if (!isValidSnapshot(req.body, projectId, bridgeBaseUrl)) {
     return res.sendStatus(400)
   }
+  const { latestVerId, files, postbackUrl } = req.body
 
   const userId = req.user_id || null // from auth middleware
 
