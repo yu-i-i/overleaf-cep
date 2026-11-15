@@ -1259,6 +1259,7 @@ module.exports = {
     'instance-stats',
     'template-gallery',
     'git-bridge',
+    'token-api',
     'git-sync/github',
     'git-sync/gitlab',
     'git-sync/gitea',
