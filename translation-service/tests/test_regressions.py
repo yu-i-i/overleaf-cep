@@ -117,7 +117,8 @@ class HTTPRegressionTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.put(f"/projects/{PROJECT_ID}/settings", json={"model": "test-model", "terms": [{"source": " 用語 ", "target": "first"}, {"source": "用語", "target": "term"}]})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["terms"], [{"source": "用語", "target": "term"}])
-        self.assertEqual((await self.client.get(f"/projects/{PROJECT_ID}/settings")).json(), response.json())
+        loaded = (await self.client.get(f"/projects/{PROJECT_ID}/settings")).json()
+        self.assertEqual({key: loaded[key] for key in response.json()}, response.json())
         self.assertIsNone((await self.client.get(f"/projects/{'c' * 24}/settings")).json()["model"])
         self.assertEqual((await self.client.get("/projects/invalid/settings")).status_code, 400)
         self.assertEqual((await self.client.put(f"/projects/{PROJECT_ID}/settings", json={"unexpected": 1})).status_code, 422)
@@ -130,7 +131,7 @@ class HTTPRegressionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 413)
 
     async def test_validated_translation_is_returned_as_sse_and_saved(self):
-        async def completion(_model, messages):
+        async def completion(_model, messages, endpoint_id=None, **_options):
             fragment = messages[-1]["content"].split("<fragment>\n", 1)[1].rsplit("\n</fragment>", 1)[0]
             yield fragment.replace("日本語", "English")
 
@@ -147,7 +148,7 @@ class HTTPRegressionTests(unittest.IsolatedAsyncioTestCase):
     async def test_closing_response_after_delta_closes_upstream_generator(self):
         closed = asyncio.Event()
 
-        async def completion(_model, _messages):
+        async def completion(_model, _messages, endpoint_id=None, **_options):
             try:
                 yield "English"
                 await asyncio.Future()

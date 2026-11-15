@@ -15,6 +15,7 @@ let writes
 const mocks = {
   logger: { warn() {} },
   SessionManager: { getLoggedInUserId: () => userId },
+  AuthorizationManager: { promises: { isUserSiteAdmin: async () => false } },
   ProjectGetter: {
     promises: { getProject: async () => ({ rootFolder: [folder] }) },
   },
@@ -27,6 +28,7 @@ const mocks = {
     blockRestrictedUserFromProject: 'restricted',
     ensureUserCanReadProject: 'read',
     ensureUserCanWriteProjectContent: 'write',
+    ensureUserIsSiteAdmin: 'site-admin',
   },
   RateLimiterMiddleware: { rateLimit: () => 'limit' },
 }
@@ -100,8 +102,13 @@ function response() {
   return res
 }
 
-async function invoke(handler, body = {}) {
-  const req = { params: { Project_id: projectId }, body, session: {} }
+async function invoke(handler, body = {}, overrides = {}) {
+  const req = {
+    params: { Project_id: projectId },
+    body,
+    session: {},
+    ...overrides,
+  }
   const res = response()
   await handler(req, res, (error) => {
     res.error = error
@@ -220,18 +227,20 @@ test('英語版文書や非 TeX 文書を翻訳元として保存しない', asy
 test('読み取りと書き込みの権限チェックをルートに登録する', () => {
   const routes = []
   const webRouter = Object.fromEntries(
-    ['get', 'post', 'put'].map((method) => [
+    ['get', 'post', 'put', 'delete'].map((method) => [
       method,
       (...args) => routes.push({ method, args }),
     ])
   )
   router.apply(webRouter)
-  assert.equal(routes.length, 5)
+  assert.equal(routes.length, 12)
   for (const { method, args } of routes) {
     assert.equal(args[1], 'login')
     if (args[0].startsWith('/project/')) {
       assert.equal(args[2], 'restricted')
       assert.equal(args[3], method === 'get' ? 'read' : 'write')
+    } else if (method !== 'get') {
+      assert.equal(args[2], controller.requireSiteAdmin)
     }
   }
 })
@@ -301,5 +310,83 @@ test('ブラウザー切断時は翻訳サービスへの接続を中断する',
     assert.equal(closed, true)
   } finally {
     globalThis.fetch = original
+  }
+})
+
+test('名前付き接続先の更新を検証して中継する', async () => {
+  const original = globalThis.fetch
+  const id = '1'.repeat(16)
+  let observed
+  globalThis.fetch = async (url, options) => {
+    observed = { url, body: JSON.parse(options.body) }
+    return Response.json({ id, has_api_key: false })
+  }
+  try {
+    const body = {
+      name: 'edited',
+      base_url: 'http://provider/v1',
+      clear_api_key: true,
+    }
+    const res = await invoke(controller.updateEndpoint, body, {
+      params: { Endpoint_id: id },
+    })
+    assert.equal(res.error, undefined)
+    assert.ok(observed.url.endsWith(`/endpoints/${id}`))
+    assert.deepEqual(observed.body, body)
+    assert.equal(res.payload.has_api_key, false)
+    const rejected = await invoke(controller.updateEndpoint, body, {
+      params: { Endpoint_id: '../bad' },
+    })
+    assert.ok(rejected.error)
+  } finally {
+    globalThis.fetch = original
+  }
+})
+
+test('モデル取得の接続先 ID は文字列として検証する', async () => {
+  const original = globalThis.fetch
+  const urls = []
+  globalThis.fetch = async (url) => {
+    urls.push(url)
+    return Response.json({ data: [] })
+  }
+  try {
+    const id = '2'.repeat(16)
+    const res = await invoke(
+      controller.getModels,
+      {},
+      { query: { endpoint_id: id } }
+    )
+    assert.equal(res.error, undefined)
+    assert.ok(urls[0].endsWith(`/models?endpoint_id=${id}`))
+    const rejected = await invoke(
+      controller.getModels,
+      {},
+      { query: { endpoint_id: [id] } }
+    )
+    assert.ok(rejected.error)
+    assert.equal(urls.length, 1)
+  } finally {
+    globalThis.fetch = original
+  }
+})
+
+test('共有接続先の管理 API は一般利用者を JSON の403で拒否する', async () => {
+  const res = response()
+  let allowed = false
+  await controller.requireSiteAdmin({ session: {} }, res, () => {
+    allowed = true
+  })
+  assert.equal(res.statusCode, 403)
+  assert.equal(allowed, false)
+  assert.equal(typeof res.payload.detail, 'string')
+  mocks.AuthorizationManager.promises.isUserSiteAdmin = async () => true
+  try {
+    await controller.requireSiteAdmin({ session: {} }, response(), () => {
+      allowed = true
+    })
+    assert.equal(allowed, true)
+  } finally {
+    mocks.AuthorizationManager.promises.isUserSiteAdmin = async () => false
   }
 })

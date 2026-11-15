@@ -25,9 +25,57 @@ export default {
     webRouter.get(
       '/local-llm/models',
       AuthenticationController.requireLogin(),
-      RateLimiterMiddleware.rateLimit(translateLimiter, { ipOnly: true }),
+      RateLimiterMiddleware.rateLimit(translateLimiter),
       LocalLlmTranslationController.getModels
     )
+
+    // 接続先は研究室で共有します。参照はログイン利用者、変更はサイト管理者だけです。
+    webRouter.get(
+      '/local-llm/endpoints',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(translateLimiter),
+      LocalLlmTranslationController.getEndpoints
+    )
+    for (const [method, path, handler] of [
+      [
+        'post',
+        '/local-llm/endpoints',
+        LocalLlmTranslationController.createEndpoint,
+      ],
+      [
+        'post',
+        '/local-llm/endpoints/test',
+        LocalLlmTranslationController.testEndpoint,
+      ],
+      [
+        'post',
+        '/local-llm/endpoints/default/clear',
+        LocalLlmTranslationController.clearEndpointDefault,
+      ],
+      [
+        'put',
+        '/local-llm/endpoints/:Endpoint_id',
+        LocalLlmTranslationController.updateEndpoint,
+      ],
+      [
+        'delete',
+        '/local-llm/endpoints/:Endpoint_id',
+        LocalLlmTranslationController.deleteEndpoint,
+      ],
+      [
+        'post',
+        '/local-llm/endpoints/:Endpoint_id/default',
+        LocalLlmTranslationController.setEndpointDefault,
+      ],
+    ]) {
+      webRouter[method](
+        path,
+        AuthenticationController.requireLogin(),
+        LocalLlmTranslationController.requireSiteAdmin,
+        RateLimiterMiddleware.rateLimit(translateLimiter),
+        handler
+      )
+    }
 
     // プロジェクトの翻訳設定（用語集・モデル・文体メモ）の読み込み。
     // プロジェクトの読み取り権限が必要です。

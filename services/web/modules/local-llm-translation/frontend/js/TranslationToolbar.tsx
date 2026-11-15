@@ -30,6 +30,7 @@ import { useFileTreePathContext } from '@/features/file-tree/contexts/file-tree-
 import { useProjectContext } from '@/shared/context/project-context'
 import { getJSON, postJSON, putJSON } from '@/infrastructure/fetch-json'
 import getMeta from '@/utils/meta'
+import ConnectionSettings from './ConnectionSettings'
 import {
   maskPartialMarkers,
   readTranslationStream,
@@ -45,6 +46,9 @@ type ProjectSettings = {
   terms: GlossaryTerm[]
   model: string | null
   context: string
+  endpoint_id?: string | null
+  prompt_instructions?: string
+  default_prompt_instructions?: string
 }
 // 翻訳対象の指定方法（選択範囲 / 現在のファイル全体）。
 type Target = 'selection' | 'file'
@@ -112,6 +116,11 @@ export default function TranslationToolbar() {
   const [models, setModels] = useState<Model[]>([])
   const [terms, setTerms] = useState<GlossaryTerm[]>([])
   const [context, setContext] = useState('')
+  const [endpointId, setEndpointId] = useState<string | null>(null)
+  const [promptInstructions, setPromptInstructions] = useState('')
+  const [defaultPrompt, setDefaultPrompt] = useState('')
+  const [loading, setLoading] = useState(false)
+  const modelsRequestRef = useRef(0)
   const [selectedModel, setSelectedModel] = useState('')
   const [consented, setConsented] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -137,7 +146,39 @@ export default function TranslationToolbar() {
     view.state.doc.toString() === snapshot.document
   )
 
-  // パネルを開いたときにモデル一覧とプロジェクト設定を並列で読み込みます。
+  const loadModels = useCallback(
+    async (endpoint: string | null, preferred = '') => {
+      const request = ++modelsRequestRef.current
+      setLoading(true)
+      setError('')
+      try {
+        const suffix = endpoint
+          ? `?endpoint_id=${encodeURIComponent(endpoint)}`
+          : ''
+        const response = await getJSON<{ data: Model[] }>(
+          `/local-llm/models${suffix}`
+        )
+        if (request !== modelsRequestRef.current) return
+        setModels(response.data)
+        setSelectedModel((current) => {
+          if (response.data.some((model) => model.id === preferred))
+            return preferred
+          if (response.data.some((model) => model.id === current))
+            return current
+          return response.data[0]?.id || ''
+        })
+      } catch (failure) {
+        if (request !== modelsRequestRef.current) return
+        setModels([])
+        setSelectedModel('')
+        setError(getErrorMessage(failure))
+      } finally {
+        if (request === modelsRequestRef.current) setLoading(false)
+      }
+    },
+    []
+  )
+
   const loadPanel = useCallback(async () => {
     setOpen(true)
     setError('')
@@ -146,44 +187,21 @@ export default function TranslationToolbar() {
     setConsented(false)
     setTarget(hasSelection ? 'selection' : 'file')
     setSnapshot(null)
-
-    const [modelResult, settingsResult] = await Promise.allSettled([
-      getJSON<{ data: Model[] }>('/local-llm/models'),
-      getJSON<ProjectSettings>(`${projectPath}/settings`),
-    ])
-
-    if (settingsResult.status === 'fulfilled') {
-      const loaded = settingsResult.value
+    setLoading(true)
+    try {
+      // プロジェクトの選択先を先に読み、その接続先のモデルだけを表示します。
+      const loaded = await getJSON<ProjectSettings>(`${projectPath}/settings`)
       setTerms(loaded.terms || [])
       setContext(loaded.context || '')
-      if (loaded.model) setSelectedModel(loaded.model)
-    } else {
-      setError(getErrorMessage(settingsResult.reason))
+      setEndpointId(loaded.endpoint_id || null)
+      setPromptInstructions(loaded.prompt_instructions || '')
+      setDefaultPrompt(loaded.default_prompt_instructions || '')
+      await loadModels(loaded.endpoint_id || null, loaded.model || '')
+    } catch (failure) {
+      setLoading(false)
+      setError(getErrorMessage(failure))
     }
-
-    if (modelResult.status === 'fulfilled') {
-      const loadedModels = modelResult.value.data || []
-      setModels(loadedModels)
-      const savedModel =
-        settingsResult.status === 'fulfilled'
-          ? settingsResult.value.model
-          : null
-      setSelectedModel((current) => {
-        if (current && loadedModels.some((model) => model.id === current)) {
-          return current
-        }
-        if (
-          savedModel &&
-          loadedModels.some((model) => model.id === savedModel)
-        ) {
-          return savedModel
-        }
-        return loadedModels[0]?.id || savedModel || current
-      })
-    } else {
-      setError(getErrorMessage(modelResult.reason))
-    }
-  }, [hasSelection, projectPath])
+  }, [hasSelection, projectPath, loadModels])
 
   // Escape キーでパネルを閉じられるようにします（翻訳中・保存中は閉じません）。
   useEffect(() => {
@@ -220,11 +238,13 @@ export default function TranslationToolbar() {
             ),
             model: selectedModel || null,
             context,
+            endpoint_id: endpointId,
+            prompt_instructions: promptInstructions,
           },
         }
       )
       setTerms(updated.terms || [])
-      setNotice('用語集と文書コンテキストを保存しました。')
+      setNotice('翻訳設定を保存しました。')
       return true
     } catch (saveError) {
       setError(getErrorMessage(saveError))
@@ -538,13 +558,27 @@ export default function TranslationToolbar() {
             </header>
 
             <div style={bodyStyle}>
+              <ConnectionSettings
+                endpointId={endpointId}
+                disabled={busy || saving}
+                onSelect={(id) => {
+                  setEndpointId(id)
+                  setResult(null)
+                  setSnapshot(null)
+                  setSelectedModel('')
+                  void loadModels(id)
+                }}
+                onChanged={() => {
+                  void loadModels(endpointId, selectedModel)
+                }}
+              />
               <label style={fieldStyle}>
                 使用モデル
                 <select
                   className="form-control"
                   value={selectedModel}
                   onChange={(event) => setSelectedModel(event.target.value)}
-                  disabled={!models.length || busy}
+                  disabled={!models.length || busy || loading}
                 >
                   {selectedModel &&
                     !models.some((model) => model.id === selectedModel) && (
@@ -658,13 +692,34 @@ export default function TranslationToolbar() {
                     placeholder="例: 分散システムを対象とする実証研究。簡潔なacademic writingを使う。"
                   />
                 </label>
+                <label style={fieldStyle}>
+                  翻訳の文体指示
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    maxLength={4000}
+                    value={promptInstructions}
+                    placeholder={defaultPrompt}
+                    onChange={(event) =>
+                      setPromptInstructions(event.target.value)
+                    }
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={saving || busy}
+                  onClick={() => setPromptInstructions('')}
+                >
+                  文体指示を既定に戻す
+                </button>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   disabled={saving || busy}
                   onClick={saveSettings}
                 >
-                  {saving ? '保存中…' : '用語集を保存'}
+                  {saving ? '保存中…' : '翻訳設定を保存'}
                 </button>
               </details>
 
@@ -799,7 +854,7 @@ export default function TranslationToolbar() {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  disabled={!consented || saving || !selectedModel}
+                  disabled={!consented || saving || loading || !selectedModel}
                   onClick={runTranslation}
                 >
                   確認して翻訳

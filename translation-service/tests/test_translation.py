@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, patch
 from app import main
 from app.database import TranslationDatabase
 from app.latex import MARKER_RE, protect_latex, restore_and_validate, split_chunks
+from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 
 
@@ -64,11 +65,58 @@ class ModelDiscoveryTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await main._get_models(), [{"id": "paper-model"}])
 
         self.assertEqual(observed["url"], "http://llm.example/v1/models")
-        self.assertIsNone(observed["timeout"])
+        self.assertEqual(observed["timeout"], 30)
         self.assertEqual(
             observed["headers"],
             {"Accept": "application/json", "Authorization": "Bearer test-only-key"},
         )
+
+
+# UI から保存した LLM 接続設定（SQLite > .env の優先順位・キー非公開）を検証します。
+class SystemPromptTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        # 使い捨て DB を差し込み、設定値が他テストへ漏れないようにします。
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = TranslationDatabase(str(Path(self._tmp.name, "prompt.sqlite3")))
+        self._patcher = patch.object(main, "database", new=self.db)
+        self._patcher.start()
+
+    def tearDown(self) -> None:
+        self._patcher.stop()
+        self._tmp.cleanup()
+
+    def test_default_instructions_are_used_when_blank(self) -> None:
+        system = main._translation_prompt(MODEL_ID, [], "", [], "", "x")[0]["content"]
+        self.assertIn("academic English", system)
+        # 検証の前提（マーカー維持）は既定でも常に付きます。
+        self.assertIn("QZPROTECTED000000XZQ", system)
+
+    def test_custom_style_cannot_remove_plain_prose_guardrails(self) -> None:
+        system = main._translation_prompt(
+            MODEL_ID, [], "", [], "", "x", "Use concise prose."
+        )[0]["content"]
+        self.assertIn("Do not introduce LaTeX commands, math delimiters", system)
+        self.assertIn("do not convert them to LaTeX math", system)
+        self.assertIn("Do not add backslashes before protection markers", system)
+
+    def test_custom_instructions_replace_style_but_keep_guardrails(self) -> None:
+        system = main._translation_prompt(
+            MODEL_ID, [], "", [], "", "x", "Use short, plain IEEE-style sentences."
+        )[0]["content"]
+        self.assertIn("Use short, plain IEEE-style sentences.", system)
+        # スタイル既定文は差し替わり、ガードレールは残り続けます。
+        self.assertNotIn("You translate Japanese academic LaTeX prose", system)
+        self.assertIn("QZPROTECTED000000XZQ", system)
+
+    async def test_settings_roundtrip_exposes_default_text(self) -> None:
+        saved = await main.put_project_settings(
+            PROJECT_ID, main.ProjectSettings(prompt_instructions="Use British spelling.")
+        )
+        self.assertEqual(saved["prompt_instructions"], "Use British spelling.")
+        loaded = await main.get_project_settings(PROJECT_ID)
+        self.assertEqual(loaded["prompt_instructions"], "Use British spelling.")
+        # UI の「デフォルトに戻す」表示用に、既定文も応答へ含まれます。
+        self.assertIn("academic English", loaded["default_prompt_instructions"])
 
 
 # OpenAI 互換 SSE ストリームの解析（本文テキストだけを歩む・タイムアウトなし）を検証します。
@@ -191,6 +239,33 @@ class LatexProtectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "introduced, removed, or altered"):
             restore_and_validate(protected, protected.masked + "{broken}")
 
+    def test_comment_line_ending_cannot_be_absorbed_by_model_spacing(self) -> None:
+        source = "前の本文。\n%\n次の本文。\n"
+        protected = protect_latex(source)
+        marker = next(
+            match.group()
+            for match in MARKER_RE.finditer(protected.masked)
+            if protected.tokens[int(match.group()[11:-3])].startswith("%")
+        )
+        # Real model response: an otherwise intact comment marker gains a space.
+        translated = protected.masked.replace("前の本文。", "Previous text.").replace(
+            "次の本文。", "Next text."
+        ).replace(marker, marker + " ")
+        restored = restore_and_validate(protected, translated)
+        self.assertIn("%\n", restored)
+        self.assertIn("Next text.", restored)
+
+    def test_definition_line_ending_and_following_blank_lines_are_protected(self) -> None:
+        source = "\\newcommand{\\term}{Term}\n\n本文。"
+        protected = protect_latex(source)
+        self.assertIn("\\newcommand{\\term}{Term}\n\n", protected.tokens)
+        translated = protected.masked.replace("本文。", "Text.")
+        translated = translated.replace("QZPROTECTED000000XZQ", "QZPROTECTED000000XZQ ")
+        self.assertEqual(
+            restore_and_validate(protected, translated),
+            "\\newcommand{\\term}{Term}\n\n Text.",
+        )
+
 
 # モデルが訳文の前後に付ける定型のメタ発言・コードフェンスの除去を検証します。
 class ModelBoilerplateTests(unittest.TestCase):
@@ -241,11 +316,12 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
         self.tempdir.cleanup()
 
     async def _translate(
-        self, source: str, *, corrupt_third_large_chunk: bool = False
+        self, source: str, *, corrupt_third_large_chunk: bool = False,
+        completion=None,
     ):
         completion_calls = 0
 
-        async def fake_completion(model, messages):
+        async def fake_completion(model, messages, endpoint_id=None, **_options):
             nonlocal completion_calls
             completion_calls += 1
             self.prompts.append(messages)
@@ -276,7 +352,7 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch.object(main, "_get_models", new=AsyncMock(return_value=[{"id": MODEL_ID}])),
-            patch.object(main, "_stream_chat_completion", new=fake_completion),
+            patch.object(main, "_stream_chat_completion", new=completion or fake_completion),
         ):
             response = await main.translate(
                 PROJECT_ID, main.TranslationRequest(text=source, model=MODEL_ID)
@@ -354,6 +430,46 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
             )
         )
 
+    async def test_long_document_comment_spacing_preserves_all_translated_chunks(self) -> None:
+        source = "本研究では信頼境界を検討する。\n%\n" * 300
+        protected = protect_latex(source)
+
+        async def spaced_comment_completion(_model, messages, endpoint_id=None, **_options):
+            fragment = messages[-1]["content"].split("<fragment>\n", 1)[1].rsplit("\n</fragment>", 1)[0]
+            fragment = fragment.replace(
+                "本研究では信頼境界を検討する。", "This study examines the trust boundary."
+            )
+            for marker in MARKER_RE.findall(fragment):
+                if protected.tokens[int(marker[11:-3])].startswith("%"):
+                    fragment = fragment.replace(marker, marker + " ")
+            yield fragment
+
+        complete = await self._translate(source, completion=spaced_comment_completion)
+        self.assertGreater(complete["chunks"], 1)
+        self.assertEqual(complete["failed_chunks"], [])
+        self.assertEqual(complete["text"].count("This study examines the trust boundary."), 300)
+        self.assertEqual(protect_latex(complete["text"]).tokens, protected.tokens)
+        self.assertFalse(any(event.get("phase") == "retrying" for event in self.events))
+
+    async def test_persistent_new_math_is_rejected_after_bounded_retries(self) -> None:
+        source = "本研究では信頼境界を検討する。"
+        calls = 0
+
+        async def added_math_completion(_model, _messages, endpoint_id=None, **_options):
+            nonlocal calls
+            calls += 1
+            yield r"This study examines the trust boundary. $x = 1$"
+
+        complete = await self._translate(source, completion=added_math_completion)
+        self.assertEqual(calls, main.MAX_PROTECTION_RETRIES + 1)
+        self.assertEqual(complete["text"], source)
+        self.assertEqual(complete["failed_chunks"], [1])
+        self.assertFalse(any(
+            event["type"] == "chunk_complete" and event["ok"]
+            for event in self.events
+        ))
+        self.assertEqual(main.database.get_memory(PROJECT_ID), [])
+
     async def test_protection_mismatch_retries_the_chunk_in_smaller_ranges(self) -> None:
         source = "\n\n".join("日本語$x=1$の説明です。" for _ in range(600))
 
@@ -372,7 +488,7 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
         """検証失敗が続くチャンクは原文保持とし、文書全体の翻訳は止めない。"""
         source = "\n\n".join("この式$x_i=1$を検討する。" for _ in range(3))
 
-        async def corrupting_completion(_model, messages):
+        async def corrupting_completion(_model, messages, endpoint_id=None, **_options):
             """常に最初の保護マーカーを消して、検証を確実に失敗させる。"""
             fragment = messages[-1]["content"].split("<fragment>\n", 1)[1].rsplit("\n</fragment>", 1)[0]
             marker = MARKER_RE.search(fragment)
@@ -410,12 +526,12 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
             any(event["type"] == "chunk_complete" and event.get("ok") is False for event in events)
         )
 
-    async def test_document_validation_reverts_only_chunks_with_new_latex(self) -> None:
-        """モデルが新規コマンドを足しても文書を捨てず、そのチャンクだけ原文へ戻す。"""
+    async def test_new_latex_is_retried_before_reverting_translated_prose(self) -> None:
+        """マーカーが一致しても新規構文を検出し、再試行で訳文を回復する。"""
         source = "\n\n".join("本研究では信頼境界を検討する。" for _ in range(300))
         completion_calls = 0
 
-        async def inflating_completion(_model, messages):
+        async def inflating_completion(_model, messages, endpoint_id=None, **_options):
             """1 つ目のチャンクで \\textbf を追加し、チャンク検証だけ通すようにする。"""
             nonlocal completion_calls
             completion_calls += 1
@@ -444,26 +560,26 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
         ]
         complete = next(event for event in events if event["type"] == "complete")
         self.assertGreater(complete["chunks"], 1)
-        # ねつ造したチャンクだけ原文へ戻り、他のチャンクの訳文は残る。
-        self.assertEqual(complete["failed_chunks"], [1])
+        # The transient error must be retried, not discovered only at the end
+        # and silently replaced with a whole chunk of Japanese.
+        self.assertEqual(complete["failed_chunks"], [])
         self.assertNotIn(r"\textbf{", complete["text"])
-        self.assertIn("本研究では信頼境界を検討する。", complete["text"])
-        self.assertGreater(complete["text"].count("This study examines the trust boundary."), 100)
+        self.assertNotIn("本研究では信頼境界を検討する。", complete["text"])
+        self.assertEqual(complete["text"].count("This study examines the trust boundary."), 300)
         self.assertTrue(
             any(
-                event["type"] == "progress" and event["phase"] == "salvaging"
+                event["type"] == "progress" and event["phase"] == "retrying"
                 for event in events
             )
         )
-        # 原文保持が混じるため、翻訳メモ（文体メモ）の更新は見送られる。
-        self.assertEqual(main.database.get_memory(PROJECT_ID), [])
+        self.assertEqual(len(main.database.get_memory(PROJECT_ID)), 1)
 
     async def test_chunk_boundary_spaces_are_restored_after_llm_trims(self) -> None:
         """LLM が境界空白を落としてもチャンク境界の単語を融合させない。"""
         # 3600 文字境界で "www." | " example.org" と割れ、結合時に URL 誤検出しうる。
         source = "あ" * 3596 + "www." + " example.org" + "を説明する。"
 
-        async def identity_completion(_model, messages):
+        async def identity_completion(_model, messages, endpoint_id=None, **_options):
             fragment = messages[-1]["content"].split("<fragment>\n", 1)[1].rsplit("\n</fragment>", 1)[0]
             yield fragment
 
@@ -493,7 +609,7 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
         started = asyncio.Event()
         closed = asyncio.Event()
 
-        async def blocked_completion(_model, _messages):
+        async def blocked_completion(_model, _messages, endpoint_id=None, **_options):
             started.set()
             try:
                 await asyncio.Future()
@@ -519,7 +635,7 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
     async def test_waiting_model_sends_progress_and_stays_cancellable(self) -> None:
         closed = asyncio.Event()
 
-        async def blocked_completion(_model, _messages):
+        async def blocked_completion(_model, _messages, endpoint_id=None, **_options):
             try:
                 await asyncio.Future()
                 yield "unreachable"
@@ -551,6 +667,201 @@ class TranslationFlowTests(unittest.IsolatedAsyncioTestCase):
             [marker for chunk in chunks for marker in MARKER_RE.findall(chunk)],
             MARKER_RE.findall(masked),
         )
+
+
+# 翻訳エンドポイント（名前付き保存・標準設定）の API と解決順序を検証します。
+class EndpointCrudTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        # 使い捨て DB を差し込み、エンドポイントが他テストへ漏れないようにします。
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = TranslationDatabase(str(Path(self._tmp.name, "endpoints.sqlite3")))
+        self._patcher = patch.object(main, "database", new=self.db)
+        self._patcher.start()
+
+    def tearDown(self) -> None:
+        self._patcher.stop()
+        self._tmp.cleanup()
+
+    async def test_add_list_delete_and_api_key_is_never_returned(self) -> None:
+        created = await main.create_endpoint(
+            main.EndpointPayload(
+                name="plamo",
+                base_url="http://10.14.149.128:8000/v1/",
+                api_key="secret-key",
+                extra_params={"stop": ["<|plamo:tag|>"], "max_tokens": 256},
+                minimal_prompt=True,
+                chunk_chars=12000,
+            )
+        )
+        self.assertTrue(created["id"])
+        self.assertTrue(created["minimal_prompt"])
+        self.assertEqual(created["chunk_chars"], 12000)
+        # URL 末尾の / は保存時に正規化、キーの生値は応答に含めません。
+        self.assertEqual(created["base_url"], "http://10.14.149.128:8000/v1")
+        self.assertNotIn("secret-key", json.dumps(created))
+
+        listed = await main.list_endpoints()
+        self.assertEqual(len(listed["data"]), 1)
+        self.assertTrue(listed["data"][0]["has_api_key"])
+
+        deleted = await main.delete_endpoint(created["id"])
+        self.assertTrue(deleted["ok"])
+        self.assertEqual((await main.list_endpoints())["data"], [])
+
+    async def test_default_endpoint_is_unique_and_clearable(self) -> None:
+        first = await main.create_endpoint(
+            main.EndpointPayload(name="a", base_url="http://a.example/v1")
+        )
+        second = await main.create_endpoint(
+            main.EndpointPayload(name="b", base_url="http://b.example/v1")
+        )
+        await main.set_default_endpoint(first["id"])
+        await main.set_default_endpoint(second["id"])
+        listed = (await main.list_endpoints())["data"]
+        defaults = [item for item in listed if item["is_default"]]
+        self.assertEqual([item["name"] for item in defaults], ["b"])
+
+        await main.clear_default_endpoint()
+        listed = (await main.list_endpoints())["data"]
+        self.assertFalse(any(item["is_default"] for item in listed))
+
+    async def test_reserved_extra_params_and_bad_url_are_rejected(self) -> None:
+        with self.assertRaises(HTTPException) as ctx:
+            await main.create_endpoint(
+                main.EndpointPayload(
+                    name="bad", base_url="http://x.example/v1", extra_params={"model": "hijack"}
+                )
+            )
+        self.assertEqual(ctx.exception.status_code, 400)
+        with self.assertRaises(HTTPException) as ctx:
+            await main.create_endpoint(
+                main.EndpointPayload(name="bad", base_url="ftp://x.example/v1")
+            )
+        self.assertEqual(ctx.exception.status_code, 400)
+
+
+# エンドポイントの実効解決（プロジェクト > 標準 > 環境変数）を検証します。
+class EndpointResolutionTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db = TranslationDatabase(str(Path(self._tmp.name, "resolve.sqlite3")))
+        self._patcher = patch.object(main, "database", new=self.db)
+        self._patcher.start()
+
+    def tearDown(self) -> None:
+        self._patcher.stop()
+        self._tmp.cleanup()
+
+    async def test_priority_chain_and_extra_params_merge(self) -> None:
+        with (
+            patch.object(main, "BASE_URL", "http://env.example/v1"),
+            patch.object(main, "API_KEY", ""),
+        ):
+            # 標準エンドポイントと、プロジェクト個別エンドポイントを 1 件ずつ用意します。
+            # 個別側は DB へ直接書き込み、API で弾かれる予約キー混入も防御できるか確かめます。
+            self.db.add_endpoint(
+                "eproject",
+                "project",
+                "http://project.example/v1",
+                "pk",
+                {"stop": ["<|plamo:tag|>"], "stream": False},
+            )
+            default_ep = await main.create_endpoint(
+                main.EndpointPayload(name="std", base_url="http://std.example/v1"),
+            )
+            await main.set_default_endpoint(default_ep["id"])
+
+            # 1) プロジェクト指定が最優先（削除済みの ID は標準へ降格）。
+            base_url, headers, extra, _, _ = main._effective_llm_settings("eproject")
+            self.assertEqual(base_url, "http://project.example/v1")
+            self.assertEqual(headers.get("Authorization"), "Bearer pk")
+            self.assertEqual(extra["stop"], ["<|plamo:tag|>"])
+            with self.assertRaises(HTTPException):
+                main._effective_llm_settings("deadbeef")
+            # 2) 未指定なら標準エンドポイント。
+            self.assertEqual(main._effective_llm_settings()[0], "http://std.example/v1")
+            # 3) 標準解除なら単一保存設定、さらに解除なら .env。
+            await main.clear_default_endpoint()
+            self.assertEqual(main._effective_llm_settings()[0], "http://env.example/v1")
+
+            # 追加パラメータはペイロードへマージされ、model/messages/stream は必ず防御される。
+            observed: dict[str, object] = {}
+
+            class FakeResponse:
+                headers = {"content-type": "text/event-stream"}
+
+                async def __aenter__(self):
+                    return self
+
+                async def __aexit__(self, *_args) -> None:
+                    return None
+
+                def raise_for_status(self) -> None:
+                    return None
+
+                async def aiter_lines(self):
+                    yield 'data: {"choices":[{"delta":{"content":"ok"}}]}'
+                    yield "data: [DONE]"
+
+            class FakeClient:
+                def __init__(self, timeout: float | None) -> None:
+                    pass
+
+                async def __aenter__(self):
+                    return self
+
+                async def __aexit__(self, *_args) -> None:
+                    return None
+
+                def stream(self, method: str, url: str, **kwargs):
+                    observed["url"] = url
+                    observed["payload"] = kwargs["json"]
+                    return FakeResponse()
+
+            with patch.object(main.httpx, "AsyncClient", FakeClient):
+                [
+                    _
+                    async for _ in main._stream_chat_completion(
+                        "m", [{"role": "user", "content": "x"}], "eproject"
+                    )
+                ]
+            payload = observed["payload"]
+            self.assertEqual(observed["url"], "http://project.example/v1/chat/completions")
+            self.assertEqual(payload["stop"], ["<|plamo:tag|>"])
+            # 追加パラメータで stream/model を上書きしようとしても元値が強制されます。
+            self.assertTrue(payload["stream"])
+            self.assertEqual(payload["model"], "m")
+
+
+# 翻訳特化モデル用ミニマルプロンプト（plamo 公式の対訳履歴形式）を検証します。
+class MinimalPromptTests(unittest.TestCase):
+    def test_minimal_messages_use_history_pairs_and_minimal_guardrail(self) -> None:
+        history = [
+            ("原文一 ⟦t1⟧", "Translation one ⟦t1⟧"),
+            ("原文二", "Translation two"),
+            ("原文三", "Translation three"),
+        ]
+        messages = main._translation_prompt(
+            "m", [{"source": "語", "target": "term"}], "ctx", [], "", "原文四",
+            history=history, minimal_prompt=True,
+        )
+        # 対訳履歴は直近 2 ペアだけ user/assistant 交互で復元されます（先頭に最小 guardrail）。
+        self.assertEqual(
+            [m["role"] for m in messages],
+            ["system", "user", "assistant", "user", "assistant", "user"],
+        )
+        self.assertEqual(messages[1]["content"], "原文二")
+        self.assertEqual(messages[4]["content"], "Translation three")
+        # 最後の user だけが今回の翻訳対象で、命令文や用語集の文章は含まれません。
+        self.assertEqual(messages[-1]["content"], "原文四")
+        self.assertNotIn("語", json.dumps(messages, ensure_ascii=False))
+
+    def test_normal_mode_keeps_system_prompt(self) -> None:
+        messages = main._translation_prompt(
+            "m", [], "", [], "", "原文", history=[("a", "b")], minimal_prompt=False
+        )
+        self.assertEqual(messages[0]["role"], "system")
+        self.assertIn("原文", messages[1]["content"])
 
 
 if __name__ == "__main__":
