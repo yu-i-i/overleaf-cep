@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import OLFormControl from '@/shared/components/ol/ol-form-control'
 import useDebounce from '@/shared/hooks/use-debounce'
 
-export default function SymbolPaletteSearch({ setInput, inputRef }) {
+export default function SymbolPaletteSearch({ setInput, inputRef, onFocus }) {
   const [localInput, setLocalInput] = useState('')
 
   // debounce the search input until a typing delay
@@ -26,12 +26,14 @@ export default function SymbolPaletteSearch({ setInput, inputRef }) {
   return (
     <OLFormControl
       className="symbol-palette-search"
+      size="sm"
       type="search"
       ref={inputRefCallback}
       id="symbol-palette-input"
       aria-label="Search"
       value={localInput}
       placeholder={t('search') + '…'}
+      onFocus={onFocus}
       onChange={event => {
         setLocalInput(event.target.value)
       }}
@@ -42,4 +44,5 @@ export default function SymbolPaletteSearch({ setInput, inputRef }) {
 SymbolPaletteSearch.propTypes = {
   setInput: PropTypes.func.isRequired,
   inputRef: PropTypes.object.isRequired,
+  onFocus: PropTypes.func,
 }

@@ -14,6 +14,10 @@ export function createCategories(t) {
       label: t('category_operators'),
     },
     {
+      id: 'Sets',
+      label: t('Sets'),
+    },
+    {
       id: 'Relations',
       label: t('category_relations'),
     },
