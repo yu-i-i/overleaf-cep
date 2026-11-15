@@ -1065,7 +1065,7 @@ module.exports = {
     mainEditorLayoutModals: [
       Path.resolve(
         __dirname,
-        '../modules/reference-picker/frontend/components/reference-picker-controller.tsx'
+        '../modules/reference-picker/frontend/js/components/reference-picker-controller.tsx'
       ),
       Path.resolve(
         __dirname,
@@ -1084,7 +1084,15 @@ module.exports = {
     integrationLinkingWidgets: [
       Path.resolve(
         __dirname,
-        '../modules/github-sync/frontend/js/components/github-sync-widget.tsx'
+        '../modules/git-sync/github/frontend/js/components/github-sync-widget.tsx'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitlab/frontend/js/components/gitlab-sync-widget.tsx'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitea/frontend/js/components/gitea-sync-widget.tsx'
       ),
     ],
     referenceLinkingWidgets: [
@@ -1096,13 +1104,37 @@ module.exports = {
     importProjectFromGithubModalWrapper: [
       Path.resolve(
         __dirname,
-        '../modules/github-sync/frontend/js/components/import-from-github-modal-wrapper.tsx'
+        '../modules/git-sync/github/frontend/js/components/import-from-github-modal-wrapper.tsx'
       ),
     ],
     importProjectFromGithubMenu: [
       Path.resolve(
         __dirname,
-        '../modules/github-sync/frontend/js/components/import-from-github-menu.tsx'
+        '../modules/git-sync/github/frontend/js/components/import-from-github-menu.tsx'
+      ),
+    ],
+    importProjectFromGitLabModalWrapper: [
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitlab/frontend/js/components/import-from-gitlab-modal-wrapper.tsx'
+      ),
+    ],
+    importProjectFromGitLabMenu: [
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitlab/frontend/js/components/import-from-gitlab-menu.tsx'
+      ),
+    ],
+    importProjectFromGiteaModalWrapper: [
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitea/frontend/js/components/import-from-gitea-modal-wrapper.tsx'
+      ),
+    ],
+    importProjectFromGiteaMenu: [
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitea/frontend/js/components/import-from-gitea-menu.tsx'
       ),
     ],
     editorLeftMenuSync: [],
@@ -1140,7 +1172,7 @@ module.exports = {
     autoCompleteExtensions: [
       Path.resolve(
         __dirname,
-        '../modules/reference-picker/frontend/extensions/reference-picker-keybinding.ts'
+        '../modules/reference-picker/frontend/js/extensions/reference-picker-keybinding.ts'
       ),
     ],
     sectionTitleGenerators: [],
@@ -1175,7 +1207,15 @@ module.exports = {
     integrationPanelComponents: [
       Path.resolve(
         __dirname,
-        '../modules/github-sync/frontend/js/components/github-integration-card.tsx'
+        '../modules/git-sync/github/frontend/js/components/github-integration-card.tsx'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitlab/frontend/js/components/gitlab-integration-card.tsx'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/git-sync/gitea/frontend/js/components/gitea-integration-card.tsx'
       ),
       Path.resolve(
         __dirname,
@@ -1194,7 +1234,7 @@ module.exports = {
     referenceIndices: [
       Path.resolve(
         __dirname,
-        '../modules/reference-picker/frontend/reference-index/advanced-reference-index.ts'
+        '../modules/reference-picker/frontend/js/reference-index/advanced-reference-index.ts'
       ),
     ],
     railEntries: [],
@@ -1216,10 +1256,13 @@ module.exports = {
     'authentication/oidc',
     'admin-tools', // import after authentication
     'registration-page', // import after authentication
+    'instance-stats',
     'template-gallery',
     'git-bridge',
     'token-api',
-    'github-sync',
+    'git-sync/github',
+    'git-sync/gitlab',
+    'git-sync/gitea',
     'zotero',
     'bib-editor',
   ],

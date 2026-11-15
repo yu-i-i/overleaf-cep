@@ -7,7 +7,7 @@ import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } fr
 import { BIBTEX_IDENTIFIER_REGEX } from '@shared/bibtex/bibtex-identifier.mts'
 import { getAllEntryTypes, getEntryType } from '@shared/bibtex/entry-types.mts'
 import { useTranslation } from 'react-i18next'
-import OLButton from '@/shared/components/ol/ol-button'
+import OLTooltip from '@/shared/components/ol/ol-tooltip'
 import OLIconButton from '@/shared/components/ol/ol-icon-button'
 import OLFormGroup from '@/shared/components/ol/ol-form-group'
 import OLFormLabel from '@/shared/components/ol/ol-form-label'
@@ -88,7 +88,7 @@ type Props = {
 }
 
 import { BibEntryTypeCombobox, BibAddFieldCombobox, displayCustomType } from './bib-entry-form-comboboxes'
-import BibNameField, { resizeTextarea } from './bib-name-field'
+import BibNameField from './bib-name-field'
 
 const ENTRY_TYPES = getAllEntryTypes()
 
@@ -136,6 +136,7 @@ export default function BibEntryForm({
   onOptionalExpandedChange,
 }: Props) {
   const { t } = useTranslation()
+  const [draggingName, setDraggingName] = useState(false)
   // This set initializes a ref; changing props must not reset validation of
   // the user's in-progress name rows. Compute it only on the first render.
   const [initiallyInvalidNameFields] = useState(() => NAME_FIELDS.filter(field =>
@@ -687,7 +688,7 @@ export default function BibEntryForm({
           sourceEntry.getField(fieldName).toEditableString() === canonical
         ? textareaSourceValues?.[fieldName] ?? canonical
         : canonical
-    const unbalanced = !hasBalancedCurlyBraces(value)
+    const unbalanced = !draggingName && !hasBalancedCurlyBraces(value)
     const braceFeedback = typeOfField !== 'name' && unbalanced && (
       <BibEntryFeedback message={t('curly_braces_must_be_balanced')} />
     )
@@ -704,23 +705,21 @@ export default function BibEntryForm({
           handleFieldChange(fieldName, val, historyUserEvent, fieldIsValid, nameDraft)
         }
         error={!!message}
+        hideBraceErrors={draggingName}
+        onDraggingChange={setDraggingName}
         idPrefix={idPrefix}
       />
     ) : typeOfField === 'large' ? (
       <OLFormControl
         as="textarea"
-        ref={isAbstractPreview ? undefined : resizeTextarea}
         id={`${idPrefix}${fieldName}`}
-        className={`${isOptional ? 'bibtex-form-input ' : ''}${
+        className={`${isAbstractPreview ? '' : 'bibtex-auto-textarea '}${isOptional ? 'bibtex-form-input ' : ''}${
           fieldName === 'abstract' ? 'bibtex-abstract-textarea' : ''
         } ${message || unbalanced ? 'is-invalid' : ''}`}
         maxLength={fieldName === 'abstract' ? '8192' : '4096'}
         autoComplete="off"
         value={value}
         onChange={e => handleFieldChange(fieldName, e.target.value)}
-        onInput={isAbstractPreview ? undefined : event => {
-          resizeTextarea(event.currentTarget)
-        }}
         rows={isAbstractPreview ? 18 : 1}
       />
     ) : (
@@ -803,7 +802,7 @@ export default function BibEntryForm({
           <OLFormLabel htmlFor={`${idPrefix}ref-key`}>
             {t('citation_key')}
           </OLFormLabel>
-          <div className="bibtex-field-with-actions">
+          <div className="bibtex-field-with-actions bibtex-citation-key">
             <OLFormControl
               className={`bibtex-form-input ${
                 citationKeyMessage ? 'is-invalid' : ''
@@ -830,20 +829,25 @@ export default function BibEntryForm({
               placeholder={id ? 'e.g. Doe0000' : generateAvailableCitationKey(
                 draft, existingIds, kind === 'new' ? undefined : sourceEntry.key
               )}
+              append={
+                <OLTooltip id={`${idPrefix}generate-citation-key`} description={t('generate')}
+                  overlayProps={{ placement: 'top', trigger: ['hover', 'focus'] }}>
+                  <OLIconButton
+                    type="button"
+                    icon="autorenew"
+                    className="bibtex-generate-key"
+                    accessibilityLabel={t('generate')}
+                    variant="ghost"
+                    size="sm"
+                    onMouseDown={event => event.preventDefault()}
+                    onClick={() => handleGenerateKey(true)}
+                  />
+                </OLTooltip>
+              }
             />
             {citationKeyMessage && (
               <BibEntryFeedback message={citationKeyMessage} />
             )}
-            <div className="bibtex-form-actions">
-              <OLButton
-                variant="secondary"
-                size="sm"
-                onMouseDown={event => event.preventDefault()}
-                onClick={() => handleGenerateKey(true)}
-              >
-                {t('generate')}
-              </OLButton>
-            </div>
           </div>
           <OLFormText>{t('citation_key_autogenerate_helper')}</OLFormText>
         </OLFormGroup>

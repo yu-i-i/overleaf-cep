@@ -17,12 +17,13 @@ import { useProjectContext } from '@/shared/context/project-context'
 import { useIdeReactContext } from '@/features/ide-react/context/ide-react-context'
 import { useLayoutContext } from '@/shared/context/layout-context'
 import { useBibEditorContext } from '../context/bib-editor-context'
-import GenericConfirmModal from '@/features/ide-react/components/modals/generic-confirm-modal'
+import BibDeleteModal from './bib-delete-modal'
 import withErrorBoundary from '@/infrastructure/error-boundary'
 
 import BibEntryList from './bib-entry-list'
 import BibManualModal from './bib-manual-modal'
 import BibEntryPreview from './bib-entry-preview'
+import { useZoteroLibraries } from '../zotero/use-zotero-libraries'
 import BibImportModal from './bib-import-modal'
 import BibOrcidImportModal from './bib-orcid-import-modal'
 
@@ -117,6 +118,14 @@ function BibEditorPanel() {
     documentId: string
     entryId: string
   } | null>(null)
+
+  const zotero = useZoteroLibraries(!readOnly && showVisual && !isFileView)
+  const [zoteroDocument, setZoteroDocument] = useState<string | null>(null)
+  const showZotero = !!zoteroDocument && zoteroDocument === currentDocumentId &&
+    !!zotero.groups && !readOnly && showVisual && !isFileView
+  useEffect(() => {
+    if (!showZotero) setZoteroDocument(null)
+  }, [showZotero])
 
   const [importOpen, setImportOpen] = useState(false)
   const [orcidOpen, setOrcidOpen] = useState(false)
@@ -885,6 +894,9 @@ function BibEditorPanel() {
   }, [])
 
   const openImport = useCallback(() => setImportOpen(true), [])
+  const openZotero = useCallback(() => {
+    if (currentDocumentId) setZoteroDocument(currentDocumentId)
+  }, [currentDocumentId])
   const openManual = useCallback(() => setManualShow(true), [])
   const openOrcid = useCallback(() => {
     if (currentDocumentId) setOrcidOpen(true)
@@ -951,6 +963,9 @@ function BibEditorPanel() {
               onAddPaste={openImport}
               onAddManual={openManual}
               onAddFromOrcid={openOrcid}
+              zoteroAvailable={zotero.available}
+              zoteroLinked={!!zotero.groups}
+              onAddFromZotero={openZotero}
             />
             <BibBulkActionsBar
               filteredLength={filtered.length}
@@ -1054,17 +1069,15 @@ function BibEditorPanel() {
         )}
         </PanelGroup>
 
-      <GenericConfirmModal
+      <BibDeleteModal
         show={!readOnly && deleteTarget !== null && deleteTarget.documentId === currentDocumentId}
         onHide={() => setDeleteTarget(null)}
         title={t('delete_entry')}
         message={t('confirm_delete_entry')}
-        confirmLabel={t('delete')}
-        primaryVariant="danger"
         onConfirm={handleConfirmDelete}
       />
 
-      <GenericConfirmModal
+      <BibDeleteModal
         show={bulkDeleteGuard !== null && bulkDeleteGuard.documentId === currentDocumentId && canWriteToView()}
         onHide={() => setBulkDeleteGuard(null)}
         title={plural(t, bulkDeleteCount, 'delete_entry', 'delete_entries')}
@@ -1074,8 +1087,6 @@ function BibEditorPanel() {
           'confirm_delete_entry',
           'confirm_delete_references_count'
         )}
-        confirmLabel={t('delete')}
-        primaryVariant="danger"
         onConfirm={handleConfirmBulkDelete}
       />
 
@@ -1084,6 +1095,15 @@ function BibEditorPanel() {
         onImport={handleImportEntries}
         onHidden={() => setImportOpen(false)}
       />
+
+      {showZotero && zotero.groups && (
+        <BibImportModal
+          show
+          zoteroGroups={zotero.groups}
+          onImport={appendImportedEntries}
+          onHidden={() => setZoteroDocument(null)}
+        />
+      )}
 
       <BibManualModal
         show={manualShow && !readOnly}

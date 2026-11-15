@@ -475,6 +475,11 @@
   flex-direction: column;
   min-height: 0;
 }
+.bibtex-auto-textarea {
+  field-sizing: content;
+  width: 100%;
+}
+
 .bibtex-abstract-textarea {
   flex: 1;
   min-height: 0;
@@ -746,10 +751,6 @@
   .bibtex-field-with-actions {
     gap: 0rem 0.6rem;
   }
-  .bibtex-name-add {
-    padding: 0 1em;
-    align-self: flex-end;
-  }
 }
 
 .bibtex-optional-field-row:has(> .bibtex-form-names) {
@@ -772,7 +773,6 @@
 }
 
 .bibtex-optional-field-row .bibtex-abstract-textarea {
-  height: auto !important;
   min-height: calc(4.5em + 0.4rem + 2px) !important;
 }
 
@@ -834,4 +834,57 @@
   background-color: var(--bg-primary-themed);
   border-color: var(--bibtex-preview-input-border);
   opacity: 1;
+}
+
+.bibtex-name-rows {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+.bibtex-dragged-name {
+  transform: translateY(-50%);
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+  white-space: nowrap;
+  color: var(--content-primary-themed);
+}
+
+.bibtex-name-rows .bibtex-name-handle {
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.bibtex-name-rows .bibtex-form-input.is-invalid {
+  background-image: none;
+}
+
+.bibtex-field-with-actions > .form-control-wrapper {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.bibtex-name-handle, .bibtex-name-add, .bibtex-generate-key {
+  padding: 0;
+  pointer-events: auto;
+}
+
+body:has(.bibtex-dragged-name),
+body:has(.bibtex-dragged-name) * {
+  cursor: grabbing !important;
+}
+
+.bibtex-citation-key {
+  grid-template-columns: minmax(0, 1fr);
+
+  .bibtex-form-input.is-invalid {
+    padding-inline-end: 56px;
+    background-position: right 32px center;
+  }
+}
+
+.bibtex-field-with-actions > .form-control-wrapper:has(.is-invalid) ~ .invalid-feedback {
+  display: block;
 }

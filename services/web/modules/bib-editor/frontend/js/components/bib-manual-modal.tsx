@@ -81,6 +81,7 @@ export default function BibManualModal({
 
   return (
     <OLModal
+      backdrop="static"
       data-bib-editor-dialog
       show={show}
       onHide={handleHide}

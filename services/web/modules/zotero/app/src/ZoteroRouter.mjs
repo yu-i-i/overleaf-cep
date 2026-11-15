@@ -16,6 +16,12 @@ export default {
       ZoteroController.getCollections
     )
 
+    webRouter.get(
+      '/user/zotero/export',
+      AuthenticationController.requireLogin(),
+      ZoteroController.exportReferences
+    )
+
     // Unlink Zotero account
     webRouter.delete(
       '/user/zotero',

@@ -19,9 +19,12 @@ type Props = {
   search: string
   onSearchChange: (search: string) => void
   openDocName: string | null
+  zoteroAvailable: boolean
+  zoteroLinked: boolean
+  onAddFromZotero: () => void
   onAddPaste: () => void
   onAddManual: () => void
-  onAddFromOrcid?: () => void
+  onAddFromOrcid: () => void
 }
 
 function BibEntryListPanel({
@@ -32,6 +35,9 @@ function BibEntryListPanel({
   onAddPaste,
   onAddManual,
   onAddFromOrcid,
+  zoteroAvailable,
+  zoteroLinked,
+  onAddFromZotero,
 }: Props) {
   const { t } = useTranslation()
 
@@ -96,14 +102,19 @@ function BibEntryListPanel({
             {t('enter_manually')}
           </OLDropdownItem>
 
-          {onAddFromOrcid ? (
-            <OLDropdownItem
-              description={t('search_orcid_by_name_or_id')}
-              onClick={onAddFromOrcid}
-            >
-              {t('import_from_orcid_org')}
+          <OLDropdownItem
+            description={t('search_orcid_by_name_or_id')}
+            onClick={onAddFromOrcid}
+          >
+            {t('import_from_provider', { provider: 'ORCID.org' })}
+          </OLDropdownItem>
+
+          {zoteroAvailable && (
+            <OLDropdownItem disabled={!zoteroLinked} onClick={onAddFromZotero}>
+              {t('import_from_provider', { provider: 'Zotero' })}
             </OLDropdownItem>
-          ) : null}
+          )}
+
         </OLDropdownMenu>
       </OLDropdown>
     </div>

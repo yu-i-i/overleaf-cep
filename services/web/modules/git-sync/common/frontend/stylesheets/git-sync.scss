@@ -1,0 +1,33 @@
+.git-sync-commits-heading {
+  align-items: center;
+  display: flex;
+  font-size: var(--font-size-03);
+  font-weight: 600;
+  justify-content: space-between;
+  line-height: var(--line-height-03);
+}
+
+.git-sync-dropdown {
+  .git-sync-dropdown-toggle {
+    border-radius: var(--border-radius-base);
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-weight: normal;
+
+    &,
+    &:hover,
+    &:active,
+    &.show {
+      background: var(--select-bg);
+      color: var(--select-color);
+      border-color: var(--select-border);
+    }
+
+    &:disabled {
+      background: var(--select-bg-disabled);
+      color: var(--select-color-disabled);
+      border-color: var(--select-border-disabled);
+    }
+  }
+}

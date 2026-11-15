@@ -29,10 +29,14 @@ import {
   type BibImportRow,
 } from '../utils/bib-import.ts'
 
+import ZoteroImportSource from '../zotero/zotero-import-source'
+import type { ZoteroGroup } from '../zotero/use-zotero-libraries'
+
 type Props = {
+  zoteroGroups?: ZoteroGroup[]
   show: boolean
   /** Fired for the Import button; false means the guarded write was rejected. */
-  onImport: (entries: BibtexEntry[]) => Promise<boolean>
+  onImport: (entries: BibtexEntry[]) => boolean | Promise<boolean>
   onHidden: () => void
   /** Library (SaaS): pre-fill the paste step (Upload .bib file → same
    *  pipeline). Default empty string. */
@@ -44,6 +48,7 @@ export default function BibImportModal({
   onImport,
   onHidden,
   initialText = '',
+  zoteroGroups,
 }: Props) {
   const { t } = useTranslation()
   const [mode, setMode] = useState<'paste' | 'preview'>('paste')
@@ -199,6 +204,7 @@ export default function BibImportModal({
 
   return (
     <OLModal
+      backdrop="static"
       data-bib-editor-dialog
       show={show}
       onHide={handleHidden}
@@ -224,11 +230,31 @@ export default function BibImportModal({
             <OLModalTitle className="visually-hidden">{t('preview')}</OLModalTitle>
           </>
         ) : (
-          <OLModalTitle>{t('add_reference')}</OLModalTitle>
+          <OLModalTitle>
+            {zoteroGroups ? t('import_from_provider', { provider: 'Zotero' }) : t('add_reference')}
+          </OLModalTitle>
         )}
       </OLModalHeader>
 
-      {mode === 'paste' ? (
+      {zoteroGroups && (
+        <ZoteroImportSource
+          groups={zoteroGroups}
+          visible={mode === 'paste'}
+          onCancel={handleHidden}
+          onPreview={bibliography => {
+            const items = splitImportText(bibliography)
+            const previewRows = items.map((item, index) =>
+              buildImportRow(item, index, 'could_not_parse_this_reference')
+            )
+            setRows(previewRows)
+            setCheckedRowIds(previewRows.filter(row => row.status === 'ok').map(row => row.rowId))
+            setImportFailed(false)
+            setPreviewDone(true)
+            setMode('preview')
+          }}
+        />
+      )}
+      {mode === 'paste' && !zoteroGroups && (
         <>
           <OLModalBody className="bibtex-import-form">
             <div className="form-group">
@@ -267,7 +293,8 @@ export default function BibImportModal({
             </OLButton>
           </OLModalFooter>
         </>
-      ) : (
+      )}
+      {mode === 'preview' && (
         <>
           <OLModalBody>
             {previewEmpty ? (
@@ -344,7 +371,7 @@ export default function BibImportModal({
                     disabled={previewEmpty || !previewDone || checkedCount === 0 || importing}
                     onClick={() => void handleImport()}
                   >
-                    {importing ? '…' : t('save')}
+                    {importing ? '…' : t(zoteroGroups ? 'import' : 'save')}
                   </OLButton>
                 </div>
               </div>
