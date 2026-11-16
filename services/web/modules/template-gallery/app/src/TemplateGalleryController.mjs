@@ -78,7 +78,7 @@ async function deleteTemplate(req, res, next) {
     res.sendStatus(200)
   } catch (error) {
     logger.error({ error }, 'Failure deleting template')
-    return res.status(500).json({ message: t('something_went_wrong_server') })
+    return res.status(error.info?.status || 500).json({ message: t('something_went_wrong_server') })
   }
 }
 
@@ -143,6 +143,10 @@ async function getTemplateJSON(req, res, next) {
     const template = await TemplateGalleryManager.getTemplate(key, val)
     res.json(template)
   } catch (error) {
+    // 共通の HTML エラー処理では入力エラーも 500 になるため、API で明示する。
+    if (error.info?.status === 400) {
+      return res.status(400).json({ message: error.message })
+    }
     next(error)
   }
 }
@@ -152,6 +156,9 @@ async function getCategoryTemplatesJSON(req, res, next) {
     const result = await TemplateGalleryManager.getCategoryTemplates(req.query)
     res.json(result)
   } catch (error) {
+    if (error.info?.status === 400) {
+      return res.status(400).json({ message: error.message })
+    }
     next(error)
   }
 }

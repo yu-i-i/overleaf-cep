@@ -55,6 +55,12 @@ services:
       GIT_BRIDGE_PORT: "8000"
       # ダウンロード URL をブリッジへ渡す際は、ブリッジから到達可能な名前にする。
       V1_HISTORY_URL_FOR_GIT_BRIDGE: http://sharelatex:3100/api
+      # ログインした利用者向けにテンプレートを共有する。公開管理は管理者に限定。
+      OVERLEAF_TEMPLATE_GALLERY: "true"
+      OVERLEAF_NON_ADMIN_CAN_PUBLISH_TEMPLATES: "false"
+      # 任意で、サイト管理者以外にテンプレートを管理するアカウントを指定できる。
+      OVERLEAF_TEMPLATES_USER_ID: ${OVERLEAF_TEMPLATES_USER_ID:-}
+      TEMPLATE_ALL_NAME: 研究室テンプレート
 
   # Overleaf が要求する単一ノードの MongoDB replica set。
   mongo:
