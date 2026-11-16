@@ -46,7 +46,26 @@ function _createZipStreamForProjectAsync(projectId) {
   })
 }
 
-export function validateTemplateInput({ name, descriptionMD, authorMD, license }) {
+export function validateTemplateInput(input, { isNew = false } = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Errors.InvalidNameError('Invalid template settings.')
+  }
+  // MongoDB の検索条件や Markdown 処理へ、文字列以外の入力を渡さない。
+  for (const field of ['name', 'descriptionMD', 'authorMD', 'license', 'category', 'language']) {
+    if (input[field] !== undefined && typeof input[field] !== 'string') {
+      throw new Errors.InvalidNameError(`Invalid template field: ${field}`)
+    }
+  }
+  for (const field of ['name', 'category', 'license']) {
+    if ((isNew || input[field] !== undefined) && !input[field]?.trim()) {
+      throw new Errors.InvalidNameError(`Missing template field: ${field}`)
+    }
+  }
+  if (isNew && (typeof input.build !== 'string' ||
+      input.build.length > 128 || !/^[\w-]+$/.test(input.build))) {
+    throw new Errors.InvalidNameError('Recompile the project before publishing.')
+  }
+  const { name, descriptionMD, authorMD, license } = input
   if (name?.length > MAX_PROJECT_NAME_LENGTH) {
     throw new Errors.InvalidNameError(`Template title exceeds the maximum length of ${MAX_PROJECT_NAME_LENGTH} characters.`)
   }

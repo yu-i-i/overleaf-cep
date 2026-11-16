@@ -19,6 +19,8 @@ const TIMEOUT = 30000
 
 async function editTemplate({ templateId, updates }) {
 
+  // 編集フォームの項目だけを受け付ける。所有者・版番号・参照先は公開処理で管理する。
+  updates = _.pick(updates, ['name', 'descriptionMD', 'authorMD', 'category', 'license', 'language'])
   validateTemplateInput(updates)
 
   const template = await Template.findById(templateId)
@@ -46,20 +48,24 @@ async function editTemplate({ templateId, updates }) {
 }
 
 async function deleteTemplate({ templateId, version }) {
+  validateAssetReference(templateId, version)
   await deleteTemplateAssets(templateId, version, true)
 }
 
 async function createTemplateFromProject({ projectId, userId, templateSource }) {
-  validateTemplateInput(templateSource)
+  validateTemplateInput(templateSource, { isNew: true })
   let template = await Template.findOne({ name: templateSource.name }).exec()
 
-  if (template && !templateSource.override) {
+  if (template) {
     const { canOverride, templateOwnerName } = await canUserOverrideTemplate(template, userId)
 
-    return {
-      conflict: true,
-      canOverride,
-      templateOwnerName
+    // 確認ダイアログを経ず override=true を送られても、上書き権限を再確認する。
+    if (!templateSource.override || !canOverride) {
+      return {
+        conflict: true,
+        canOverride,
+        templateOwnerName
+      }
     }
   }
 
@@ -90,6 +96,7 @@ async function createTemplateFromProject({ projectId, userId, templateSource }) 
 }
 
 async function fetchTemplatePreview({ templateId, version, style }) {
+  validateAssetReference(templateId, version)
   if (!templateId || !version) {
     throw new OError('Template ID and version are required', { status: 404 })
   }
@@ -131,11 +138,25 @@ async function getTemplate(key, val) {
     return null
   }
 
+  // クライアントが MongoDB の演算子や任意フィールドを検索キーに指定できないようにする。
+  if (!['_id', 'name'].includes(key) || typeof val !== 'string' ||
+      (key === '_id' && !/^[a-f0-9]{24}$/i.test(val))) {
+    throw new OError('Invalid template lookup', { status: 400 })
+  }
+
   const query = { [key]: val }
   const template = await Template.findOne(query).exec()
   if (!template) return null
 
   return _formatTemplateForPage(template)
+}
+
+function validateAssetReference(templateId, version) {
+  // プレビュー取得・削除で使う内部 URL のパスへ、利用者の任意文字列を挿入しない。
+  if (!/^[a-f0-9]{24}$/i.test(String(templateId)) ||
+      !/^[1-9]\d*$/.test(String(version)) || !Number.isSafeInteger(Number(version))) {
+    throw new OError('Invalid template asset reference', { status: 400 })
+  }
 }
 
 async function getCategoryTemplates(reqQuery) {

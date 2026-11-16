@@ -1,6 +1,7 @@
 import logger from '@overleaf/logger'
 
 import AuthenticationController from '../../../../app/src/Features/Authentication/AuthenticationController.mjs'
+import AuthorizationMiddleware from '../../../../app/src/Features/Authorization/AuthorizationMiddleware.mjs'
 import RateLimiterMiddleware from '../../../../app/src/Features/Security/RateLimiterMiddleware.mjs'
 import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.mjs'
 import TemplateGalleryController from './TemplateGalleryController.mjs'
@@ -29,6 +30,8 @@ export default {
       AuthenticationController.requireLogin(),
       RateLimiterMiddleware.rateLimit(rateLimiterNewTemplate),
       TemplateAuthorizationMiddleware.ensureTemplateManagementAccess,
+      // ギャラリーの管理権限だけで、他人の非公開プロジェクトを公開させない。
+      AuthorizationMiddleware.ensureUserCanWriteProjectContent,
       TemplateGalleryController.createTemplateFromProject
     )
 
