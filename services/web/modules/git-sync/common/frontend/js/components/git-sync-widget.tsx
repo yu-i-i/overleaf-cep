@@ -60,7 +60,7 @@ export default function GitSyncWidget() {
 
         <div className="description-container">
           <div className="title-row">
-            <h4>{displayTitle || providerName}</h4>
+            <h4>{displayTitle}</h4>
           </div>
 
           <p className="small">
@@ -80,7 +80,7 @@ export default function GitSyncWidget() {
 
         <div className="description-container">
           <div className="title-row">
-            <h4 id={`${basePath}`}>{displayTitle || providerName}</h4>
+            <h4 id={`${basePath}`}>{displayTitle}</h4>
           </div>
 
           <p className="small">

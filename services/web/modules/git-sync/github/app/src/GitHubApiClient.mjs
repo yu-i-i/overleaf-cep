@@ -21,15 +21,16 @@ import {
   AlreadyExistsError,
 } from '../../../common/app/src/GitSyncErrors.mjs'
 
-const GITHUB_URL = 'https://github.com'
-const GITHUB_API_BASE = 'https://api.github.com'
-const GITHUB_GRAPHQL = 'https://api.github.com/graphql'
+const REQUEST_TIMEOUT_MS = 60_000
+const REQUEST_LONG_TIMEOUT_MS = 600_000
 const MAX_PER_PAGE = 100  // GitHub REST API limit
 
-const REQUEST_TIMEOUT_MS = 60 * 1000
-const REQUEST_LONG_TIMEOUT_MS = 600 * 1000
+const maxConcurrency = Settings.githubSync.apiMaxConcurrency
 
-const maxConcurrency = process.env.GITHUB_API_MAX_CONCURRENCY || 5
+const githubUrl = Settings.githubSync.url
+const isEnterprise = !['https://github.com', 'https://www.github.com'].includes(githubUrl.toLowerCase())
+const githubApiBase = isEnterprise ? `${githubUrl}/api/v3` : 'https://api.github.com'
+const githubGraphQL = isEnterprise ? `${githubUrl}/api/graphql` : 'https://api.github.com/graphql'
 
 function buildHeaders(token) {
   return {
@@ -152,7 +153,7 @@ function fetchGitHubStream(url, options, operation) {
 
 // OAuth
 function getOAuth2Url() {
-  const oAuthUrl = new URL(`${GITHUB_URL}/login/oauth/authorize`)
+  const oAuthUrl = new URL(`${githubUrl}/login/oauth/authorize`)
   oAuthUrl.searchParams.append('client_id', Settings.githubSync.clientID)
   oAuthUrl.searchParams.append('redirect_uri', Settings.githubSync.callbackURL)
   oAuthUrl.searchParams.append('scope', 'read:org,repo,workflow')
@@ -160,7 +161,7 @@ function getOAuth2Url() {
 }
 
 function exchangeCodeForToken(code) {
-  return fetchGitHubJson(`${GITHUB_URL}/login/oauth/access_token`, {
+  return fetchGitHubJson(`${githubUrl}/login/oauth/access_token`, {
     method: 'POST',
     headers: buildHeaders(),
     json: {
@@ -175,7 +176,7 @@ function exchangeCodeForToken(code) {
 
 function revokeToken(token) {
   const { clientID, clientSecret } = Settings.githubSync
-  return fetchGitHubNothing(`${GITHUB_API_BASE}/applications/${clientID}/token`, {
+  return fetchGitHubNothing(`${githubApiBase}/applications/${clientID}/token`, {
     method: 'DELETE',
     headers: buildHeaders(),
     basicAuth: {
@@ -189,35 +190,11 @@ function revokeToken(token) {
 
 // user, orgs, permissions
 function getUser(token) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/user`, {
+  return fetchGitHubJson(`${githubApiBase}/user`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getUser').then(({ id, login, name }) => ({ id, login, name }))
 }
-
-/*
-async function getUserAndOrgsREST(token) {
-  const user = await fetchGitHubJson(`${GITHUB_API_BASE}/user`, {
-    headers: buildHeaders(token),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-  }, 'getUserAndOrgs:user')
-
-  const page = 1
-  const params = new URLSearchParams({
-    page: page.toString(),
-    per_page: MAX_PER_PAGE.toString(),
-  })
-  const orgs = await fetchGitHubJson(`${GITHUB_API_BASE}/user/orgs?${params}`, {
-    headers: buildHeaders(token),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-  }, 'getUserAndOrgs:orgs')
-
-  return {
-    user: user.login,
-    orgs: orgs.map(o => o.login)
-  }
-}
-*/
 
 async function getUserAndOrgs(token) {
   const query = `
@@ -233,7 +210,7 @@ async function getUserAndOrgs(token) {
       }
     }
   `
-  const json = await fetchGitHubJson(GITHUB_GRAPHQL, {
+  const json = await fetchGitHubJson(githubGraphQL, {
     method: 'POST',
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -249,7 +226,7 @@ async function getUserAndOrgs(token) {
 }
 
 function getPushPermission(token, repoFullName) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getPushPrmission').then(repo => (repo.permissions?.push === true))
@@ -257,7 +234,7 @@ function getPushPermission(token, repoFullName) {
 
 // repos
 function createRepo(token, { name, description, isPublic, org }) {
-  const url = org ? `${GITHUB_API_BASE}/orgs/${org}/repos` : `${GITHUB_API_BASE}/user/repos`
+  const url = org ? `${githubApiBase}/orgs/${org}/repos` : `${githubApiBase}/user/repos`
   return fetchGitHubJson(url, {
     method: 'POST',
     headers: buildHeaders(token),
@@ -277,7 +254,7 @@ async function _listUserReposPage(token, page) {
     per_page: MAX_PER_PAGE.toString(),
   })
 
-  const { json, response } = await fetchGitHubJsonWithResponse(`${GITHUB_API_BASE}/user/repos?${params}`, {
+  const { json, response } = await fetchGitHubJsonWithResponse(`${githubApiBase}/user/repos?${params}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, '_listUserReposPage')
@@ -314,7 +291,7 @@ async function listRepoBranches(token, repoFullName) {
   let page = 1
   while (true) {
     const params = new URLSearchParams({ page: page.toString(), per_page: MAX_PER_PAGE.toString() })
-    const { json, response } = await fetchGitHubJsonWithResponse(`${GITHUB_API_BASE}/repos/${repoFullName}/branches?${params}`, {
+    const { json, response } = await fetchGitHubJsonWithResponse(`${githubApiBase}/repos/${repoFullName}/branches?${params}`, {
       headers: buildHeaders(token),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     }, 'listRepoBranches')
@@ -327,7 +304,7 @@ async function listRepoBranches(token, repoFullName) {
 
 // Git (blobs / trees / commits)
 function uploadBlob(token, repoFullName, buffer) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/blobs`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/git/blobs`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -341,7 +318,7 @@ function uploadBlob(token, repoFullName, buffer) {
 function getBlobStream(token, repoFullName, ref, path) {
   const encodedPath = encodeURIComponent(path).replace(/%2F/g, '/')
 
-  return fetchGitHubStream(`${GITHUB_API_BASE}/repos/${repoFullName}/contents/${encodedPath}?ref=${ref}`, {
+  return fetchGitHubStream(`${githubApiBase}/repos/${repoFullName}/contents/${encodedPath}?ref=${ref}`, {
     headers: {
       ...buildHeaders(token),
       Accept: 'application/vnd.github.raw',
@@ -351,7 +328,7 @@ function getBlobStream(token, repoFullName, ref, path) {
 }
 
 function createTree(token, repoFullName, entries, base_tree) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/trees`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/git/trees`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -368,7 +345,7 @@ function createTree(token, repoFullName, entries, base_tree) {
 }
 
 function createCommit(token, repoFullName, { tree, message, parents = [] }) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/commits`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/git/commits`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -381,14 +358,14 @@ function createCommit(token, repoFullName, { tree, message, parents = [] }) {
 }
 
 function getCommitTree(token, repoFullName, commit) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/commits/${commit}`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/git/commits/${commit}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'getCommitTree').then(r => r.tree.sha)
 }
 
 async function listBlobsAtCommit(token, repoFullName, commit) {
-  const treeUrl = `${GITHUB_API_BASE}/repos/${repoFullName}/git/trees/`
+  const treeUrl = `${githubApiBase}/repos/${repoFullName}/git/trees/`
   const options = () => ({
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS)
@@ -421,7 +398,7 @@ async function isAncestor(token, repoFullName, ancestor, descendant) {
   try {
     if (ancestor === descendant) return true
     const data = await fetchGitHubJson(
-      `${GITHUB_API_BASE}/repos/${repoFullName}/compare/${encodeURIComponent(ancestor)}...${encodeURIComponent(descendant)}`,
+      `${githubApiBase}/repos/${repoFullName}/compare/${encodeURIComponent(ancestor)}...${encodeURIComponent(descendant)}`,
       { headers: buildHeaders(token), signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS) },
       'isAncestor'
     )
@@ -433,7 +410,7 @@ async function isAncestor(token, repoFullName, ancestor, descendant) {
 }
 
 async function listNewCommitsWithStatus(token, fullName, branchName, fromCommit) {
-  const url = `${GITHUB_API_BASE}/repos/${fullName}/compare/${fromCommit}...${encodeURIComponent(branchName)}`
+  const url = `${githubApiBase}/repos/${fullName}/compare/${fromCommit}...${encodeURIComponent(branchName)}`
   const data = await fetchGitHubJson(url, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS)
@@ -454,14 +431,14 @@ async function listNewCommitsWithStatus(token, fullName, branchName, fromCommit)
 
 // branches
 function getBranchHead(token, repoFullName, branchName) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/ref/heads/${encodeURIComponent(branchName)}`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/git/ref/heads/${encodeURIComponent(branchName)}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'getBranchHead').then(r => r.object.sha)
 }
 
 function createBranch(token, repoFullName, branchName, sha) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/refs`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/git/refs`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -473,7 +450,7 @@ function createBranch(token, repoFullName, branchName, sha) {
 }
 
 function updateBranch(token, repoFullName, branchName, sha, force = false) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
     method: 'PATCH',
     headers: buildHeaders(token),
     json: { sha, force },
@@ -482,7 +459,7 @@ function updateBranch(token, repoFullName, branchName, sha, force = false) {
 }
 
 function deleteBranch(token, repoFullName, branchName) {
-  return fetchGitHubNothing(`${GITHUB_API_BASE}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
+  return fetchGitHubNothing(`${githubApiBase}/repos/${repoFullName}/git/refs/heads/${encodeURIComponent(branchName)}`, {
     method: 'DELETE',
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
@@ -490,7 +467,7 @@ function deleteBranch(token, repoFullName, branchName) {
 }
 
 function setDefaultBranch(token, repoFullName, branchName) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}`, {
     method: 'PATCH',
     headers: buildHeaders(token),
     json: { default_branch: branchName },
@@ -500,7 +477,7 @@ function setDefaultBranch(token, repoFullName, branchName) {
 
 // merge / compare
 function mergeBranch(token, repoFullName, base, head, expectedSource) {
-  return fetchGitHubJson(`${GITHUB_API_BASE}/repos/${repoFullName}/merges`, {
+  return fetchGitHubJson(`${githubApiBase}/repos/${repoFullName}/merges`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: { base, head: expectedSource ?? head },
@@ -510,7 +487,7 @@ function mergeBranch(token, repoFullName, base, head, expectedSource) {
 
 // zip
 function getRepoZipball(token, repoFullName, sha) {
-  return fetchGitHubStream(`${GITHUB_API_BASE}/repos/${repoFullName}/zipball/${sha}`, {
+  return fetchGitHubStream(`${githubApiBase}/repos/${repoFullName}/zipball/${sha}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS),
   }, 'getRepoZipball')

@@ -19,17 +19,18 @@ import {
   AlreadyExistsError,
 } from '../../../common/app/src/GitSyncErrors.mjs'
 
-
-const url = Settings.giteaSync.url
-const providerName = Settings.giteaSync.brand === 'forgejo' ? 'Forgejo' : 'Gitea'
-const apiBase = `${url}/api/v1`
-const MAX_PER_PAGE = 50
-const MAX_TREE_PER_PAGE = 1000
 const REQUEST_TIMEOUT_MS = 60_000
 const REQUEST_LONG_TIMEOUT_MS = 600_000
+const MAX_PER_PAGE = 50
+const MAX_TREE_PER_PAGE = 1000
 const MERGE_RETRY_INTERVAL_MS = 1500
-const MERGE_RETRY_ATTEMPTS = 10
-const maxConcurrency = Number(process.env.GITEA_API_MAX_CONCURRENCY) || 5
+
+const giteaUrl = Settings.giteaSync.url
+const apiBase = `${giteaUrl}/api/v1`
+const providerName = Settings.giteaSync.brand === 'forgejo' ? 'Forgejo' : 'Gitea'
+const mergeRetryAttempts = Settings.giteaSync.mergeRetryAttempts
+const maxConcurrency = Settings.giteaSync.apiMaxConcurrency
+
 const syncContext = new AsyncLocalStorage()
 
 function headers(token) {
@@ -64,8 +65,12 @@ function normalizeError(err, operation) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body) } catch { body = null }
   }
-  if (operation === 'refreshToken' && [400, 401].includes(status) &&
-      ['invalid_grant', 'invalid_token'].includes(body?.error)) {
+  if (
+    operation === 'refreshToken' && [400, 401].includes(status) &&
+    (['invalid_grant', 'invalid_token'].includes(body?.error) ||
+      (body?.error === 'unauthorized_client' &&
+        body.error_description === 'token was already used'))
+  ) {
     throw new InvalidTokenError(`${providerName} refresh token expired or revoked`, { status: 401 }, err)
   }
   if (status === 401) throw new InvalidTokenError('Invalid token', { status }, err)
@@ -118,7 +123,7 @@ async function getPages(path, token, operation) {
 }
 
 function getOAuth2Url() {
-  const authUrl = new URL(`${url}/login/oauth/authorize`)
+  const authUrl = new URL(`${giteaUrl}/login/oauth/authorize`)
   authUrl.searchParams.set('client_id', Settings.giteaSync.clientID)
   authUrl.searchParams.set('redirect_uri', Settings.giteaSync.callbackURL)
   authUrl.searchParams.set('response_type', 'code')
@@ -139,7 +144,7 @@ function toCredentials(response) {
 }
 
 function exchangeCodeForToken(code) {
-  return fetchJson(`${url}/login/oauth/access_token`, {
+  return fetchJson(`${giteaUrl}/login/oauth/access_token`, {
     method: 'POST', headers: headers(),
     json: {
       client_id: Settings.giteaSync.clientID,
@@ -154,7 +159,7 @@ function exchangeCodeForToken(code) {
 }
 
 function refreshToken(refreshToken) {
-  return fetchJson(`${url}/login/oauth/access_token`, {
+  return fetchJson(`${giteaUrl}/login/oauth/access_token`, {
     method: 'POST', headers: headers(),
     json: {
       client_id: Settings.giteaSync.clientID,
@@ -356,7 +361,7 @@ async function mergeBranch(token, fullName, base, head, expectedSource, retry = 
     base, head, title: 'Merge changes from Overleaf',
   }, 'createMergeRequest', REQUEST_LONG_TIMEOUT_MS)
   const headCommit = expectedSource ?? await getBranchHead(token, fullName, head)
-  for (let attempt = 0; attempt < MERGE_RETRY_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < mergeRetryAttempts; attempt++) {
     try {
       await fetchNothing(`${apiBase}/repos/${repo}/pulls/${pr.number}/merge`, {
         method: 'POST', headers: headers(token),
@@ -368,7 +373,7 @@ async function mergeBranch(token, fullName, base, head, expectedSource, retry = 
       return mergedHead
     } catch (err) {
       if (isPendingMerge(err)) {
-        if (attempt < MERGE_RETRY_ATTEMPTS - 1) {
+        if (attempt < mergeRetryAttempts - 1) {
           await new Promise(resolve => setTimeout(resolve, MERGE_RETRY_INTERVAL_MS))
           continue
         }

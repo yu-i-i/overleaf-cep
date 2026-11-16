@@ -7,7 +7,6 @@ export type GitSyncConfig = {
   displayTitle?: string
   basePath: string
   Logo: ComponentType<{ size?: number }>
-  helpUrl: string
   repoUrl: (fullName: string) => string
   branchUrl: (fullName: string, branch: string) => string
   commitUrl: (fullName: string, sha: string) => string

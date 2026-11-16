@@ -6,7 +6,7 @@ import GitSyncModal from './modals/git-sync-modal'
 import { GitSyncModalStatus } from '../types/git-sync-types'
 
 const GitSyncCardContent = () => {
-  const { providerName, displayTitle, Logo, t } = useGitSync()
+  const { displayTitle, Logo, t } = useGitSync()
 
   const [showModal, setShowModal] = useState(false)
   const { projectId, name } = useProjectContext()
@@ -15,7 +15,7 @@ const GitSyncCardContent = () => {
   return (
     <>
       <IntegrationCard
-        title={displayTitle || providerName}
+        title={displayTitle}
         description={t('sync_with_a_github_repository')}
         icon={<Logo size={32} />}
         showPaywallBadge={false}

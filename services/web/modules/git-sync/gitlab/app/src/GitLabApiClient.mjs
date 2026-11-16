@@ -23,15 +23,15 @@ import {
   AlreadyExistsError,
 } from '../../../common/app/src/GitSyncErrors.mjs'
 
-const GITLAB_URL = Settings.gitlabSync?.url
-const GITLAB_API_BASE = `${GITLAB_URL}/api/v4`
+const REQUEST_TIMEOUT_MS = 60_000
+const REQUEST_LONG_TIMEOUT_MS = 600_000
 const MAX_PER_PAGE = 100
 
-const REQUEST_TIMEOUT_MS = 60 * 1000
-const REQUEST_LONG_TIMEOUT_MS = 600 * 1000
-
-const MERGE_REQUEST_POLL_INTERVAL_MS = Settings.gitlabSync?.mergeRequestPollInterval
-const MERGE_REQUEST_TIMEOUT_MS = Settings.gitlabSync?.mergeRequestTimeout
+const gitlabUrl = Settings.gitlabSync.url
+const apiBase = `${gitlabUrl}/api/v4`
+const mergeRequestPollInterval = Settings.gitlabSync.mergeRequestPollInterval
+const mergeRequestTimeout = Settings.gitlabSync.mergeRequestTimeout
+const maxConcurrency = Settings.gitlabSync.apiMaxConcurrency
 
 const mergeRequestPendingStates = new Set([
   'unchecked',
@@ -62,9 +62,6 @@ const mergeRequestBlockingStates = new Set([
   'title_regex',
 ])
 
-
-
-const maxConcurrency = Number(process.env.GITLAB_API_MAX_CONCURRENCY) || 5
 const syncContext = new AsyncLocalStorage()
 
 function buildHeaders(token) {
@@ -210,7 +207,7 @@ function getTokenRefreshTimestamp(token, safetyMarginInSec = 300) {
 
 
 async function compareCommitsFull(token, repoFullName, from, to) {
-  const url = new URL(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/compare`)
+  const url = new URL(`${apiBase}/projects/${projectPath(repoFullName)}/repository/compare`)
   url.searchParams.set('from', from)
   url.searchParams.set('to', to)
 
@@ -225,7 +222,7 @@ async function compareCommitsFull(token, repoFullName, from, to) {
 
 // OAuth
 function getOAuth2Url() {
-  const oAuthUrl = new URL(`${GITLAB_URL}/oauth/authorize`)
+  const oAuthUrl = new URL(`${gitlabUrl}/oauth/authorize`)
   oAuthUrl.searchParams.append('client_id', Settings.gitlabSync.clientID)
   oAuthUrl.searchParams.append('redirect_uri', Settings.gitlabSync.callbackURL)
   oAuthUrl.searchParams.append('response_type', 'code')
@@ -242,7 +239,7 @@ function toCredentials(response) {
 }
 
 function exchangeCodeForToken(code) {
-  return fetchGitLabJson(`${GITLAB_URL}/oauth/token`, {
+  return fetchGitLabJson(`${gitlabUrl}/oauth/token`, {
     method: 'POST',
     headers: buildHeaders(),
     json: {
@@ -257,7 +254,7 @@ function exchangeCodeForToken(code) {
 }
 
 function refreshToken(refreshToken) {
-  return fetchGitLabJson(`${GITLAB_URL}/oauth/token`, {
+  return fetchGitLabJson(`${gitlabUrl}/oauth/token`, {
     method: 'POST',
     headers: buildHeaders(),
     json: {
@@ -273,7 +270,7 @@ function refreshToken(refreshToken) {
 
 function revokeToken(token) {
   const { clientID, clientSecret } = Settings.gitlabSync
-  return fetchGitLabNothing(`${GITLAB_URL}/oauth/revoke`, {
+  return fetchGitLabNothing(`${gitlabUrl}/oauth/revoke`, {
     method: 'POST',
     headers: buildHeaders(),
     json: {
@@ -287,19 +284,19 @@ function revokeToken(token) {
 
 // user, orgs, permissions
 function getUser(token) {
-  return fetchGitLabJson(`${GITLAB_API_BASE}/user`, {
+  return fetchGitLabJson(`${apiBase}/user`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getUser').then(({ id, username, name }) => ({ id, login: username, name }))
 }
 
 async function getUserAndOrgs(token) {
-  const user = await fetchGitLabJson(`${GITLAB_API_BASE}/user`, {
+  const user = await fetchGitLabJson(`${apiBase}/user`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getUserAndOrgs:user')
 
-  const groupsUrl = new URL(`${GITLAB_API_BASE}/groups`)
+  const groupsUrl = new URL(`${apiBase}/groups`)
   groupsUrl.searchParams.set('all_available', 'true')
   groupsUrl.searchParams.set('min_access_level', '30')
   groupsUrl.searchParams.set('top_level_only', 'true')
@@ -318,7 +315,7 @@ async function getUserAndOrgs(token) {
 }
 
 function getPushPermission(token, repoFullName) {
-  return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}`, {
+  return fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getPushPermission').then(project => {
@@ -333,7 +330,7 @@ function resolveNamespaceId(token, org) {
   if (org == null) return Promise.resolve(null)
   if (/^\d+$/.test(org)) return Promise.resolve(Number(org))
 
-  return fetchGitLabJson(`${GITLAB_API_BASE}/groups/${encodePath(org)}`, {
+  return fetchGitLabJson(`${apiBase}/groups/${encodePath(org)}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'resolveNamespaceId').then(group => group.id)
@@ -353,7 +350,7 @@ async function createRepo(token, { name, description, isPublic, org }) {
     payload.namespace_id = namespaceId
   }
 
-  return fetchGitLabJson(`${GITLAB_API_BASE}/projects`, {
+  return fetchGitLabJson(`${apiBase}/projects`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: payload,
@@ -362,7 +359,7 @@ async function createRepo(token, { name, description, isPublic, org }) {
 }
 
 async function listUserRepos(token) {
-  const url = new URL(`${GITLAB_API_BASE}/projects`)
+  const url = new URL(`${apiBase}/projects`)
   url.searchParams.set('membership', 'true')
   url.searchParams.set('per_page', MAX_PER_PAGE.toString())
   url.searchParams.set('simple', 'true')
@@ -383,7 +380,7 @@ async function listUserRepos(token) {
 }
 
 async function listRepoBranches(token, repoFullName) {
-  const url = new URL(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/branches`)
+  const url = new URL(`${apiBase}/projects/${projectPath(repoFullName)}/repository/branches`)
   url.searchParams.set('per_page', MAX_PER_PAGE.toString())
   const branches = await fetchAllPages(url, {
     headers: buildHeaders(token),
@@ -423,7 +420,7 @@ async function uploadBlob(token, repoFullName, buffer) {
 
 function getBlobStream(token, repoFullName, ref, path) {
   const encodedPath = encodePath(path)
-  return fetchGitLabStream(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/files/${encodedPath}/raw?ref=${encodeURIComponent(ref)}`, {
+  return fetchGitLabStream(`${apiBase}/projects/${projectPath(repoFullName)}/repository/files/${encodedPath}/raw?ref=${encodeURIComponent(ref)}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS),
   }, 'getBlobStream')
@@ -449,7 +446,7 @@ async function createTree(token, repoFullName, entries, baseTree) {
       // Guard touched files at the expected parent. A branch-head preflight
       // alone cannot protect against an edit arriving before the write.
       const file = await fetchGitLabJson(
-        `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/files/${encodePath(entry.path)}?ref=${encodeURIComponent(baseTree.commit)}`,
+        `${apiBase}/projects/${projectPath(repoFullName)}/repository/files/${encodePath(entry.path)}?ref=${encodeURIComponent(baseTree.commit)}`,
         { headers: buildHeaders(token), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) },
         'getFileCommit'
       )
@@ -477,7 +474,7 @@ async function createCommit(token, repoFullName, { tree, message, branch, start_
   }
   const payload = { branch, commit_message: message, actions }
   if (start_sha) payload.start_sha = start_sha
-  const result = await fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/commits`, {
+  const result = await fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/repository/commits`, {
     method: 'POST', headers: buildHeaders(token), json: payload,
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS),
   }, 'createCommit')
@@ -490,7 +487,7 @@ async function getCommitTree(token, repoFullName, commit) {
 }
 
 async function listBlobsAtCommit(token, repoFullName, commit) {
-  const url = new URL(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/tree`)
+  const url = new URL(`${apiBase}/projects/${projectPath(repoFullName)}/repository/tree`)
   url.searchParams.set('ref', commit)
   url.searchParams.set('recursive', 'true')
   url.searchParams.set('per_page', MAX_PER_PAGE.toString())
@@ -513,7 +510,7 @@ async function listBlobsAtCommit(token, repoFullName, commit) {
 async function getBlobContent(token, repoFullName, sha) {
   if (!sha) return null
 
-  const url = `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/blobs/${sha}`
+  const url = `${apiBase}/projects/${projectPath(repoFullName)}/repository/blobs/${sha}`
 
   return await fetchGitLabJson(url, {
     headers: buildHeaders(token),
@@ -559,14 +556,14 @@ async function listNewCommitsWithStatus(token, fullName, branchName, fromCommit)
 
 // branches
 function getBranchHead(token, repoFullName, branchName) {
-  return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/branches/${encodePath(branchName)}`, {
+  return fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/repository/branches/${encodePath(branchName)}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   }, 'getBranchHead').then(r => r.commit.id)
 }
 
 function createBranch(token, repoFullName, branchName, sha) {
-  return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/branches`, {
+  return fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/repository/branches`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -578,7 +575,7 @@ function createBranch(token, repoFullName, branchName, sha) {
 }
 
 function deleteBranch(token, repoFullName, branchName) {
-  return fetchGitLabNothing(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/branches/${encodePath(branchName)}`, {
+  return fetchGitLabNothing(`${apiBase}/projects/${projectPath(repoFullName)}/repository/branches/${encodePath(branchName)}`, {
     method: 'DELETE',
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
@@ -587,7 +584,7 @@ function deleteBranch(token, repoFullName, branchName) {
 
 // merge / compare
 async function createMergeRequest(token, repoFullName, sourceBranch, targetBranch, title) {
-  return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests`, {
+  return fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/merge_requests`, {
     method: 'POST',
     headers: buildHeaders(token),
     json: {
@@ -604,8 +601,8 @@ async function createMergeRequest(token, repoFullName, sourceBranch, targetBranc
 async function waitForMergeRequestToBeReady(token, repoFullName, mergeRequestIid) {
   const startedAt = Date.now()
 
-  while (Date.now() - startedAt < MERGE_REQUEST_TIMEOUT_MS) {
-    const mergeRequest = await fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequestIid}`, {
+  while (Date.now() - startedAt < mergeRequestTimeout) {
+    const mergeRequest = await fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequestIid}`, {
       headers: buildHeaders(token),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     }, 'getMergeRequest')
@@ -623,7 +620,7 @@ async function waitForMergeRequestToBeReady(token, repoFullName, mergeRequestIid
     }
 
     if (mergeRequestPendingStates.has(status)) {
-      await new Promise(resolve => setTimeout(resolve, MERGE_REQUEST_POLL_INTERVAL_MS))
+      await new Promise(resolve => setTimeout(resolve, mergeRequestPollInterval))
       continue
     }
 
@@ -645,7 +642,7 @@ async function waitForMergeRequestToBeReady(token, repoFullName, mergeRequestIid
 }
 
 async function mergeOpenMergeRequest(token, repoFullName, mergeRequestIid, sha) {
-  return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequestIid}/merge`, {
+  return fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequestIid}/merge`, {
     method: 'PUT',
     headers: buildHeaders(token),
     json: { sha, squash: false },
@@ -656,7 +653,7 @@ async function mergeOpenMergeRequest(token, repoFullName, mergeRequestIid, sha) 
 async function isAncestor(token, repoFullName, ancestor, descendant) {
   try {
     if (ancestor === descendant) return true
-    const url = new URL(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/merge_base`)
+    const url = new URL(`${apiBase}/projects/${projectPath(repoFullName)}/repository/merge_base`)
     url.searchParams.append('refs[]', ancestor)
     url.searchParams.append('refs[]', descendant)
     const base = await fetchGitLabJson(url.toString(), {
@@ -670,7 +667,7 @@ async function isAncestor(token, repoFullName, ancestor, descendant) {
 }
 
 function getMergeRequest(token, repoFullName, iid) {
-  return fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${iid}`, {
+  return fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/merge_requests/${iid}`, {
     headers: buildHeaders(token), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getMergeRequest')
 }
@@ -678,7 +675,7 @@ function getMergeRequest(token, repoFullName, iid) {
 async function mergeBranch(token, repoFullName, base, head, expectedSource, retry = false) {
   let existing
   if (retry) {
-    const url = new URL(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests`)
+    const url = new URL(`${apiBase}/projects/${projectPath(repoFullName)}/merge_requests`)
     url.searchParams.set('state', 'opened')
     url.searchParams.set('source_branch', head)
     url.searchParams.set('target_branch', base)
@@ -718,7 +715,7 @@ async function mergeBranch(token, repoFullName, base, head, expectedSource, retr
       // A policy blocker or timeout is reported as an error, not saved as a
       // manual content conflict. Close the unused MR before removing its source.
       try {
-        await fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequest.iid}`, {
+        await fetchGitLabJson(`${apiBase}/projects/${projectPath(repoFullName)}/merge_requests/${mergeRequest.iid}`, {
           method: 'PUT', headers: buildHeaders(token), json: { state_event: 'close' },
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         }, 'closeMergeRequest')
@@ -731,7 +728,7 @@ async function mergeBranch(token, repoFullName, base, head, expectedSource, retr
 }
 
 function getRepoZipball(token, repoFullName, sha) {
-  return fetchGitLabStream(`${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/repository/archive.zip?sha=${encodeURIComponent(sha)}`, {
+  return fetchGitLabStream(`${apiBase}/projects/${projectPath(repoFullName)}/repository/archive.zip?sha=${encodeURIComponent(sha)}`, {
     headers: buildHeaders(token),
     signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS),
   }, 'getRepoZipball')
@@ -739,7 +736,7 @@ function getRepoZipball(token, repoFullName, sha) {
 
 
 async function getFirstParent(token, repo, sha) {
-  const result = await fetchGitLabJson(`${GITLAB_API_BASE}/projects/${projectPath(repo)}/repository/commits/${sha}`, {
+  const result = await fetchGitLabJson(`${apiBase}/projects/${projectPath(repo)}/repository/commits/${sha}`, {
     headers: buildHeaders(token), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }, 'getFirstParent')
   const parent = result.parent_ids?.[0]
@@ -749,7 +746,7 @@ async function getFirstParent(token, repo, sha) {
 
 async function getTreeIdentity(token, repo, commit) {
   // Root directory object IDs cover every nested file, mode and submodule.
-  const url = new URL(`${GITLAB_API_BASE}/projects/${projectPath(repo)}/repository/tree`)
+  const url = new URL(`${apiBase}/projects/${projectPath(repo)}/repository/tree`)
   url.searchParams.set('ref', commit)
   url.searchParams.set('per_page', MAX_PER_PAGE.toString())
   const root = await fetchAllPages(url, { headers: buildHeaders(token), signal: AbortSignal.timeout(REQUEST_LONG_TIMEOUT_MS) }, 'getTreeIdentity')

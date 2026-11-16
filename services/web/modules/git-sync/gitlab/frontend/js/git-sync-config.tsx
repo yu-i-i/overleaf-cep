@@ -11,7 +11,6 @@ export const gitlabGitSyncConfig: GitSyncConfig = {
   displayTitle: settings.gitlabTitle?.trim() || 'GitLab',
   basePath: 'gitlab-sync',
   Logo: GitLabLogo,
-  helpUrl: 'https://docs.gitlab.com/administration/settings/account_and_limit_settings/',
   repoUrl,
   branchUrl: (fullName, branch) => `${repoUrl(fullName)}/-/tree/${encodeURIComponent(branch)}?ref_type=heads`,
   commitUrl: (fullName, sha) => `${repoUrl(fullName)}/-/commit/${sha}`,
