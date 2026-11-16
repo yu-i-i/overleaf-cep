@@ -8,7 +8,9 @@ In most cases the original code has been modified, optimized, or extended.
 The Symbol palette feature is based on the
 [original Overleaf implementation](https://github.com/overleaf/web/tree/master/frontend/js/features/symbol-palette)
 
-The original code was slightly improved, particularly in the parts related to keyboard input.
+The original code was slightly improved, particularly in the parts related to keyboard input, new symbols were added.
+
+Symbol recognition code is from [here](https://github.com/ayaka-notes/ayakaleaf-pro).
 
 ## LDAP authentication
 
