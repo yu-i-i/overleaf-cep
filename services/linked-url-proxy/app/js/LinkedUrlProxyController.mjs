@@ -1,200 +1,208 @@
-import dns from 'dns/promises'
-import { sanitizeUrl } from 'strict-url-sanitise'
-import normalizeUrlPath from 'als-normalize-urlpath'
+import dns from 'node:dns/promises'
+import { Readable, Transform } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import { posix } from 'node:path'
 import ipaddr from 'ipaddr.js'
-import { URL } from 'node:url'
-import { Transform } from 'node:stream'
 import logger from '@overleaf/logger'
 import Settings from '@overleaf/settings'
-import { fetchStreamWithResponse, RequestFailedError } from '@overleaf/fetch-utils'
-import { Agent } from 'undici'
+import { Agent, fetch } from 'undici'
 
-function isAllowedResource(targetUrl) {
-  if (!Settings.allowedResources) return false
-  return Settings.allowedResources.test(targetUrl)
+function failure(status, message) {
+  const error = new Error(message)
+  error.info = { status }
+  return error
 }
 
-function isBlockedIp(ipStr, targetUrl) {
-  const addr = ipaddr.parse(ipStr)
-  if (addr.kind() === 'ipv6' && addr.isIPv4MappedAddress()) {
-    return isBlockedIp(addr.toIPv4Address().toString(), targetUrl)
-  }
-
-  const range = addr.range()
-  if (!['unicast'].includes(addr.range())) {
-    return true
-  }
-
-  for (const blocked of Settings.blockedNetworks) {
-    try {
-      const net = ipaddr.parseCIDR(blocked)
-      if (addr.match(net)) return true
-    } catch (e) {
-      logger.error({ blocked, error: e }, 'Invalid blockedNetworks entry')
-      const err = new Error(`Invalid blockedNetworks entry: ${blocked}`)
-      err.info = { status: 500 }
-      throw err
+function isExplicitlyAllowed(url) {
+  if (!Settings.allowedResources) return false
+  const candidate = new URL(url)
+  let pathname = url.pathname
+  try {
+    // 許可パスの判定では、二重エンコードした ../ や区切り文字も正規化する。
+    // 実際の取得 URL は変更せず、署名付きクエリや %20 等をそのまま送る。
+    for (let depth = 0; /%[a-f0-9]{2}/i.test(pathname); depth++) {
+      if (depth >= 8) return false
+      pathname = decodeURIComponent(pathname)
     }
+    candidate.pathname = posix.normalize(pathname.replaceAll('\\', '/'))
+  } catch {
+    return false
+  }
+  return Settings.allowedResources.test(candidate.href)
+}
+
+export function isBlockedIp(address) {
+  let addr = ipaddr.parse(address)
+  // IPv4-mapped IPv6 でも IPv4 と同じ判定を行う。
+  if (addr.kind() === 'ipv6' && addr.isIPv4MappedAddress()) {
+    addr = addr.toIPv4Address()
+  }
+  if (addr.range() !== 'unicast') return true
+  for (const entry of Settings.blockedNetworks) {
+    let network
+    try {
+      network = ipaddr.parseCIDR(entry)
+    } catch {
+      throw failure(500, 'Invalid blocked network configuration')
+    }
+    // IPv4 と IPv6 の CIDR を混在させても、別系統との比較では例外を出さない。
+    if (addr.kind() === network[0].kind() && addr.match(network)) return true
   }
   return false
 }
 
-async function checkUrlAccess(hostname, targetUrl) {
-  const records = await dns.lookup(hostname, { all: true }).catch(() => [])
-  if (!records.length) {
-    const err = new Error(`DNS lookup failed for ${hostname}`)
-    err.info = { status: 421 }
-    throw err
-  }
-// Permit explicitly allowed resources without checking blocked IPs
-  if (isAllowedResource(targetUrl)) return records[0].address
-  for (const { address } of records) {
-    if (isBlockedIp(address, targetUrl)) {
-      const err = new Error(`Blocked IP address: ${address}`)
-      err.info = { status: 403 }
-      throw err
+async function resolveAddress(url, signal) {
+  const hostname = url.hostname.replace(/^\[|\]$/g, '')
+  let records
+  if (ipaddr.isValid(hostname)) {
+    records = [
+      {
+        address: hostname,
+        family: ipaddr.parse(hostname).kind() === 'ipv6' ? 6 : 4,
+      },
+    ]
+  } else {
+    // OS の DNS 解決待ちも、リクエスト全体の期限に含める。
+    let onAbort
+    try {
+      signal.throwIfAborted()
+      records = await Promise.race([
+        dns.lookup(hostname, { all: true }),
+        new Promise((_, reject) => {
+          onAbort = () => reject(signal.reason)
+          signal.addEventListener('abort', onAbort, { once: true })
+        }),
+      ])
+    } catch (error) {
+      if (signal.aborted) throw signal.reason
+      throw failure(421, 'DNS lookup failed')
+    } finally {
+      if (onAbort) signal.removeEventListener('abort', onAbort)
     }
   }
-  return records[0].address
+  signal.throwIfAborted()
+  if (!records.length) throw failure(421, 'DNS lookup failed')
+  if (!isExplicitlyAllowed(url)) {
+    if (records.some((record) => isBlockedIp(record.address))) {
+      throw failure(403, 'Blocked IP address')
+    }
+  }
+  return records[0]
 }
 
-async function validateAndFetch(rawUrl, redirectCount = 0) {
-  if (redirectCount > Settings.maxRedirects) {
-    const err = new Error('Too many redirects')
-    err.info = { status: 421 }
-    throw err
-  }
-
-  const sanitizedUrl = sanitizeUrl(rawUrl)
-  if (!sanitizedUrl) {
-    const err = new Error(`Invalid or unsafe URL: ${rawUrl}`)
-    err.info = { status: 400 }
-    throw err
-  }
-
-  const url = new URL(sanitizedUrl)
-
-  if (!['http:', 'https:'].includes(url.protocol)) {
-    const err = new Error(`${url.protocol} protocol is not allowed`)
-    err.info = { status: 400 }
-    throw err
-  }
-
-  const normalizedPath = normalizeUrlPath(url.pathname).pathname
-
-  if (!normalizedPath) {
-    const err = new Error(`Invalid or unsafe URL path: ${url.pathname}`)
-    err.info = { status: 400 }
-    throw err
-  }
-
-  const normalizedUrl = url.toString()
-
-  // check DNS and allowed resources
-  const validatedIp = await checkUrlAccess(url.hostname, normalizedUrl)
-
-  // pin fetch to validated IP to prevent DNS rebinding
-  const agent = new Agent({
-    connect: {
-      lookup(hostname, opts, cb) {
-        cb(null, validatedIp, 4)
-      }
+async function validateAndFetch(rawUrl, signal, agents) {
+  for (let redirects = 0; redirects <= Settings.maxRedirects; redirects++) {
+    let url
+    try {
+      url = new URL(rawUrl)
+      if (url.username || url.password) throw new Error('credentials')
+    } catch {
+      throw failure(400, 'Invalid or unsafe URL')
     }
-  })
-
-  const opts = {
-    redirect: 'manual',
-    timeout: Settings.fetchTimeoutMs,
-    headers: Settings.userAgentHeader,
-  }
-
-  try {
-    const { stream, response } = await fetchStreamWithResponse(normalizedUrl, { ...opts, dispatcher: agent })
-
-    const contentLengthHeader = response.headers.get('content-length')
-    if (contentLengthHeader) {
-      const n = parseInt(contentLengthHeader, 10)
-      if (!Number.isNaN(n) && n > Settings.maxUploadSize) {
-        const err = new Error('file too large')
-	err.info = { status: 413 }
-        try { stream.destroy() } catch (_) {}
-        throw err
-      }
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw failure(400, 'Only HTTP and HTTPS URLs are allowed')
     }
 
-    return {
-      stream,
-      response,
-      headers: Object.fromEntries(response.headers.entries()),
+    const record = await resolveAddress(url, signal)
+    // fetch-utils は node-fetch を使うため、Undici の dispatcher 指定を解釈しない。
+    // Undici 自身の fetch を使い、検証後に別の IP へ再解決されることを防ぐ。
+    const agent = new Agent({
+      connect: {
+        lookup(_hostname, options, callback) {
+          if (options.all) callback(null, [record])
+          else callback(null, record.address, record.family)
+        },
+      },
+    })
+    agents.push(agent)
+    const response = await fetch(url, {
+      dispatcher: agent,
+      redirect: 'manual',
+      signal,
+      headers: Settings.userAgentHeader,
+    })
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location')
+      await response.body?.cancel()
+      await agent.destroy()
+      if (!location)
+        throw failure(421, 'Redirect response missing Location header')
+      // 転送先も毎回検証し、許可済みの URL から内部アドレスへ転送させない。
+      rawUrl = new URL(location, url).href
+      continue
     }
-  } catch (err) {
-    if (err instanceof RequestFailedError) {
-      const status = err.info.status
-
-      // Handle redirects
-      if (status >= 300 && status < 400) {
-        const location = err.response.headers.get('Location')
-        if (location) {
-          const nextUrl = new URL(location, normalizedUrl).toString()
-          return validateAndFetch(nextUrl, redirectCount + 1)
-        } else {
-          const e = new Error('Redirect response missing Location header')
-	  e.info = { status: 421 }
-          throw e
-        }
-      }
-      throw err
+    if (!response.ok) {
+      await response.body?.cancel()
+      throw failure(response.status, 'Upstream request failed')
     }
-    if (!err?.info?.status) {
-      if(err.type === "request-timeout") {
-        err.info = { status: 408 }
-      } else err.info = { status: 422 }
+    if (
+      Number(response.headers.get('content-length')) > Settings.maxUploadSize
+    ) {
+      await response.body?.cancel()
+      throw failure(413, 'file too large')
     }
-    throw err
+    return response
   }
+  throw failure(421, 'Too many redirects')
 }
 
 async function proxy(req, res) {
+  const controller = new AbortController()
+  const agents = []
+  const timer = setTimeout(
+    () => controller.abort(failure(408, 'Request timed out')),
+    Settings.fetchTimeoutMs
+  )
+  timer.unref()
+  const onClose = () => {
+    if (!res.writableFinished)
+      controller.abort(failure(499, 'Request cancelled'))
+  }
+  res.once('close', onClose)
   try {
-    const u = new URL(req.url, `http://${req.headers.host}`)
-    const targetUrl = u.searchParams.get('url')
-    if (!targetUrl) {
-      res.writeHead(400, { 'Content-Type': 'text/plain' })
-      res.end('Missing ?url parameter')
-      return
-    }
-
-    const { stream: upstreamStream, response, headers } = await validateAndFetch(targetUrl)
-
-    res.statusCode = response.status || 200
-    res.setHeader('Content-Type', headers['content-type'] || 'application/octet-stream')
+    const target = new URL(req.url, 'http://localhost').searchParams.get('url')
+    if (!target) throw failure(400, 'Missing ?url parameter')
+    const response = await validateAndFetch(target, controller.signal, agents)
+    let received = 0
+    const limit = new Transform({
+      transform(chunk, _encoding, callback) {
+        received += chunk.length
+        // Content-Length が無い応答や、圧縮後のサイズだけが小さい応答も制限する。
+        if (received > Settings.maxUploadSize)
+          callback(failure(413, 'file too large'))
+        else callback(null, chunk)
+      },
+    })
+    res.statusCode = response.status
+    res.setHeader(
+      'Content-Type',
+      response.headers.get('content-type') || 'application/octet-stream'
+    )
     res.setHeader('Cache-Control', 'no-store')
-
-    function onError(err) {
-      logger.info({ err, url: req.url }, 'linked-url-proxy request failed')
-      try { upstreamStream.destroy() } catch (_) {}
-      if (!res.headersSent) {
-	let body = `Error: ${err?.message ?? String(err)}`
-        res.writeHead(err?.info?.status || 503, { 'Content-Type': 'text/plain' })
-        res.end(body)
-      } else {
-        try { res.destroy() } catch (_) {}
-      }
-    }
-
-    upstreamStream.on('error', onError)
-    upstreamStream.pipe(res)
-
-  } catch (err) {
-    const status = err.info?.status || 500
-    logger.info({ linkedUrl: err.message, status, url: req.url }, 'linked-url-proxy request failed')
-    let body = `Error: ${err.message || String(err)}`
-    try {
-      res.writeHead(status, { 'Content-Type': 'text/plain' })
-      res.end(body)
-    } catch {
-      try { res.end() } catch {}
-    }
+    await pipeline(Readable.fromWeb(response.body), limit, res, {
+      signal: controller.signal,
+    })
+  } catch (error) {
+    const reported = error.info
+      ? error
+      : controller.signal.aborted
+        ? controller.signal.reason
+        : error
+    const status = reported.info?.status || 422
+    // URL には認証情報や署名付きクエリが含まれ得るため、ログへそのまま残さない。
+    logger.info({ status }, 'linked-url-proxy request failed')
+    if (!res.destroyed && !res.headersSent) {
+      res.writeHead(status, {
+        'Content-Type': 'text/plain',
+        'Cache-Control': 'no-store',
+      })
+      res.end(`Error: ${reported.message}`)
+    } else if (!res.destroyed) res.destroy()
+  } finally {
+    clearTimeout(timer)
+    res.removeListener('close', onClose)
+    // 成功・中断・転送エラーのいずれでも専用コネクションを閉じる。
+    await Promise.allSettled(agents.map((agent) => agent.destroy()))
   }
 }
 
