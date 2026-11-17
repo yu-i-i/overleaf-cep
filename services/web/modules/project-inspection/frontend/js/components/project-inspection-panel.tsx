@@ -7,6 +7,7 @@ import MaterialIcon, {
 import Notification from '@/shared/components/notification'
 import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
 import OLTooltip from '@/shared/components/ol/ol-tooltip'
+import OLButton from '@/shared/components/ol/ol-button'
 import RailPanelHeader from '@/features/ide-react/components/rail/rail-panel-header'
 import { useProjectContext } from '@/shared/context/project-context'
 import { useFileTreeData } from '@/shared/context/file-tree-data-context'
@@ -27,6 +28,7 @@ import '../../stylesheets/project-inspection.scss'
 
 const PAGE_SIZE = 100
 const MAX_ENTRY_POINTS = 50
+const TOOLTIP_AUTO_HIDE_DELAY = 2500
 
 function getErrorMessage(error: unknown) {
   if (
@@ -91,7 +93,13 @@ const ISSUE_DEPENDENCY_TYPES: Record<string, string> = {
 }
 
 const UNFILLED_CATEGORY_ICONS = new Set<AvailableUnfilledIcon>([
+  'book_5',
+  'description',
+  'format_quote',
   'image',
+  'input',
+  'label',
+  'link',
   'table_chart',
   'text_snippet',
 ])
@@ -258,7 +266,6 @@ function DependencyTypeIcon({
         unfilled
         type={newEditorIconTypeFromName(filePath)}
         accessibilityLabel="File"
-        className="project-inspection-tree-type"
       />
     )
   }
@@ -266,7 +273,6 @@ function DependencyTypeIcon({
   const definition =
     DEPENDENCY_TYPE_ICONS[type] ?? DEPENDENCY_TYPE_ICONS['missing-resource']
   if (
-    type === 'bibliography-entry' &&
     isUnfilledCategoryIcon(definition.icon)
   ) {
     return (
@@ -300,6 +306,7 @@ function DependencyStatus({
       className={`project-inspection-tree-status project-inspection-tree-status-${status}${showLabel ? '' : ' project-inspection-tree-status-icon-only'}`}
     >
       <MaterialIcon
+        unfilled
         type={DEPENDENCY_STATUS_ICONS[status]}
         accessibilityLabel={showLabel ? undefined : `Contains ${status} issue`}
         className="project-inspection-tree-status-icon"
@@ -425,15 +432,27 @@ function IssueList({
         })}
       </ul>
       {limit < ids.length && (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setLimit(value => value + PAGE_SIZE)}
-        >
-          Show more
-        </Button>
+        <div className="d-flex justify-content-center">
+          <OLButton
+            variant="secondary"
+            size="sm"
+            onClick={() => setLimit(value => value + PAGE_SIZE)}
+          >
+            Show more
+          </OLButton>
+        </div>
       )}
     </>
+  )
+}
+
+function InspectionCaret() {
+  return (
+    <MaterialIcon
+      type="keyboard_arrow_right"
+      className="project-inspection-caret"
+      aria-hidden="true"
+    />
   )
 }
 
@@ -461,15 +480,18 @@ function IssueSection({
       onToggle={event => setExpanded(event.currentTarget.open)}
     >
       <summary>
+        <InspectionCaret />
         <span>{title}</span>
         <span className="project-inspection-count">{issueIds.length}</span>
       </summary>
       {expanded && (
-        <IssueList
-          ids={issueIds}
-          issues={result.issues.byId}
-          onNavigate={onNavigate}
-        />
+        <div className="project-inspection-children">
+          <IssueList
+            ids={issueIds}
+            issues={result.issues.byId}
+            onNavigate={onNavigate}
+          />
+        </div>
       )}
     </details>
   )
@@ -514,10 +536,7 @@ function DependencyNode({
     return (
       <li>
         <div className="project-inspection-tree-row">
-          <span
-            className="project-inspection-tree-toggle"
-            aria-hidden="true"
-          />
+          <span className="project-inspection-caret" aria-hidden="true" />
           <DependencyTypeIcon
             node={node}
             incomingKind={incomingKindByNode.get(nodeId)}
@@ -548,10 +567,7 @@ function DependencyNode({
         onToggle={event => setExpanded(event.currentTarget.open)}
       >
         <summary>
-          <MaterialIcon
-            type={expanded ? 'indeterminate_check_box' : 'add_box'}
-            className="project-inspection-tree-toggle"
-          />
+          <InspectionCaret />
           <DependencyTypeIcon
             node={node}
             incomingKind={incomingKindByNode.get(nodeId)}
@@ -573,7 +589,7 @@ function DependencyNode({
           />
         </summary>
         {expanded && (
-          <ul>
+          <ul className="project-inspection-children">
             {children.map(childId => (
               <DependencyNode
                 key={`${nodeId}:${childId}`}
@@ -659,9 +675,10 @@ function DependencyTree({
       open
     >
       <summary>
+        <InspectionCaret />
         <span>Dependency Tree</span>
       </summary>
-      <ul className="project-inspection-tree">
+      <ul className="project-inspection-tree project-inspection-children">
         {result.graph.roots.map(root => (
           <DependencyNode
             key={root}
@@ -709,6 +726,8 @@ function ProjectInspectionPanel() {
   const [result, setResult] = useState<ProjectInspectionResult>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>()
+  const [expiredTooltip, setExpiredTooltip] = useState<string | null>(null)
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const abortControllerRef = useRef<AbortController | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -729,6 +748,7 @@ function ProjectInspectionPanel() {
   useEffect(
     () => () => {
       abortControllerRef.current?.abort()
+      clearTimeout(tooltipTimeoutRef.current)
     },
     []
   )
@@ -787,6 +807,19 @@ function ProjectInspectionPanel() {
     },
     [findEntityByPath, openDocWithId, openFileWithId]
   )
+
+  const startTooltipTimeout = (id: string) => {
+    clearTimeout(tooltipTimeoutRef.current)
+    setExpiredTooltip(null)
+    tooltipTimeoutRef.current = setTimeout(() => {
+      setExpiredTooltip(id)
+    }, TOOLTIP_AUTO_HIDE_DELAY)
+  }
+
+  const clearTooltipTimeout = () => {
+    clearTimeout(tooltipTimeoutRef.current)
+    setExpiredTooltip(null)
+  }
 
   const scrollToSection = (id: string) => {
     const container = contentRef.current
@@ -862,19 +895,21 @@ function ProjectInspectionPanel() {
                 Up to {MAX_ENTRY_POINTS} entry points can be analyzed at once.
               </p>
             )}
-            <Button
-              type="submit"
-              size="sm"
-              isLoading={loading}
-              loadingLabel="Analyzing project"
-              disabled={selectedIds.size === 0}
-            >
-              Analyze Project
-            </Button>
+            <div className="d-flex justify-content-center">
+              <OLButton
+                type="submit"
+                size="sm"
+                isLoading={loading}
+                loadingLabel="Analyzing project"
+                disabled={selectedIds.size === 0}
+              >
+                Analyze Project
+              </OLButton>
+            </div>
           </fieldset>
         </form>
 
-        {error && <Notification type="error" content={error} />}
+        {error && <Notification type="error" className="mt-2" content={error} />}
 
         {result && (
           <>
@@ -884,10 +919,10 @@ function ProjectInspectionPanel() {
             {hasCoverageWarning && (
               <Notification
                 type="warning"
-                className="project-inspection-coverage-warning"
                 content={`${coverageWarningCount} item(s) could not be analyzed conclusively or the displayed result was truncated. Results favor fewer false positives.`}
               />
             )}
+            <hr className="project-inspection-divider" />
             <section className="project-inspection-overview">
               <h3>Overview</h3>
               <p className="project-inspection-totals">
@@ -898,15 +933,20 @@ function ProjectInspectionPanel() {
               <div className="project-inspection-summary-grid">
                 <OLTooltip
                   id="project-inspection-overview-circular"
+                  hidden={expiredTooltip === 'circular'}
                   description="Shows the number of circular file-dependency cycles."
                   overlayProps={{
-                    placement: 'right',
+                    placement: 'top',
                     trigger: ['hover', 'focus'],
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => scrollToSection('inspection-circular')}
+                    onMouseEnter={() => startTooltipTimeout('circular')}
+                    onMouseLeave={clearTooltipTimeout}
+                    onFocus={() => startTooltipTimeout('circular')}
+                    onBlur={clearTooltipTimeout}
                   >
                     <StatusDot status="circular" /> Circular
                     <strong>{result.overview.circular}</strong>
@@ -914,15 +954,20 @@ function ProjectInspectionPanel() {
                 </OLTooltip>
                 <OLTooltip
                   id="project-inspection-overview-missing"
+                  hidden={expiredTooltip === 'missing'}
                   description="Shows the number of missing components."
                   overlayProps={{
-                    placement: 'right',
+                    placement: 'top',
                     trigger: ['hover', 'focus'],
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => scrollToSection('inspection-missing')}
+                    onMouseEnter={() => startTooltipTimeout('missing')}
+                    onMouseLeave={clearTooltipTimeout}
+                    onFocus={() => startTooltipTimeout('missing')}
+                    onBlur={clearTooltipTimeout}
                   >
                     <StatusDot status="missing" /> Missing
                     <strong>{result.overview.missing}</strong>
@@ -930,15 +975,20 @@ function ProjectInspectionPanel() {
                 </OLTooltip>
                 <OLTooltip
                   id="project-inspection-overview-duplicate"
+                  hidden={expiredTooltip === 'duplicate'}
                   description="Shows the number of duplicate labels, figure or table captions, bibliography keys, or bibliography titles."
                   overlayProps={{
-                    placement: 'right',
+                    placement: 'bottom',
                     trigger: ['hover', 'focus'],
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => scrollToSection('inspection-duplicate')}
+                    onMouseEnter={() => startTooltipTimeout('duplicate')}
+                    onMouseLeave={clearTooltipTimeout}
+                    onFocus={() => startTooltipTimeout('duplicate')}
+                    onBlur={clearTooltipTimeout}
                   >
                     <StatusDot status="duplicate" /> Duplicate
                     <strong>{result.overview.duplicate}</strong>
@@ -946,17 +996,22 @@ function ProjectInspectionPanel() {
                 </OLTooltip>
                 <OLTooltip
                   id="project-inspection-overview-unused"
+                  hidden={expiredTooltip === 'unused'}
                   description="Shows the number of unused or unreferenced components."
                   overlayProps={{
-                    placement: 'right',
+                    placement: 'bottom',
                     trigger: ['hover', 'focus'],
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => scrollToSection('inspection-unused')}
+                    onMouseEnter={() => startTooltipTimeout('unused')}
+                    onMouseLeave={clearTooltipTimeout}
+                    onFocus={() => startTooltipTimeout('unused')}
+                    onBlur={clearTooltipTimeout}
                   >
-                    <StatusDot status="unused" /> Unused / Unreferenced
+                    <StatusDot status="unused" /> Unused
                     <strong>{result.overview.unusedUnreferenced}</strong>
                   </button>
                 </OLTooltip>

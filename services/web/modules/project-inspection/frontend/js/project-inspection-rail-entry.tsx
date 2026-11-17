@@ -7,7 +7,7 @@ const ProjectInspectionIcon: RailElement['icon'] = ({ open, title }) => (
   <FileMagnifyingGlass
     aria-label={title}
     className="ide-rail-tab-link-icon"
-    size={24}
+    size={20}
     weight={open ? 'fill' : 'regular'}
   />
 )

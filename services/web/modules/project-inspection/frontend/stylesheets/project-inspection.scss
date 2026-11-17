@@ -1,9 +1,21 @@
+[data-theme='light'] .project-inspection-panel {
+  --project-inspection-line-guide-color: color-mix(
+    in srgb,
+    var(--border-primary) 24%,
+    transparent
+  );
+}
+
 .project-inspection-panel {
   --project-inspection-status-missing: var(--red-50);
   --project-inspection-status-unused: var(--yellow-30);
   --project-inspection-status-duplicate: var(--yellow-40);
   --project-inspection-status-circular: var(--red-70);
-  --project-inspection-secondary-text: var(--content-secondary);
+  --project-inspection-secondary-text: var(--content-primary);
+  --project-inspection-line-guide-color: var(--border-primary);
+
+  background-color: var(--bg-primary-themed);
+  color: var(--content-primary-themed);
 
   container-name: project-inspection;
   container-type: inline-size;
@@ -48,6 +60,9 @@
     margin-bottom: var(--spacing-03);
     overflow: hidden auto;
 
+    .form-check {
+      padding-left: 2em;
+    }
     .form-check,
     .form-check-label {
       min-width: 0;
@@ -66,6 +81,10 @@
     white-space: nowrap;
   }
 
+  .project-inspection-timestamp {
+    text-align: center;
+  }
+
   .project-inspection-timestamp,
   .project-inspection-note,
   .project-inspection-totals,
@@ -77,7 +96,12 @@
   }
 
   .project-inspection-overview {
-    margin-top: var(--spacing-05);
+    margin-top: var(--spacing-03);
+  }
+
+  .project-inspection-divider {
+    margin: var(--spacing-02) 0;
+    border-color: var(--border-primary-themed);
   }
 
   .project-inspection-totals {
@@ -93,9 +117,9 @@
     button {
       align-items: center;
       background: var(--bg-primary-themed);
-      border: 1px solid var(--border-divider);
+      color: var(--content-primary-themed);
+      border: 1px solid var(--border-divider-themed);
       border-radius: var(--border-radius-base);
-      color: inherit;
       display: grid;
       font-size: var(--font-size-02);
       font-weight: normal;
@@ -111,39 +135,17 @@
   }
 
   .project-inspection-section {
-    border-top: 1px solid var(--border-divider);
+    border-top: 1px solid var(--border-divider-themed);
     min-width: 0;
     padding: var(--spacing-03) 0;
 
     > summary {
-      align-items: start;
-      column-gap: var(--spacing-02);
       cursor: pointer;
-      display: grid;
       font-weight: 600;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      list-style: none;
       max-width: 100%;
       min-width: 0;
     }
 
-    > summary::-webkit-details-marker {
-      display: none;
-    }
-
-    > summary::before {
-      border-block: 0.25rem solid transparent;
-      border-inline-start: 0.375rem solid currentColor;
-      content: '';
-      height: 0;
-      margin-block-start: 0.375rem;
-      transform-origin: center;
-      width: 0;
-    }
-
-    &[open] > summary::before {
-      transform: rotate(90deg);
-    }
   }
 
   .project-inspection-count {
@@ -171,16 +173,6 @@
       min-width: 0;
     }
 
-    details > summary::-webkit-details-marker {
-      display: none;
-    }
-
-    ul {
-      border-left: 1px solid var(--border-divider);
-      margin-left: var(--spacing-02);
-      padding-left: var(--spacing-03);
-    }
-
     li {
       max-width: 100%;
       min-width: 0;
@@ -188,18 +180,6 @@
       padding: var(--spacing-01) 0;
       word-break: normal;
     }
-  }
-
-  .project-inspection-tree-toggle {
-    align-items: center;
-    display: inline-flex;
-    flex: 0 0 1rem;
-    font-size: var(--font-size-01);
-    height: 1rem;
-    justify-content: center;
-    margin-right: var(--spacing-01);
-    vertical-align: middle;
-    width: 1rem;
   }
 
   .project-inspection-tree-type,
@@ -218,7 +198,7 @@
     flex: 0 1 auto;
     min-width: 0;
     overflow-wrap: break-word;
-    padding: 0;
+    padding: 0 0 var(--spacing-01) 0;
     text-align: left;
     word-break: normal;
   }
@@ -278,8 +258,7 @@
     background: var(--project-inspection-status-missing);
   }
 
-  .project-inspection-status-unused,
-  .project-inspection-status-unreferenced {
+  .project-inspection-status-unused {
     background: var(--project-inspection-status-unused);
   }
 
@@ -291,12 +270,7 @@
     background: var(--project-inspection-status-circular);
   }
 
-  .project-inspection-status-normal {
-    background: var(--content-positive);
-  }
-
   .project-inspection-issue-list li {
-    // border-bottom: 1px solid var(--border-divider);
     max-width: 100%;
     min-width: 0;
     padding: var(--spacing-02) 0;
@@ -331,14 +305,12 @@
     min-width: 0;
   }
 
-  .project-inspection-issue-title,
-  .project-inspection-location {
+  .project-inspection-issue-title {
     display: block;
     overflow-wrap: anywhere;
     word-break: normal;
   }
 
-  .project-inspection-location,
   .project-inspection-secondary-location {
     color: var(--project-inspection-secondary-text);
     font-size: var(--font-size-01);
@@ -347,8 +319,8 @@
 
   .project-inspection-secondary-location {
     margin-left: 0;
-    padding-left: calc(20px + var(--spacing-02));
-    padding-top: var(--spacing-01);
+    margin-top: var(--spacing-01);
+    padding: var(--spacing-01) 0 var(--spacing-02) calc(20px + var(--spacing-02));
   }
 }
 
@@ -357,10 +329,10 @@
   --project-inspection-status-unused: var(--yellow-20);
   --project-inspection-status-duplicate: var(--yellow-30);
   --project-inspection-status-circular: var(--red-40);
-  --project-inspection-secondary-text: var(--content-primary-dark);
+  --project-inspection-secondary-text: var(--content-primary-themed);
 
   .project-inspection-overview h3 {
-    color: var(--content-primary-dark);
+    color: var(--content-primary-themed);
   }
 }
 
@@ -370,32 +342,12 @@
       padding: var(--spacing-02);
     }
 
-    .project-inspection-coverage-warning.notification {
-      column-gap: var(--spacing-02);
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      padding: 0 var(--spacing-03);
-
-      .notification-icon {
-        padding: var(--spacing-03) 0 0;
-      }
-
-      .notification-content {
-        padding: var(--spacing-03) 0;
-      }
-    }
-
     .project-inspection-summary-grid {
       grid-template-columns: minmax(0, 1fr);
     }
 
     .project-inspection-tree {
       padding-left: 0;
-
-      ul {
-        margin-left: 0;
-        padding-left: var(--spacing-01);
-      }
 
       .project-inspection-tree-row,
       details > summary {
@@ -406,14 +358,8 @@
       }
     }
 
-    .project-inspection-tree-toggle,
     .project-inspection-tree-type {
       margin-right: 0;
-    }
-
-    .project-inspection-tree-toggle {
-      grid-column: 1;
-      grid-row: 1;
     }
 
     .project-inspection-tree-type {
@@ -475,10 +421,6 @@
     }
 
     .project-inspection-tree {
-      ul {
-        padding-left: 2px;
-      }
-
       .project-inspection-tree-row,
       details > summary {
         column-gap: 2px;
@@ -494,3 +436,57 @@
     }
   }
 }
+
+.project-inspection-panel .project-inspection-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  list-style: none;
+}
+.project-inspection-panel .project-inspection-section summary::before,
+.project-inspection-panel .project-inspection-section summary::after {
+  content: none;
+}
+.project-inspection-panel .project-inspection-section summary::-webkit-details-marker {
+  display: none;
+}
+.project-inspection-panel .project-inspection-caret {
+  flex: 0 0 1rem;
+  width: 1rem;
+  font-size: 1rem;
+}
+.project-inspection-panel details[open] > summary > .project-inspection-caret {
+  transform: rotate(90deg);
+}
+.project-inspection-panel .project-inspection-count {
+  margin-inline-start: auto;
+}
+.project-inspection-panel .project-inspection-section .project-inspection-children {
+  margin-inline-start: 0.5rem;
+  padding-inline-start: 0.5rem;
+  border-inline-start: 1px solid var(--project-inspection-line-guide-color);
+}
+
+
+// Match the outline's hover colors for expandable rows and navigation buttons.
+.project-inspection-panel {
+  .project-inspection-section summary,
+  .project-inspection-tree-link,
+  button.project-inspection-issue,
+  .project-inspection-secondary-location,
+  .project-inspection-summary-grid button {
+    &:hover {
+      background-color: var(--bg-secondary-themed);
+    }
+  }
+
+  .project-inspection-tree-link,
+  button.project-inspection-issue,
+  .project-inspection-secondary-location {
+    &:focus {
+      background-color: var(--bg-secondary-themed);
+    }
+  }
+}
+
