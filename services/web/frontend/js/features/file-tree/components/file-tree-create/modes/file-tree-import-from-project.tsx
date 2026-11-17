@@ -48,6 +48,20 @@ export default function FileTreeImportFromProject() {
     !hasLinkedProjectFileFeature
   )
 
+  const clearSelection = useCallback(() => {
+    // プロジェクトや種別を切り替えたら、前のファイル名・候補を再利用しない。
+    setSelectedProjectEntity(undefined)
+    setSelectedProjectOutputFile(undefined)
+    setName('')
+  }, [setName])
+  const handleProjectChange = useCallback(
+    (project: Project) => {
+      clearSelection()
+      setSelectedProject(project)
+    },
+    [clearSelection]
+  )
+
   // use the basename of a path as the file name
   const setNameFromPath = useCallback(
     (path: string) => {
@@ -132,7 +146,7 @@ export default function FileTreeImportFromProject() {
     <OLForm id="create-file" onSubmit={handleSubmit}>
       <SelectProject
         selectedProject={selectedProject}
-        setSelectedProject={setSelectedProject}
+        setSelectedProject={handleProjectChange}
       />
 
       {isOutputFilesMode ? (
@@ -155,7 +169,10 @@ export default function FileTreeImportFromProject() {
           <OLButton
             variant="link"
             type="button"
-            onClick={() => setOutputFilesMode(value => !value)}
+            onClick={() => {
+              clearSelection()
+              setOutputFilesMode(value => !value)
+            }}
           >
             <span>
               {isOutputFilesMode
