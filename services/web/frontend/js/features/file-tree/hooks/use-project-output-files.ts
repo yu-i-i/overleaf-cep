@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { postJSON } from '../../../infrastructure/fetch-json'
 import { fileCollator } from '../util/file-collator'
-import useAbortController from '../../../shared/hooks/use-abort-controller'
 
 export type OutputEntity = {
   path: string
@@ -18,13 +17,14 @@ export function useProjectOutputFiles(projectId?: string) {
   const [data, setData] = useState<OutputEntity[] | null>(null)
   const [error, setError] = useState<any>(false)
 
-  const { signal } = useAbortController()
-
   useEffect(() => {
+    // プロジェクト変更時に旧コンパイル応答が届いても、別の候補として表示しない。
+    setLoading(Boolean(projectId))
+    setError(false)
+    setData(null)
     if (projectId) {
-      setLoading(true)
-      setError(false)
-      setData(null)
+      const controller = new AbortController()
+      const { signal } = controller
 
       postJSON(`/project/${projectId}/compile`, {
         body: {
@@ -35,24 +35,33 @@ export function useProjectOutputFiles(projectId?: string) {
         signal,
       })
         .then(data => {
+          if (signal.aborted) return
           if (data.status === 'success') {
             const filteredFiles = data.outputFiles.filter(
-              (file: OutputEntity) =>
-                file.path.match(/.*\.(pdf|png|jpeg|jpg|gif)/)
+              (file: OutputEntity) => /\.(pdf|png|jpe?g|gif)$/i.test(file.path)
             )
-            data.outputFiles.forEach((file: OutputEntity) => {
-              file.clsiServerId = data.clsiServerId
-              file.compileGroup = data.compileGroup
-            })
-            setData(filteredFiles.sort(alphabetical))
+            setData(
+              filteredFiles
+                .map((file: OutputEntity) => ({
+                  ...file,
+                  clsiServerId: data.clsiServerId,
+                  compileGroup: data.compileGroup,
+                }))
+                .sort(alphabetical)
+            )
           } else {
             setError('linked-project-compile-error')
           }
         })
-        .catch(error => setError(error))
-        .finally(() => setLoading(false))
+        .catch(error => {
+          if (!signal.aborted) setError(error)
+        })
+        .finally(() => {
+          if (!signal.aborted) setLoading(false)
+        })
+      return () => controller.abort()
     }
-  }, [projectId, signal])
+  }, [projectId])
 
   return { loading, data, error }
 }

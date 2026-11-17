@@ -61,8 +61,9 @@ services:
       # 任意で、サイト管理者以外にテンプレートを管理するアカウントを指定できる。
       OVERLEAF_TEMPLATES_USER_ID: ${OVERLEAF_TEMPLATES_USER_ID:-}
       TEMPLATE_ALL_NAME: 研究室テンプレート
-      # URL リンク付きファイルは、本体内の linked-url-proxy を通して取り込む。
-      ENABLED_LINKED_FILE_TYPES: url
+      # URL と別プロジェクトのソース・出力ファイルをリンクとして取り込む。
+      # URL の取得は本体内の linked-url-proxy を通す。
+      ENABLED_LINKED_FILE_TYPES: url,project_file,project_output_file
       OVERLEAF_LINKED_URL_ALLOWED_RESOURCES: ${OVERLEAF_LINKED_URL_ALLOWED_RESOURCES:-}
       OVERLEAF_LINKED_URL_BLOCKED_NETWORKS: ${OVERLEAF_LINKED_URL_BLOCKED_NETWORKS:-}
 
