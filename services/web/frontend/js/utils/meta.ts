@@ -138,6 +138,7 @@ export interface Meta {
   'ol-footer': FooterMetadata
   'ol-galleryTagName': string
   'ol-gitBridgeEnabled': boolean
+  'ol-personalMcpEnabled': boolean
   'ol-gitBridgePublicBaseUrl': string
   'ol-github': { enabled: boolean; error: boolean; expired?: boolean }
   'ol-groupAuditLogs': []

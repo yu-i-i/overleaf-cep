@@ -193,6 +193,7 @@ async function settingsPage(req, res) {
     userRestrictions: Array.from(req.userRestrictions || []),
     currentManagedUserAdminEmail,
     gitBridgeEnabled: Settings.enableGitBridge,
+    personalMcpEnabled: Settings.enablePersonalMcp,
     isSaas: Features.hasFeature('saas'),
     memberOfSSOEnabledGroups,
     capabilities: [...req.capabilitySet],

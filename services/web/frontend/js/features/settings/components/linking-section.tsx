@@ -18,6 +18,7 @@ const availableLangFeedbackLinkingWidgets = importOverleafModules(
 ) as any[]
 
 const gitBridgeEnabled = getMeta('ol-gitBridgeEnabled')
+const personalMcpEnabled = getMeta('ol-personalMcpEnabled')
 const githubSyncEnabled = getMeta('ol-ExposedSettings').githubSyncEnabled
 const zoteroEnabled = getMeta('ol-ExposedSettings').zoteroEnabled
 
@@ -54,6 +55,13 @@ function LinkingSection() {
     path: string
   }[]
 
+  const personalMcpComponents = !personalMcpEnabled
+    ? []
+    : (importOverleafModules('personalMcpTokens') as {
+        import: { default: ElementType }
+        path: string
+      }[])
+
   const renderSyncSection =
     getMeta('ol-isSaas') || gitBridgeEnabled || githubSyncEnabled
 
@@ -87,12 +95,14 @@ function LinkingSection() {
   }
 
   const hasSSOLinkingSection = Object.keys(subscriptions).length > 0
+  const hasPersonalMcpSection = personalMcpComponents.length > 0
 
   if (
     !haslangFeedbackLinkingWidgets &&
     !hasIntegrationLinkingSection &&
     !hasReferencesLinkingSection &&
-    !hasSSOLinkingSection
+    !hasSSOLinkingSection &&
+    !hasPersonalMcpSection
   ) {
     return null
   }
@@ -192,6 +202,17 @@ function LinkingSection() {
           </div>
         </>
       ) : null}
+      {hasPersonalMcpSection ? (
+        <>
+          <h3 id="personal-mcp">{t('personal_mcp_access_tokens')}</h3>
+          <div className="settings-widgets-container">
+            {personalMcpComponents.map(({ import: { default: Widget }, path }) => (
+              <Widget key={path} />
+            ))}
+          </div>
+        </>
+      ) : null}
+
       {haslangFeedbackLinkingWidgets ||
       hasIntegrationLinkingSection ||
       hasReferencesLinkingSection ||
