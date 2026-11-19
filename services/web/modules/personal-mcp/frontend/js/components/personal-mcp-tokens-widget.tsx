@@ -83,11 +83,8 @@ export const PersonalMcpTokensWidget = function PersonalMcpTokensWidget() {
   )
 
   return (
-    <div className="settings-widget-container">
-      <div className="description-container">
-        <div className="title-row">
-          <h4>{t('personal_mcp_access_tokens')}</h4>
-        </div>
+    <div style={{ padding: 'var(--spacing-05)' }}>
+      <div>
         <p className="small">{t('personal_mcp_info')}</p>
 
         {error ? <Notification type="error" content={error} /> : null}

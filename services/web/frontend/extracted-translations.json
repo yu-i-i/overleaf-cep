@@ -427,7 +427,6 @@
   "contacting_the_sales_team": "",
   "continue": "",
   "continue_github_merge": "",
-  "continue_github_merge": "",
   "continue_to": "",
   "continue_to_checkout": "",
   "continue_using_free_features": "",
@@ -2932,5 +2931,14 @@
   "untitled": "",
   "url_format_hint": "",
   "works_by_author": "",
-  "year_format_hint": ""
+  "year_format_hint": "",
+  "personal_mcp_access_tokens": "",
+  "personal_mcp_info": "",
+  "personal_mcp_endpoint_info": "",
+  "personal_mcp_token_purpose": "",
+  "personal_mcp_new_token_warning": "",
+  "personal_mcp_created": "",
+  "personal_mcp_expires": "",
+  "personal_mcp_last_used": "",
+  "personal_mcp_no_tokens": ""
 }
