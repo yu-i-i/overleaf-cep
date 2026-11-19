@@ -1057,6 +1057,7 @@ module.exports = {
     // 研究室向けの翻訳パネルを、既存のツールバー拡張点へ登録します。
     sourceEditorToolbarComponents: [
       '../../../../../modules/local-llm-translation/frontend/js/TranslationToolbar',
+      '../../../../../modules/local-llm-translation/frontend/js/split/BilingualEditorButton',
     ],
     sourceEditorToolbarEndButtons: [],
     rootContextProviders: [
@@ -1075,7 +1076,12 @@ module.exports = {
         '../modules/selected-word-count/frontend/components/selected-word-count-controller.tsx'
       ),
     ],
-    mainEditorLayoutPanels: [],
+    mainEditorLayoutPanels: [
+      Path.resolve(
+        __dirname,
+        '../modules/local-llm-translation/frontend/js/split/BilingualEditorPanel.tsx'
+      ),
+    ],
     pythonRunner: [
       Path.resolve(
         __dirname,
