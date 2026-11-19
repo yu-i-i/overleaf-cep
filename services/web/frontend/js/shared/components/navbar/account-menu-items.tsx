@@ -34,6 +34,11 @@ export function AccountMenuItems({
       <NavDropdownLinkItem href="/user/settings">
         {t('account_settings')}
       </NavDropdownLinkItem>
+      {getMeta('ol-ExposedSettings').llmEnabled && (
+        <NavDropdownLinkItem href="/user/llm-settings">
+          {t('llm_settings', 'LLM Settings')}
+        </NavDropdownLinkItem>
+      )}
       {showSubscriptionLink ? (
         <NavDropdownLinkItem href="/user/subscription">
           {t('subscription')}

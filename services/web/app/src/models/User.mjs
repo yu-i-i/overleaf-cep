@@ -249,6 +249,62 @@ export const UserSchema = new Schema(
       us: { type: String },
       uk: { type: String },
     },
+    // LLM module: per-user AI assistant settings
+    useOwnLLMSettings: { type: Boolean, default: false },
+    llmApiKey: { type: String, default: '' },
+    llmModelName: { type: String, default: '' },
+    llmApiUrl: { type: String, default: '' },
+    llmCompletionModel: { type: String, default: '' },
+    // overleaf-lab: LLM module (services/web/modules/llm). Extra legacy fields for the
+    // single-connection migration, plus the bring-your-own provider rows.
+    llmApiType: { type: String, default: '' },
+    llmModels: { type: [String], default: [] },
+    llmModelNames: { type: [String], default: [] },
+    llmCompletionModels: { type: [String], default: [] },
+    // overleaf-lab: user-scoped shared LLM model selection (File → "Select
+    // LLM Model"): model id or `u:<rowId>:<model>`; '' = deployment default.
+    // Written by LLMSettingsController.saveSelectedModel (module:llm).
+    llmSelectedModel: { type: String, default: '' },
+    // overleaf-lab (2026-08-27): per-user compliance review rubrics (owner
+    // request: the rubrics moved from global admin settings to the user's own
+    // LLM settings page). Free-form documents of the shared rubric shape
+    // (id/name/guidelines/scanPatterns), sanitized by the module's shared helper.
+    llmComplianceRubrics: { type: [Object], default: [] },
+    // Each row is a free-form document shaped by the module's row schema
+    // (id/name/providerType/baseUrl/apiKey[encrypted]/models/completionModel/enabled).
+    llmProviders: { type: [Object], default: [] },
+    // 翻訳専用設定（Phase 2）: 翻訳レールが使う接続先を BYO 行から 1 つ選ぶ欄。
+    // 形は { providerId, model, minimal, chunkChars } で秘密値は持ちません
+    // （API キーは llmProviders 側の暗号化値を使う）。providerId 空 = 翻訳
+    // サービス側の標準設定（translation-service のエンドポイント/.env）に従う。
+    llmTranslation: {
+      type: Object,
+      default: () => ({ providerId: '', model: '', minimal: false, chunkChars: 0 }),
+    },
+    // 機能別の AI 選択: { chat, ask, completion, generate, compileFix, compliance }。
+    // 値は共通モデル選択と同じ ref 書式（'u:<行ID>:<モデル>' かサイト側モデル名、
+    // 空欄 = File メニューの共有選択 → サーバー既定の従来チェーンに従う）。
+    llmFeatureModels: {
+      type: Object,
+      default: () => ({
+        chat: '',
+        ask: '',
+        completion: '',
+        generate: '',
+        compileFix: '',
+        compliance: '',
+      }),
+    },
+    // AI Assistant チャットのプロジェクト TeX 自動参照の ON/OFF（既定 ON）。
+    // LLM 設定画面から切り替える（チャット画面には置かない・2026-11-13 の要望）。
+    llmChatAutoContext: { type: Boolean, default: true },
+    // 参照モード（2026-11-13 の追加要望）: 'auto' = 質問に合う抜粋（既定）、
+    // 'full' = プロジェクト全体を予算内でまとめて添える（全体チェック用）、
+    // 'off' = 参照しない。空欄 = 旧 llmChatAutoContext（ON/OFF）から自動判定。
+    llmChatContextMode: { type: String, default: '' },
+    // 参照コンテキスト長の予算（文字数・2026-11-13 の追加要望）。auto/full 双方に
+    // 適用。0 = 組み込み既定（auto: 12,000 字 / full: 60,000 字）。
+    llmChatContextBudget: { type: Number, default: 0 },
   },
   { minimize: false }
 )

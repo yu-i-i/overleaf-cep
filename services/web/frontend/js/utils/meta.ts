@@ -73,6 +73,30 @@ import { SharingPermissions } from '../../../modules/sharing-permissions/app/src
 import { FullHistoryFailure } from '@ol-types/history/projectHistory'
 
 export interface Meta {
+  'ol-systemPrompt': string
+  'ol-llmApiUrl': string
+  'ol-llmApiType': string
+  'ol-hasLlmApiKey': string
+  'ol-allowedModels': string
+  'ol-knownModels': string
+  'ol-completionModel': string
+  'ol-llmApiUrlFromEnv': string
+  'ol-llmApiTypeFromEnv': string
+  'ol-reviewModel': string
+  'ol-maxContextTokens': string
+  'ol-reviewMaxTokens': string
+  'ol-askAiSystemPrompt': string
+  'ol-errorPrompt': string
+  'ol-reviewSystemPrompt': string
+  'ol-chatEnabled': boolean
+  'ol-completionEnabled': boolean
+  'ol-reviewEnabled': boolean
+  'ol-featureChatEnabled': boolean
+  'ol-featureCompletionEnabled': boolean
+  'ol-complianceRubrics': any
+  'ol-askAiActionPrompts': any
+  'ol-promptDefaults': any
+
   'ol-ExposedSettings': ExposedSettings
   'ol-adminCapabilities': AdminCapability[]
   'ol-adminSubscription': AdminSubscription

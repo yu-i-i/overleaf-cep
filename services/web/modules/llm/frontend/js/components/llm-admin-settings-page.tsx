@@ -1,0 +1,810 @@
+import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import getMeta from '@/utils/meta'
+import { postJSON } from '@/infrastructure/fetch-json'
+import useAsync from '@/shared/hooks/use-async'
+import OLButton from '@/shared/components/ol/ol-button'
+import OLFormGroup from '@/shared/components/ol/ol-form-group'
+import OLFormLabel from '@/shared/components/ol/ol-form-label'
+import OLFormText from '@/shared/components/ol/ol-form-text'
+import OLFormControl from '@/shared/components/ol/ol-form-control'
+import OLNotification from './llm-notification'
+import OLBadge from '@/shared/components/ol/ol-badge'
+import MaterialIcon from '@/shared/components/material-icon'
+import {
+  OLDropdown as Dropdown,
+  OLDropdownToggle as DropdownToggle,
+  OLDropdownMenu as DropdownMenu,
+  OLDropdownItem as DropdownItem,
+} from '@/shared/components/ol/ol-dropdown-menu'
+import '../../stylesheets/llm-settings.scss'
+import LLMUsageMeter from './llm-usage-meter' // overleaf-lab (usage meter)
+// overleaf-lab: shared upstream-AI design tokens (--wf-*) used by the settings chrome
+import '../../stylesheets/llm-ui.scss'
+
+const LLM_API_TYPES = [
+  { name: 'openai', label: 'OpenAI' },
+  { name: 'anthropic', label: 'Anthropic' },
+]
+
+const DEFAULT_SYSTEM_PROMPT = `You are an expert LaTeX debugging assistant and compiler error specialist.
+
+**Your Primary Role - Error Debugging:**
+- Analyze LaTeX compilation errors and warnings
+- Identify syntax mistakes, missing packages, and structural issues
+- Explain errors in beginner-friendly language
+- Provide working fixes with clear explanations
+
+**When a user sends a compilation error:**
+
+1. **Quick Summary** (1-2 sentences)
+   - What's wrong in plain English
+
+2. **The Problem**
+   - Explain the error clearly
+   - Point to the exact issue in their code
+
+3. **The Fix**
+   - Show corrected code in \`\`\`latex blocks
+   - Highlight what changed
+
+4. **Why This Happened**
+   - Brief explanation of the root cause
+   - How to prevent it in future
+
+**Error Analysis Guidelines:**
+- The line marked with → is where the error occurred
+- Look at surrounding context for clues
+- Common issues: typos in commands, missing packages, unmatched braces
+- Check for: \\begin without \\end, missing $, wrong package names
+
+**Also Helpful With:**
+- General LaTeX syntax and commands
+- Document structure and formatting
+- Mathematical typesetting
+- Bibliography and citations
+
+**Response Style:**
+- Be concise and practical
+- Use code blocks for all LaTeX examples
+- Assume the user is learning LaTeX
+- Focus on solving the immediate problem first
+
+Remember: The user is likely frustrated. Be encouraging and clear!`
+
+// overleaf-lab: a small accessible toggle switch (styled from a button) used for
+// the per-feature enable/disable controls.
+function ToggleSwitch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label?: string
+}) {
+  return (
+    <OLButton
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`ol-llm-admin-settings__switch${checked ? ' is-on' : ''}`}
+    >
+      <span className="ol-llm-admin-settings__switch-knob" />
+    </OLButton>
+  )
+}
+
+export default function LLMAdminSettingsPage() {
+  const { t } = useTranslation()
+  const hasStoredKey = getMeta('ol-hasLlmApiKey') === 'true'
+  // overleaf-lab: true when the shown URL is inherited from the LLM_API_URL env
+  // var rather than saved in the admin settings file.
+  const apiUrlFromEnv = getMeta('ol-llmApiUrlFromEnv') === 'true'
+  const apiTypeFromEnv = getMeta('ol-llmApiTypeFromEnv') === 'true'
+
+  const [systemPrompt, setSystemPrompt] = useState<string>(
+    (getMeta('ol-systemPrompt') as string) || DEFAULT_SYSTEM_PROMPT
+  )
+  const [llmApiUrl, setLlmApiUrl] = useState<string>(
+    (getMeta('ol-llmApiUrl') as string) || ''
+  )
+  const [llmApiType, setLlmApiType] = useState<string>(
+    (getMeta('ol-llmApiType') as string) || ''
+  )
+  const [llmApiKey, setLlmApiKey] = useState<string>('')
+  // overleaf-lab: true = the user explicitly asked to REMOVE the stored key
+  // (blank input otherwise keeps the stored key).
+  const [clearLlmApiKey, setClearLlmApiKey] = useState(false)
+  const [allowedModels, setAllowedModels] = useState<string[]>(
+    ((getMeta('ol-allowedModels') as string) || '')
+      .split(',')
+      .map(m => m.trim())
+      .filter(Boolean)
+  )
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  // overleaf-lab: item 8 — the FULL model list found by a scan/test (including
+  // unchecked models), persisted so unchecked models stay visible across reloads.
+  const [knownModels, setKnownModels] = useState<string[]>(
+    ((getMeta('ol-knownModels') as string) || '')
+      .split(',')
+      .map(m => m.trim())
+      .filter(Boolean)
+  )
+  const [chatEnabled, setChatEnabled] = useState<boolean>(
+    getMeta('ol-chatEnabled') !== false
+  )
+  const [scanStatus, setScanStatus] = useState<string | null>(null)
+  const [testStatus, setTestStatus] = useState<string | null>(null)
+
+  const {
+    isLoading: isSaving,
+    isSuccess,
+    isError,
+    error,
+    runAsync,
+  } = useAsync()
+
+  const [showSuccess, setShowSuccess] = useState(false)
+  // F8: surface validation errors returned by the save endpoint (field + message).
+  const [saveErrors, setSaveErrors] = useState<string[]>([])
+  useEffect(() => {
+    if (isSuccess) {
+      setShowSuccess(true)
+      const timer = setTimeout(() => setShowSuccess(false), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [isSuccess])
+
+  // overleaf-lab: only the URL and its type are required — a local llama.cpp server has no
+  // auth, so scan/test must work with an empty key. The server returns 401 if
+  // it actually needs one.
+  const canConnect = !!llmApiUrl && !!llmApiType
+  const selectedApiType = LLM_API_TYPES.find(t => t.name === llmApiType)
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaveErrors([])
+    runAsync(
+      postJSON('/admin/llm/settings', {
+        body: {
+          systemPrompt,
+          llmApiUrl,
+          llmApiType,
+          llmApiKey,
+          clearLlmApiKey,
+          allowedModels,
+          knownModels,
+          chatEnabled,
+        },
+      })
+    ).catch((err: any) => {
+      // F8: show the specific validation errors when the server returns them.
+      const list = Array.isArray(err?.data?.errors)
+        ? err.data.errors.map((x: any) => `${x.field}: ${x.message}`)
+        : [
+            err?.data?.error ||
+              err?.message ||
+              t('generic_something_went_wrong', 'Something went wrong'),
+          ]
+      setSaveErrors(list)
+    })
+  }
+
+  const testConnection = async () => {
+    setTestStatus('testing')
+    try {
+      const resp = await postJSON('/admin/llm/settings/check', {
+        body: { apiUrl: llmApiUrl, apiKey: llmApiKey, apiType: llmApiType },
+      })
+      if (resp.success) {
+        setTestStatus('success')
+        // overleaf-lab: item 7 — test = model-list fetch: a successful test
+        // returns the backend's model list, so adopt it in the same round
+        // trip (no separate scan needed).
+        if (Array.isArray(resp.models)) {
+          setKnownModels(prev => Array.from(new Set([...prev, ...resp.models])))
+        }
+      } else {
+        setTestStatus('error')
+      }
+    } catch (e) {
+      setTestStatus('error')
+    }
+  }
+
+  const scanModels = async () => {
+    setScanStatus('scanning')
+    try {
+      const resp = await postJSON('/admin/llm/models', {
+        body: {
+          apiUrl: llmApiUrl,
+          apiKey: llmApiKey,
+          apiType: llmApiType,
+        },
+      })
+      if (resp.success && Array.isArray(resp.models)) {
+        setAvailableModels(resp.models)
+        setScanStatus('success')
+        setKnownModels(prev => Array.from(new Set([...prev, ...resp.models])))
+        setAllowedModels(prev => {
+          const combined = new Set([...prev, ...resp.models])
+          return Array.from(combined)
+        })
+      } else {
+        setScanStatus('error')
+      }
+    } catch {
+      setScanStatus('error')
+    }
+  }
+
+  const toggleAllowedModel = (model: string) => {
+    setAllowedModels(prev =>
+      prev.includes(model) ? prev.filter(m => m !== model) : [...prev, model]
+    )
+  }
+
+  /* overleaf-lab (2026-08-27): rubric editing moved to the user settings page
+       (/user/llm-settings) — no admin rubric state anymore. */
+
+  const allModels = Array.from(
+    new Set([...knownModels, ...availableModels, ...allowedModels])
+  )
+
+  // overleaf-lab (owner request 2026-08-26): admin page reorganized like the
+  // admin/user console — a left sidebar lists the sections, the right column
+  // shows the active one (CSS hides the rest via data-active/data-sec).
+  const [activeSection, setActiveSection] = useState('features')
+
+  return (
+    <div
+      className="container llm-settings ol-llm-admin-settings"
+      data-active={activeSection}
+    >
+      {/* Page header */}
+      <div className="llm-settings-header">
+        <h1 className="llm-settings-header-title">
+          <MaterialIcon type="smart_toy" />
+          {t('llm_configuration', 'LLM Configuration')}
+        </h1>
+        <p className="llm-settings-header-desc">
+          {t(
+            'llm_admin_description',
+            'Configure the AI assistant for your Overleaf instance. Set up the API connection, choose available models, and customize the system prompt.'
+          )}
+        </p>
+      </div>
+
+      {/* overleaf-lab: sidebar navigation (admin/user-style layout) */}
+      <nav
+        className="llm-admin-sidebar"
+        aria-label={t('llm_admin_sections', 'LLM settings sections')}
+      >
+        {[
+          {
+            id: 'features',
+            icon: 'toggle_on',
+            label: t('llm_features', 'Features'),
+          },
+          {
+            id: 'connection',
+            icon: 'link',
+            label: t('api_connection', 'API Connection'),
+          },
+          {
+            id: 'models',
+            icon: 'model_training',
+            label: t('model_selection', 'Model Selection'),
+          },
+          {
+            id: 'prompt',
+            icon: 'description',
+            label: t('system_prompt', 'System Prompt'),
+          },
+          { id: 'usage', icon: 'insights', label: t('llm_usage', 'Usage') }, // overleaf-lab (usage meter)
+        ].map(s => (
+          <button
+            key={s.id}
+            type="button"
+            role="tab"
+            className={`llm-admin-nav-item${activeSection === s.id ? ' active' : ''}`}
+            aria-current={activeSection === s.id ? 'page' : undefined}
+            onClick={() => setActiveSection(s.id)}
+          >
+            <span aria-hidden="true">
+              <MaterialIcon type={s.icon} className="llm-admin-nav-icon" />
+            </span>
+            {s.label}
+          </button>
+        ))}
+      </nav>
+
+      <form onSubmit={handleSave} className="llm-admin-content">
+        {/* ── Section 1: Features ── */}
+        {/* overleaf-lab: master on/off switches per AI feature */}
+        <div className="llm-settings-section" data-sec="features">
+          <div className="llm-settings-section-header">
+            <span className="llm-settings-section-badge">1</span>
+            <MaterialIcon type="toggle_on" />
+            {t('llm_features', 'Features')}
+          </div>
+          <p className="llm-settings-section-desc">
+            {t(
+              'llm_features_desc',
+              'Enable or disable each AI feature for all users. A disabled feature cannot be used by anyone, even with their own API key.'
+            )}
+          </p>
+
+          <div className="llm-settings-section-body">
+            {/* overleaf-lab: one toggle switch per feature */}
+            {[
+              {
+                key: 'chat',
+                on: chatEnabled,
+                set: setChatEnabled,
+                title: t('feature_chat', 'Chat'),
+                help: t('feature_chat_help', 'The AI chat panel.'),
+              },
+            ]
+              .filter(feature => feature.key === 'chat')
+              .map(f => (
+                <div key={f.key} className="ol-llm-admin-settings__feature-row">
+                  <div>
+                    <span className="ol-llm-admin-settings__feature-title">
+                      {f.title}
+                    </span>
+                    <OLFormText className="ol-llm-admin-settings__no-margin">
+                      {f.help}
+                    </OLFormText>
+                  </div>
+                  <ToggleSwitch
+                    checked={f.on}
+                    onChange={f.set}
+                    label={f.title}
+                  />
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* ── Section 2: API Connection ── */}
+        <div className="llm-settings-section" data-sec="connection">
+          <div className="llm-settings-section-header">
+            <span className="llm-settings-section-badge">2</span>
+            <MaterialIcon type="link" />
+            {t('api_connection', 'API Connection')}
+            {testStatus === 'success' && (
+              <OLBadge
+                bg="success"
+                className="ol-llm-admin-settings__connected-badge"
+              >
+                {t('connected', 'Connected')}
+              </OLBadge>
+            )}
+          </div>
+          <p className="llm-settings-section-desc">
+            {t(
+              'api_connection_desc',
+              'Enter the endpoint URL and API key for your OpenAI-compatible LLM provider.'
+            )}
+          </p>
+
+          <OLFormGroup controlId="llm-api-url">
+            <OLFormLabel>{t('llm_api_url', 'API Endpoint URL')}</OLFormLabel>
+            <OLFormControl
+              type="url"
+              value={llmApiUrl}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setLlmApiUrl(e.target.value)
+              }
+              placeholder="https://api.example.com/v1"
+            />
+            {apiUrlFromEnv && (
+              <OLFormText>
+                <MaterialIcon
+                  type="info"
+                  className="me-1 ol-llm-admin-settings__icon-sm"
+                />
+                {t(
+                  'llm_admin_from_env',
+                  'Inherited from the LLM_API_URL environment variable. Saving here stores it in the admin settings file.'
+                )}
+              </OLFormText>
+            )}
+          </OLFormGroup>
+
+          <OLFormGroup controlId="llm-api-type">
+            <OLFormLabel>{t('llm_api_type', 'API Type')}</OLFormLabel>
+            <div>
+              <Dropdown>
+                <DropdownToggle
+                  id="llm-api-type-dropdown"
+                  className="btn-secondary"
+                  aria-label="Select LLM API type"
+                >
+                  <span className="text-truncate" aria-hidden>
+                    {selectedApiType?.label ?? 'Select API type'}
+                  </span>
+                </DropdownToggle>
+
+                <DropdownMenu flip={false}>
+                  {LLM_API_TYPES.map(apiType => (
+                    <DropdownItem
+                      key={apiType.name}
+                      active={apiType.name === llmApiType}
+                      onClick={() => setLlmApiType(apiType.name)}
+                    >
+                      {apiType.label}
+                    </DropdownItem>
+                  ))}
+                </DropdownMenu>
+              </Dropdown>
+            </div>
+
+            {apiTypeFromEnv && (
+              <OLFormText>
+                <MaterialIcon
+                  type="info"
+                  className="me-1 ol-llm-admin-settings__icon-sm"
+                />
+                {t(
+                  'llm_type_from_env',
+                  'Inherited from the LLM_API_TYPE environment variable. Saving here stores it in the admin settings file.'
+                )}
+              </OLFormText>
+            )}
+          </OLFormGroup>
+
+          <OLFormGroup
+            controlId="llm-api-key"
+            className="ol-llm-admin-settings__mb-lg"
+          >
+            <OLFormLabel>{t('llm_api_key', 'API Key')}</OLFormLabel>
+            <OLFormControl
+              type="password"
+              value={llmApiKey}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setLlmApiKey(e.target.value)
+                // overleaf-lab: typing a new key cancels a pending "remove"
+                if (e.target.value) {
+                  setClearLlmApiKey(false)
+                }
+              }}
+              placeholder={
+                hasStoredKey
+                  ? t(
+                      'llm_api_key_placeholder_stored',
+                      '••••••••  (stored — leave blank to keep)'
+                    )
+                  : t('llm_api_key_placeholder', 'Paste your API key here')
+              }
+            />
+            {hasStoredKey && !llmApiKey && (
+              <OLFormText>
+                <MaterialIcon
+                  type="check_circle"
+                  className="me-1 ol-llm-admin-settings__ok-green"
+                />
+                {t(
+                  'llm_api_key_stored',
+                  'An API key is already stored. Leave blank to keep it.'
+                )}
+              </OLFormText>
+            )}
+            <OLFormText>
+              <MaterialIcon
+                type="info"
+                className="me-1 ol-llm-admin-settings__icon-sm"
+              />
+              {t(
+                'llm_api_key_optional_local',
+                'Leave blank for a local server with no auth (e.g. a llama.cpp server).'
+              )}
+            </OLFormText>
+            {hasStoredKey && (
+              <OLButton
+                variant="link"
+                onClick={() => {
+                  setLlmApiKey('')
+                  setClearLlmApiKey(true)
+                }}
+              >
+                {t('llm_api_key_remove', 'Remove stored key')}
+              </OLButton>
+            )}
+          </OLFormGroup>
+
+          <div className="ol-llm-admin-settings__row-inline">
+            <OLButton
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={testConnection}
+              disabled={!canConnect}
+              isLoading={testStatus === 'testing'}
+            >
+              <MaterialIcon
+                type="cable"
+                className="me-1 ol-llm-admin-settings__icon-base"
+              />
+              {t('test_connection', 'Test Connection')}
+            </OLButton>
+            {testStatus === 'success' && (
+              <span className="llm-settings-section-status llm-settings-section-status-success">
+                <MaterialIcon
+                  type="check_circle"
+                  className="llm-settings-section-status-icon"
+                />
+                {t('connection_successful', 'Connection successful')}
+              </span>
+            )}
+            {testStatus === 'error' && (
+              <span className="llm-settings-section-status llm-settings-section-status-error">
+                <MaterialIcon
+                  type="error"
+                  className="llm-settings-section-status-icon"
+                />
+                {t(
+                  'connection_failed',
+                  'Connection failed — check URL and key'
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ── Section 3: Model Selection ── */}
+        <div className="llm-settings-section" data-sec="models">
+          <div className="llm-settings-section-header">
+            <span className="llm-settings-section-badge">3</span>
+            <MaterialIcon type="model_training" />
+            {t('model_selection', 'Model Selection')}
+            {allModels.length > 0 && (
+              <span className="ol-llm-admin-settings__model-count">
+                {allowedModels.filter(m => allModels.includes(m)).length}/
+                {allModels.length} {t('selected', 'selected')}
+              </span>
+            )}
+          </div>
+          <p className="llm-settings-section-desc">
+            {t(
+              'model_selection_desc',
+              'Scan the API for available models, then choose which ones users can access.'
+            )}
+          </p>
+
+          <div
+            className={`ol-llm-admin-settings__row-inline${allModels.length > 0 ? ' ol-llm-admin-settings__mt-lg' : ''}`}
+          >
+            <OLButton
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={scanModels}
+              disabled={!canConnect}
+              isLoading={scanStatus === 'scanning'}
+            >
+              <MaterialIcon
+                type="radar"
+                className="me-1 ol-llm-admin-settings__icon-base"
+              />
+              {t('scan_for_models', 'Scan for Models')}
+            </OLButton>
+            {scanStatus === 'success' && (
+              <span className="llm-settings-section-status llm-settings-section-status-success">
+                <MaterialIcon
+                  type="check_circle"
+                  className="llm-settings-section-status-icon"
+                />
+                {t(
+                  'scan_found_models',
+                  `Found ${availableModels.length} model(s)`
+                )}
+              </span>
+            )}
+            {scanStatus === 'error' && (
+              <span className="llm-settings-section-status llm-settings-section-status-error">
+                <MaterialIcon
+                  type="error"
+                  className="llm-settings-section-status-icon"
+                />
+                {t('scan_failed', 'Scan failed — check connection first')}
+              </span>
+            )}
+            {!canConnect && scanStatus === null && (
+              <span className="ol-llm-admin-settings__small">
+                {t(
+                  'configure_api_first',
+                  'Configure the API connection above first'
+                )}
+              </span>
+            )}
+          </div>
+
+          {allModels.length > 0 && (
+            <>
+              <div className="ol-llm-admin-settings__model-list">
+                {allModels.map(model => (
+                  <label
+                    key={model}
+                    className="ol-llm-admin-settings__model-row"
+                    onMouseEnter={e => {
+                      ;(e.currentTarget as HTMLElement).style.backgroundColor =
+                        'var(--bg-light-secondary, #f8f9fa)'
+                    }}
+                    onMouseLeave={e => {
+                      ;(e.currentTarget as HTMLElement).style.backgroundColor =
+                        ''
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={allowedModels.includes(model)}
+                      onChange={() => toggleAllowedModel(model)}
+                      className="ol-llm-admin-settings__model-checkbox"
+                    />
+                    <span className="ol-llm-admin-settings__mono-lg">
+                      {model}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="ol-llm-admin-settings__models-actions">
+                <OLButton
+                  variant="link"
+                  size="sm"
+                  type="button"
+                  onClick={() => setAllowedModels([...allModels])}
+                  className="ol-llm-admin-settings__link-btn"
+                >
+                  {t('select_all', 'Select all')}
+                </OLButton>
+                <span className="ol-llm-admin-settings__muted">|</span>
+                <OLButton
+                  variant="link"
+                  size="sm"
+                  type="button"
+                  onClick={() => setAllowedModels([])}
+                  className="ol-llm-admin-settings__link-btn"
+                >
+                  {t('unselect_all', 'Unselect all')}
+                </OLButton>
+              </div>
+            </>
+          )}
+
+          {/* overleaf-lab (2026-08-27, owner request): the admin
+                      "Inline completion model" picker is GONE — inline
+                      completion runs on each user's shared model selection
+                      (profile -> first BYO row -> site default), managed by
+                      users in File -> "Select LLM Model" and their BYO rows. */}
+        </div>
+
+        {/* ── Section 4: System Prompt ── */}
+        <div className="llm-settings-section" data-sec="prompt">
+          <div className="llm-settings-section-header">
+            <span className="llm-settings-section-badge">4</span>
+            <MaterialIcon type="description" />
+            {t('system_prompt', 'System Prompt')}
+          </div>
+          <p className="llm-settings-section-desc">
+            {t(
+              'system_prompt_desc',
+              "This prompt is prepended to every AI conversation. Use it to customize the assistant's behavior for your organization."
+            )}
+          </p>
+
+          <OLFormGroup
+            controlId="llm-system-prompt"
+            className="ol-llm-admin-settings__mb-sm"
+          >
+            <OLFormControl
+              as="textarea"
+              rows={12}
+              value={systemPrompt}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setSystemPrompt(e.target.value)
+              }
+              placeholder={t(
+                'llm_system_prompt_placeholder',
+                'You are a helpful LaTeX assistant...'
+              )}
+              maxLength={4000}
+              className="ol-llm-admin-settings__mono"
+            />
+          </OLFormGroup>
+          <div className="ol-llm-admin-settings__row-between">
+            <OLFormText className="ol-llm-admin-settings__no-margin">
+              {systemPrompt.length}/4000 {t('characters', 'characters')}
+            </OLFormText>
+            <OLButton
+              variant="link"
+              size="sm"
+              type="button"
+              onClick={() => setSystemPrompt(DEFAULT_SYSTEM_PROMPT)}
+              className="ol-llm-admin-settings__link-btn"
+            >
+              <MaterialIcon
+                type="restart_alt"
+                className="me-1 ol-llm-admin-settings__icon-base"
+              />
+              {t('reset_to_default', 'Reset to default')}
+            </OLButton>
+          </div>
+        </div>
+
+        {/* overleaf-lab (2026-08-27, owner request): the former admin
+                  Compliance Review section (rubric editor + Review model picker)
+                  is GONE. Rubrics are USER-SCOPED now: each user configures
+                  their own under /user/llm-settings; the reviewer reads the
+                  user's rubrics, inheriting the deployment-wide set until the
+                  user saves their own. The review runs on the user's shared
+                  model selection (profile -> BYO row -> site default), the
+                  same as every other AI surface. The review's token budgets
+                  moved to Section 5 (AI Prompts). */}
+
+        {/* ── Section 6: AI Prompts ── */}
+        {/* ── Notifications ── */}
+        {showSuccess && (
+          <div className="ol-llm-admin-settings__mb-lg">
+            <OLNotification
+              type="success"
+              content={t(
+                'llm_settings_saved',
+                'LLM settings saved successfully.'
+              )}
+            />
+          </div>
+        )}
+        {isError && (
+          <div className="ol-llm-admin-settings__mb-lg">
+            <OLNotification
+              type="error"
+              content={
+                (error as any)?.message ??
+                t('generic_something_went_wrong', 'Something went wrong')
+              }
+            />
+          </div>
+        )}
+
+        {/* ── Save Button ── */}
+        {saveErrors.length > 0 && (
+          <OLNotification type="error" content={saveErrors.join(' · ')} />
+        )}
+        <OLButton
+          variant="primary"
+          type="submit"
+          disabled={isSaving}
+          isLoading={isSaving}
+          loadingLabel={t('saving') + '…'}
+          className="ol-llm-admin-settings__save-btn"
+        >
+          <MaterialIcon
+            type="save"
+            className="me-1 ol-llm-admin-settings__icon-lg"
+          />
+          {t('save_settings', 'Save Settings')}
+        </OLButton>
+      </form>
+
+      {/* ── Section 6: Usage (usage meter) — read-only, outside the form ── */}
+      <div className="llm-settings-section" data-sec="usage">
+        <div className="llm-settings-section-header">
+          <span className="llm-settings-section-badge">5</span>
+          <MaterialIcon type="insights" />
+          {t('llm_usage', 'Usage')}
+        </div>
+        <p className="llm-settings-section-desc">
+          {t(
+            'llm_usage_desc',
+            'Token usage across the whole site (all users, site and personal connections). Data comes from real model responses and is updated after each request.'
+          )}
+        </p>
+        <LLMUsageMeter scope="admin" />
+      </div>
+    </div>
+  )
+}

@@ -5,6 +5,8 @@ type TemplateLink = {
 }
 
 export type ExposedSettings = {
+  llmEnabled: boolean
+  llmAllowUserSettings: boolean
   adminEmail: string
   appName: string
   cookieDomain: string

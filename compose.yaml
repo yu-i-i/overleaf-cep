@@ -49,6 +49,11 @@ services:
       ENABLE_CONVERSIONS: "true"
       # CE モジュール（local-llm-translation）が翻訳サービスへ接続する内部 URL。
       LOCAL_LLM_SERVICE_URL: http://translation-service:8000
+      # チャットの接続設定は管理画面で保存。暗号化秘密は再起動後も同じ値を使います。
+      LLM_ENABLED: ${LLM_ENABLED:-false}
+      LLM_ALLOW_USER_SETTINGS: ${LLM_ALLOW_USER_SETTINGS:-false}
+      LLM_KEY_SECRET: ${LLM_KEY_SECRET:-}
+      LLM_ADMIN_SETTINGS_PATH: /var/lib/overleaf/data/llm-admin-settings.json
       # CE+ の Git 連携を有効化する。公開経路は既存 nginx の /git/<project-id>。
       GIT_BRIDGE_ENABLED: "true"
       GIT_BRIDGE_HOST: git-bridge

@@ -1039,7 +1039,8 @@ module.exports = {
       ),
     ],
     sourceEditorVisualExtensions: [],
-    sourceEditorComponents: [],
+    // チャット送信時にだけ編集中の本文を読み取る中継。
+    sourceEditorComponents: [Path.resolve(__dirname, '../modules/llm/frontend/js/components/llm-editor-context.tsx')],
     pdfLogEntryHeaderActionComponents: [],
     pdfLogEntryComponents: [],
     pdfLogEntriesComponents: [],
@@ -1213,6 +1214,7 @@ module.exports = {
       ),
     ],
     railEntries: [
+      Path.resolve(__dirname, '../modules/llm/frontend/js/components/llm-rail-pane.tsx'),
       Path.resolve(
         __dirname,
         '../modules/local-llm-translation/frontend/js/rail/translation-rail-entry.tsx'
@@ -1247,6 +1249,7 @@ module.exports = {
     'zotero',
     'bib-editor',
     'local-llm-translation',
+    'llm',
   ],
   viewIncludes: {},
 
