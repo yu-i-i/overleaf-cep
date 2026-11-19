@@ -168,7 +168,14 @@ export function createWriteService({
       }
       await requireWrite(userId, projectId);
       const folderId = await makeFolders(projectId, folderPath, userId);
-      await moveDoc(userId, projectId, docId, folderId);
+      // moveEntity refuses to target the folder an element is already in, so a
+      // same-folder move (a pure rename) skips it and only runs renameEntity
+      // below, mirroring the separate web-UI rename route.
+      const sameFolder =
+        doc?.folderId != null && String(doc.folderId) === String(folderId);
+      if (!sameFolder) {
+        await moveDoc(userId, projectId, docId, folderId);
+      }
       // A rename is a separate entity operation, mirroring the web UI.
       const currentName = doc != null ? doc.name : undefined;
       if (currentName != null && currentName !== name) {

@@ -19,6 +19,7 @@ const USER = "507f1f77bcf86cd799439011";
 const PROJECT = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const DOC = "cccccccccccccccccccccccc";
 const FOLDER = "eeeeeeeeeeeeeeeeeeeeeeee";
+const SOURCE_FOLDER = "ffffffffffffffffffffffff";
 
 const MUTATIONS = [
   "makeFolders",
@@ -55,7 +56,7 @@ function makeService(overrides = {}) {
     findDoc: async (project, docId) => ({
       _id: docId,
       name: "old.tex",
-      folderId: FOLDER,
+      folderId: SOURCE_FOLDER,
     }),
     findEntityByPath: async () => null,
     makeFolders: async () => FOLDER,
@@ -195,6 +196,21 @@ describe("PersonalMcpWriteService", () => {
     expect(f.names()).not.toContain("renameDoc");
   });
 
+  it("renames in place without moveEntity when the folder is unchanged", async () => {
+    f = makeService({
+      findDoc: async (project, docId) => ({
+        _id: docId,
+        name: "old.tex",
+        folderId: FOLDER,
+      }),
+    });
+    const out = await f.service.moveDoc(USER, PROJECT, DOC, "old2.tex");
+    expect(out).toEqual({ id: DOC, path: "old2.tex" });
+    // moveEntity refuses to target the folder the element is already in.
+    expect(f.names()).not.toContain("moveDoc");
+    expect(f.argsOf("renameDoc")).toEqual([USER, PROJECT, DOC, "old2.tex"]);
+  });
+
   it("conflicts when another entity occupies the destination path", async () => {
     f = makeService({ findEntityByPath: async () => ({ _id: "zz" }) });
     await expectCode(
@@ -205,10 +221,17 @@ describe("PersonalMcpWriteService", () => {
   });
 
   it("allows moving a doc onto the path it already lives at", async () => {
-    f = makeService({ findEntityByPath: async () => ({ _id: DOC }) });
+    f = makeService({
+      findEntityByPath: async () => ({ _id: DOC }),
+      findDoc: async (project, docId) => ({
+        _id: docId,
+        name: "old.tex",
+        folderId: FOLDER,
+      }),
+    });
     await f.service.moveDoc(USER, PROJECT, DOC, "old.tex");
-    // proceeding with a same-path move is harmless; no rename happens
-    expect(f.names()).toContain("moveDoc");
+    // same folder, same name: neither moveEntity nor renameEntity runs
+    expect(f.names()).not.toContain("moveDoc");
     expect(f.names()).not.toContain("renameDoc");
   });
 
