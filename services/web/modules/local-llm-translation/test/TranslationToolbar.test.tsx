@@ -278,3 +278,47 @@ describe('translation draft recovery', () => {
     expect(window.confirm).not.toHaveBeenCalled()
   })
 })
+
+it('opens the embedded panel once and keeps a stopped draft when the editor becomes unavailable', async () => {
+  const view = render(<TranslationToolbar embedded />)
+  await screen.findByRole('option', { name: 'test' })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.queryByRole('button', { name: '閉じる' })).toBeNull()
+  expect(
+    screen.getByRole('region', { name: '日本語から英語へ翻訳' })
+  ).toBeTruthy()
+  fireEvent.click(screen.getByRole('checkbox'))
+  fireEvent.click(screen.getByRole('button', { name: '確認して翻訳' }))
+  await waitFor(() => expect(fetch).toHaveBeenCalled())
+  await fail()
+  const reads = mock.get.mock.calls.length
+  view.rerender(<TranslationToolbar embedded editorAvailable={false} />)
+  expect(
+    (screen.getByRole('button', { name: draftName }) as HTMLButtonElement)
+      .disabled
+  ).toBe(true)
+  expect(
+    (screen.getByRole('button', { name: '確認して翻訳' }) as HTMLButtonElement)
+      .disabled
+  ).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: '訳済み部分をコピー' }))
+  await waitFor(() => expect(mock.copy).toHaveBeenCalledWith(confirmed))
+  view.rerender(<TranslationToolbar embedded />)
+  expect(mock.get.mock.calls.length).toBe(reads)
+  expect(screen.getByRole('button', { name: draftName })).toBeTruthy()
+})
+
+it('opens the saved English document through the shared side-panel event', async () => {
+  const events: CustomEvent[] = []
+  const listener = (event: Event) => events.push(event as CustomEvent)
+  window.addEventListener('overleaf:open-bilingual-editor', listener)
+  try {
+    await start()
+    await fail()
+    fireEvent.click(screen.getByRole('button', { name: draftName }))
+    await waitFor(() => expect(events).toHaveLength(1))
+    expect(events[0].detail).toEqual({ docId: 'english', refresh: true })
+  } finally {
+    window.removeEventListener('overleaf:open-bilingual-editor', listener)
+  }
+})

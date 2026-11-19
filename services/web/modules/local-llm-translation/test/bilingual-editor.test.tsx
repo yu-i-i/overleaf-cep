@@ -8,6 +8,8 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { EditorView } from '@codemirror/view'
+import { undo } from '@codemirror/commands'
+import SplitLauncherPanel from '../frontend/js/rail/SplitLauncherPanel'
 import BilingualEditorPanel from '../frontend/js/split/BilingualEditorPanel'
 import { collectTexDocs } from '../frontend/js/split/tex-docs'
 
@@ -84,6 +86,7 @@ vi.mock('@/infrastructure/fetch-json', () => ({
 }))
 
 beforeEach(() => {
+  localStorage.clear()
   mocks.main = 'jp'
   mocks.write = true
   mocks.get.mockResolvedValue({ content: 'English before', version: 5 })
@@ -97,6 +100,7 @@ afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
   vi.resetAllMocks()
+  vi.useRealTimers()
 })
 function open() {
   const result = render(<BilingualEditorPanel />)
@@ -230,4 +234,158 @@ it('clears the navigation warning after explicitly discarding a closed panel', a
   window.dispatchEvent(after)
   expect(after.defaultPrevented).toBe(false)
   expect(screen.queryByRole('textbox', { name: '横並びエディター' })).toBeNull()
+})
+
+it('keeps separate document content and undo history while switching tabs', async () => {
+  open()
+  const english = await editor()
+  replace(english, 'English draft')
+  fireEvent.change(screen.getByRole('combobox'), {
+    target: { value: 'chapter' },
+  })
+  const chapter = await editor()
+  replace(chapter, 'Chapter draft')
+  fireEvent.click(screen.getByRole('tab', { name: 'main.en.tex' }))
+  expect(await editor()).toBe(english)
+  expect(english.state.doc.toString()).toBe('English draft')
+  act(() => {
+    undo(english)
+  })
+  expect(english.state.doc.toString()).toBe('English before')
+  fireEvent.click(screen.getByRole('tab', { name: 'chapters/INTRO.TEX' }))
+  expect(await editor()).toBe(chapter)
+  expect(chapter.state.doc.toString()).toBe('Chapter draft')
+  expect(mocks.get).toHaveBeenCalledTimes(2)
+})
+it('confirms discarding a tab but allows switching without discarding', async () => {
+  open()
+  const english = await editor()
+  replace(english, 'Unsaved English')
+  fireEvent.change(screen.getByRole('combobox'), {
+    target: { value: 'chapter' },
+  })
+  await editor()
+  expect(window.confirm).not.toHaveBeenCalled()
+  vi.mocked(window.confirm).mockReturnValue(false)
+  fireEvent.click(
+    screen.getByRole('button', { name: 'main.en.tex のタブを閉じる' })
+  )
+  expect(screen.getByRole('tab', { name: 'main.en.tex' })).toBeTruthy()
+  vi.mocked(window.confirm).mockReturnValue(true)
+  fireEvent.click(
+    screen.getByRole('button', { name: 'main.en.tex のタブを閉じる' })
+  )
+  expect(screen.queryByRole('tab', { name: 'main.en.tex' })).toBeNull()
+  expect(screen.getByRole('tab', { name: 'chapters/INTRO.TEX' })).toBeTruthy()
+})
+it('restores tab IDs and active tab without storing unsaved document text', async () => {
+  const result = open()
+  replace(await editor(), 'Private unsaved text')
+  fireEvent.change(screen.getByRole('combobox'), {
+    target: { value: 'chapter' },
+  })
+  await editor()
+  const stored = localStorage.getItem('bilingual-editor-tabs:project')!
+  expect(stored).not.toContain('Private unsaved text')
+  result.unmount()
+  render(<BilingualEditorPanel />)
+  expect(
+    screen
+      .getByRole('tab', { name: 'chapters/INTRO.TEX' })
+      .getAttribute('aria-selected')
+  ).toBe('true')
+  expect(screen.getAllByRole('tab')).toHaveLength(2)
+  expect((await editor()).state.doc.toString()).toBe('English before')
+})
+it('preserves a dirty tab when translation opens the saved English document', async () => {
+  open()
+  const english = await editor()
+  replace(english, 'Unsaved side draft')
+  act(() => {
+    window.dispatchEvent(
+      new CustomEvent('overleaf:open-bilingual-editor', {
+        detail: { docId: 'en', refresh: true },
+      })
+    )
+  })
+  expect(await editor()).toBe(english)
+  expect(english.state.doc.toString()).toBe('Unsaved side draft')
+  expect(mocks.get).toHaveBeenCalledTimes(1)
+  expect(screen.getByText(/編集中の内容は保持/)).toBeTruthy()
+})
+it('reloads a clean existing tab when a new translation is saved', async () => {
+  open()
+  const first = await editor()
+  mocks.get.mockResolvedValueOnce({ content: 'New translation', version: 8 })
+  act(() => {
+    window.dispatchEvent(
+      new CustomEvent('overleaf:open-bilingual-editor', {
+        detail: { docId: 'en', refresh: true },
+      })
+    )
+  })
+  await waitFor(() =>
+    expect(
+      screen.getByRole('textbox', { name: '横並びエディター' }).textContent
+    ).toBe('New translation')
+  )
+  expect(await editor()).not.toBe(first)
+  expect(mocks.get).toHaveBeenCalledTimes(2)
+})
+
+it('autosaves after typing and stops automatic retries after a conflict', async () => {
+  open()
+  const view = await editor()
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  mocks.put.mockRejectedValueOnce({ data: { detail: 'Conflict' } })
+  replace(view, 'Autosaved draft')
+  await act(async () => {
+    vi.advanceTimersByTime(1500)
+  })
+  expect(mocks.put).toHaveBeenCalledTimes(1)
+  expect(view.state.doc.toString()).toBe('Autosaved draft')
+  await act(async () => {
+    vi.advanceTimersByTime(30000)
+  })
+  replace(view, 'Keep local edits')
+  await act(async () => {
+    vi.advanceTimersByTime(30000)
+  })
+  expect(mocks.put).toHaveBeenCalledTimes(1)
+})
+it('keeps autosave versions separate for each tab', async () => {
+  open()
+  const english = await editor()
+  fireEvent.change(screen.getByRole('combobox'), {
+    target: { value: 'chapter' },
+  })
+  const chapter = await editor()
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  replace(english, 'English autosave')
+  replace(chapter, 'Chapter autosave')
+  await act(async () => {
+    vi.advanceTimersByTime(1500)
+  })
+  expect(mocks.put).toHaveBeenCalledWith(
+    '/project/project/local-llm/doc-content',
+    { body: { doc_id: 'en', content: 'English autosave', version: 5 } }
+  )
+  expect(mocks.put).toHaveBeenCalledWith(
+    '/project/project/local-llm/doc-content',
+    { body: { doc_id: 'chapter', content: 'Chapter autosave', version: 5 } }
+  )
+})
+it('opens a selected document from the rail launcher', () => {
+  const listener = vi.fn()
+  window.addEventListener('overleaf:open-bilingual-editor', listener)
+  try {
+    render(<SplitLauncherPanel />)
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'chapter' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '横並びで開く' }))
+    expect(listener.mock.calls[0][0].detail).toEqual({ docId: 'chapter' })
+  } finally {
+    window.removeEventListener('overleaf:open-bilingual-editor', listener)
+  }
 })

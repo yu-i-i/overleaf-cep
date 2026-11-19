@@ -1,8 +1,9 @@
 /**
- * エディタツールバーの「英訳」ボタンと翻訳パネル（ダイアログ）です。
+ * 翻訳・草稿保存の共通パネルです。左レールでは embedded モードで表示します。
+ * 従来のモーダル表示も同じ処理を使い、保存経路を二重に持たせません。
  *
- * CE の拡張点 sourceEditorToolbarComponents（settings.defaults.js）から
- * LaTeX 文書エディタのツールバーへ登録されます。パネルの流れは次のとおりです。
+ * レール側は CodeMirrorBridge が公開したエディターをコンテキストへ渡します。
+ * パネルの流れは次のとおりです。
  *
  * 1. 開いた時点でモデル一覧とプロジェクト設定（用語集）を読み込む
  * 2. 「確認して翻訳」で原文のスナップショットを取り、Overleaf API 経由で翻訳を開始
@@ -99,10 +100,13 @@ async function streamTranslation(
 }
 
 /**
- * 「英訳」ボタンと翻訳パネルの本体コンポーネントです。
+ * 翻訳パネルの本体コンポーネントです。
  * LaTeX 文書以外のタブではボタンを表示しません（isLatex 判定）。
  */
-export default function TranslationToolbar() {
+export default function TranslationToolbar({
+  embedded = false,
+  editorAvailable = true,
+}: { embedded?: boolean; editorAvailable?: boolean } = {}) {
   const state = useCodeMirrorStateContext()
   const view = useCodeMirrorViewContext()
   const editorManager = useEditorManagerContext()
@@ -140,6 +144,7 @@ export default function TranslationToolbar() {
   // 結果を適用・保存できる条件: 翻訳後に対象ドキュメントが一度も編集されていないこと。
   const canApply = Boolean(
     permissions.write &&
+    editorAvailable &&
     !busy &&
     (result || completedPreview) &&
     snapshot &&
@@ -206,15 +211,25 @@ export default function TranslationToolbar() {
     }
   }, [hasSelection, projectPath, loadModels])
 
+  // レールでは初めてエディターが利用可能になったときだけ設定を読む。
+  // 選択範囲の変更やタブの開閉で、翻訳途中の状態をリセットしない。
+  const initialized = useRef(false)
+  useEffect(() => {
+    if (embedded && editorAvailable && !initialized.current) {
+      initialized.current = true
+      void loadPanel()
+    }
+  }, [embedded, editorAvailable, loadPanel])
+
   // Escape キーでパネルを閉じられるようにします（翻訳中・保存中は閉じません）。
   useEffect(() => {
-    if (!open) return
+    if (!open || embedded) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !busy && !saving) setOpen(false)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [busy, open, saving])
+  }, [busy, open, saving, embedded])
 
   // コンポーネントがアンマウントされたら、未完了の翻訳ストリームを必ず止めます。
   useEffect(
@@ -285,6 +300,7 @@ export default function TranslationToolbar() {
 
   /** 翻訳開始の入口。スナップショット採取 → 設定保存 → SSE 翻訳の順に進めます。 */
   const runTranslation = async () => {
+    if (!editorAvailable) return
     const captured = captureSnapshot()
     if (!captured.text.trim()) {
       setError('翻訳する内容がありません。')
@@ -485,6 +501,12 @@ export default function TranslationToolbar() {
       setSnapshot(null)
       setCompletedPreview('')
       setPartialPreview('')
+      // 横並び側に未保存の内容がある場合、そちらは破棄せずタブを選ぶだけにする。
+      window.dispatchEvent(
+        new CustomEvent('overleaf:open-bilingual-editor', {
+          detail: { docId: saved.doc._id, refresh: true },
+        })
+      )
       if (setAsMainDocument) {
         try {
           await postJSON(`/project/${projectId}/settings`, {
@@ -540,35 +562,55 @@ export default function TranslationToolbar() {
 
   return (
     <>
-      {/* LaTeX ツールバーに表示する「英訳」ボタン。クリックでパネルを開きます。 */}
-      <button
-        type="button"
-        className="ol-cm-toolbar-button"
-        title="日本語から英語へ翻訳"
-        aria-label="日本語から英語へ翻訳"
-        onClick={loadPanel}
-      >
-        英訳
-      </button>
+      {/* モーダル表示を利用する場合だけ、起動ボタンを表示します。 */}
+      {!embedded && (
+        <button
+          type="button"
+          className="ol-cm-toolbar-button"
+          title="日本語から英語へ翻訳"
+          aria-label="日本語から英語へ翻訳"
+          onClick={loadPanel}
+        >
+          英訳
+        </button>
+      )}
 
-      {/* 翻訳パネル（モーダル）。背景クリックでは閉じますが、翻訳中・保存中は無視します。 */}
+      {/* レールでは文書編集と並行して使える領域として表示し、背景クリックで閉じません。 */}
       {open && (
         <div
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !busy && !saving) {
+            if (
+              !embedded &&
+              event.target === event.currentTarget &&
+              !busy &&
+              !saving
+            ) {
               setOpen(false)
             }
           }}
-          style={overlayStyle}
+          style={embedded ? { height: '100%', minHeight: 0 } : overlayStyle}
         >
           <section
-            role="dialog"
-            aria-modal="true"
+            role={embedded ? 'region' : 'dialog'}
+            aria-modal={embedded ? undefined : true}
             aria-labelledby="local-llm-translation-title"
-            style={dialogStyle}
+            style={
+              embedded
+                ? {
+                    ...dialogStyle,
+                    width: '100%',
+                    height: '100%',
+                    maxHeight: 'none',
+                    borderRadius: 0,
+                    boxShadow: 'none',
+                  }
+                : dialogStyle
+            }
           >
-            <header style={headerStyle}>
+            <header
+              style={embedded ? { ...headerStyle, padding: 12 } : headerStyle}
+            >
               <div>
                 <h2
                   id="local-llm-translation-title"
@@ -580,17 +622,25 @@ export default function TranslationToolbar() {
                   LLM: {selectedModel || '未選択'}
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={busy || saving}
-                onClick={() => setOpen(false)}
-              >
-                閉じる
-              </button>
+              {!embedded && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={busy || saving}
+                  onClick={() => setOpen(false)}
+                >
+                  閉じる
+                </button>
+              )}
             </header>
 
-            <div style={bodyStyle}>
+            <div
+              style={
+                embedded
+                  ? { ...bodyStyle, padding: 12, flex: 1, minHeight: 0 }
+                  : bodyStyle
+              }
+            >
               <ConnectionSettings
                 endpointId={endpointId}
                 disabled={busy || saving}
@@ -692,7 +742,11 @@ export default function TranslationToolbar() {
                     />
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className={
+                        embedded
+                          ? 'btn btn-secondary text-wrap'
+                          : 'btn btn-secondary'
+                      }
                       aria-label="用語を削除"
                       onClick={() =>
                         setTerms((current) =>
@@ -706,7 +760,11 @@ export default function TranslationToolbar() {
                 ))}
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className={
+                    embedded
+                      ? 'btn btn-secondary text-wrap'
+                      : 'btn btn-secondary'
+                  }
                   onClick={() =>
                     setTerms((current) => [
                       ...current,
@@ -742,7 +800,11 @@ export default function TranslationToolbar() {
                 </label>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className={
+                    embedded
+                      ? 'btn btn-secondary text-wrap'
+                      : 'btn btn-secondary'
+                  }
                   disabled={saving || busy}
                   onClick={() => setPromptInstructions('')}
                 >
@@ -750,7 +812,11 @@ export default function TranslationToolbar() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className={
+                    embedded
+                      ? 'btn btn-secondary text-wrap'
+                      : 'btn btn-secondary'
+                  }
                   disabled={saving || busy}
                   onClick={saveSettings}
                 >
@@ -778,7 +844,16 @@ export default function TranslationToolbar() {
               </label>
 
               {snapshot && (
-                <div style={previewGridStyle}>
+                <div
+                  style={
+                    embedded
+                      ? {
+                          ...previewGridStyle,
+                          gridTemplateColumns: 'minmax(0, 1fr)',
+                        }
+                      : previewGridStyle
+                  }
+                >
                   <div>
                     <strong>日本語原文</strong>
                     <pre style={previewStyle}>{snapshot.text}</pre>
@@ -831,7 +906,13 @@ export default function TranslationToolbar() {
               )}
             </div>
 
-            <footer style={footerStyle}>
+            <footer
+              style={
+                embedded
+                  ? { ...footerStyle, padding: 12, flexDirection: 'column' }
+                  : footerStyle
+              }
+            >
               {busy ? (
                 <button
                   type="button"
@@ -845,7 +926,11 @@ export default function TranslationToolbar() {
                   <>
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className={
+                        embedded
+                          ? 'btn btn-secondary text-wrap'
+                          : 'btn btn-secondary'
+                      }
                       disabled={!canApply || saving}
                       title={
                         canApply
@@ -858,7 +943,11 @@ export default function TranslationToolbar() {
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className={
+                        embedded
+                          ? 'btn btn-primary text-wrap'
+                          : 'btn btn-primary'
+                      }
                       disabled={!canApply || saving}
                       title={
                         canApply
@@ -873,7 +962,9 @@ export default function TranslationToolbar() {
                 ) : (
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className={
+                      embedded ? 'btn btn-primary text-wrap' : 'btn btn-primary'
+                    }
                     disabled={!canApply || saving}
                     title={
                       canApply
@@ -892,7 +983,11 @@ export default function TranslationToolbar() {
                       {snapshot.target === 'file' && (
                         <button
                           type="button"
-                          className="btn btn-primary"
+                          className={
+                            embedded
+                              ? 'btn btn-primary text-wrap'
+                              : 'btn btn-primary'
+                          }
                           disabled={!canApply || saving}
                           title={
                             canApply
@@ -908,7 +1003,11 @@ export default function TranslationToolbar() {
                       )}
                       <button
                         type="button"
-                        className="btn btn-secondary"
+                        className={
+                          embedded
+                            ? 'btn btn-secondary text-wrap'
+                            : 'btn btn-secondary'
+                        }
                         disabled={saving}
                         onClick={copyCompletedPreview}
                       >
@@ -918,8 +1017,16 @@ export default function TranslationToolbar() {
                   )}
                   <button
                     type="button"
-                    className="btn btn-primary"
-                    disabled={!consented || saving || loading || !selectedModel}
+                    className={
+                      embedded ? 'btn btn-primary text-wrap' : 'btn btn-primary'
+                    }
+                    disabled={
+                      !editorAvailable ||
+                      !consented ||
+                      saving ||
+                      loading ||
+                      !selectedModel
+                    }
                     onClick={runTranslation}
                   >
                     確認して翻訳

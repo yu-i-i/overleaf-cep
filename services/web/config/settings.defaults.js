@@ -1054,9 +1054,9 @@ module.exports = {
     ],
     sourceEditorToolbarStartButtons: [],
     sourceEditorToolbarButtonGroups: [],
-    // 研究室向けの翻訳パネルを、既存のツールバー拡張点へ登録します。
+    // メインエディターの状態を翻訳レールへ中継し、横並び表示の入口を登録します。
     sourceEditorToolbarComponents: [
-      '../../../../../modules/local-llm-translation/frontend/js/TranslationToolbar',
+      '../../../../../modules/local-llm-translation/frontend/js/rail/CodeMirrorBridge',
       '../../../../../modules/local-llm-translation/frontend/js/split/BilingualEditorButton',
     ],
     sourceEditorToolbarEndButtons: [],
@@ -1212,7 +1212,16 @@ module.exports = {
         '../modules/reference-picker/frontend/js/reference-index/advanced-reference-index.ts'
       ),
     ],
-    railEntries: [],
+    railEntries: [
+      Path.resolve(
+        __dirname,
+        '../modules/local-llm-translation/frontend/js/rail/translation-rail-entry.tsx'
+      ),
+      Path.resolve(
+        __dirname,
+        '../modules/local-llm-translation/frontend/js/rail/split-rail-entry.tsx'
+      ),
+    ],
     railPopovers: [],
     railActions: [],
     railModals: [],
