@@ -8,6 +8,9 @@ export default defineConfig({
   esbuild: { jsx: 'automatic' },
   test: {
     environment: 'jsdom',
-    include: ['modules/local-llm-translation/test/TranslationToolbar.test.tsx'],
+    include: [
+      'modules/local-llm-translation/test/TranslationToolbar.test.tsx',
+      'modules/local-llm-translation/test/translation-rail.test.tsx',
+    ],
   },
 })
