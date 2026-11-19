@@ -140,7 +140,8 @@ export default function TranslationToolbar() {
   // 結果を適用・保存できる条件: 翻訳後に対象ドキュメントが一度も編集されていないこと。
   const canApply = Boolean(
     permissions.write &&
-    result &&
+    !busy &&
+    (result || completedPreview) &&
     snapshot &&
     editorManager.getCurrentDocumentId() === snapshot.sourceDocId &&
     view.state.doc.toString() === snapshot.document
@@ -184,6 +185,8 @@ export default function TranslationToolbar() {
     setError('')
     setNotice('')
     setResult(null)
+    setCompletedPreview('')
+    setPartialPreview('')
     setConsented(false)
     setTarget(hasSelection ? 'selection' : 'file')
     setSnapshot(null)
@@ -397,16 +400,30 @@ export default function TranslationToolbar() {
   /**
    * 翻訳結果を同じフォルダーの英語版 .en.tex として保存します。
    * setAsMainDocument が true の場合、保存後にメイン文書設定とタブ切替も行います。
-   * 日本語原文は変更しません。
+   * 日本語原文は変更しません。停止・失敗時は確定済みチャンクだけを草稿にできます。
    */
   const saveEnglishDocument = async (setAsMainDocument: boolean) => {
-    if (!result || !snapshot || snapshot.target !== 'file') return
+    // 受信途中の delta は含めず、検証済みの最終結果か確定済みチャンクだけを保存する。
+    const content = result?.text ?? completedPreview
+    const isDraft = !result
+    if (busy || saving || !content || !snapshot || snapshot.target !== 'file')
+      return
+    // 未完了の文書をメイン文書へ切り替えない。草稿は別ファイルとして退避する。
+    if (isDraft && setAsMainDocument) return
     if (!canApply) {
       setError(
         '翻訳中に原文が変更されたか、別のファイルへ移動しました。現在の文書で翻訳し直してください。'
       )
       return
     }
+
+    if (
+      isDraft &&
+      !window.confirm(
+        '翻訳は完走していません。確定済みチャンクだけを草稿として保存します。文書全体の LaTeX 検証は済んでいないため、保存後に内容を確認してください。続けますか？'
+      )
+    )
+      return
 
     const sourcePath = pathInFolder(snapshot.sourceDocId)
     const sourceName = sourcePath?.split('/').pop()
@@ -459,13 +476,15 @@ export default function TranslationToolbar() {
             source_doc_id: snapshot.sourceDocId,
             parent_folder_id: parent.entity._id,
             name: englishName,
-            content: result.text,
+            content,
             overwrite,
           },
         }
       )
       setResult(null)
       setSnapshot(null)
+      setCompletedPreview('')
+      setPartialPreview('')
       if (setAsMainDocument) {
         try {
           await postJSON(`/project/${projectId}/settings`, {
@@ -483,13 +502,27 @@ export default function TranslationToolbar() {
         }
       } else {
         setNotice(
-          `${englishPath} に英語版を${overwrite ? '上書き保存' : '作成'}しました。日本語原文は変更していません。`
+          isDraft
+            ? `${englishPath} に訳済み部分を草稿として保存しました。文書全体の LaTeX 検証は未実施です。`
+            : `${englishPath} に英語版を${overwrite ? '上書き保存' : '作成'}しました。日本語原文は変更していません。`
         )
       }
     } catch (saveError) {
       setError(getErrorMessage(saveError))
     } finally {
       setSaving(false)
+    }
+  }
+
+  /** コピーは退避専用。原文が変わった後でも確定済みの内容を取り出せる。 */
+  const copyCompletedPreview = async () => {
+    if (busy || !completedPreview) return
+    setError('')
+    try {
+      await navigator.clipboard.writeText(completedPreview)
+      setNotice('訳済み部分をコピーしました。プレビューは残っています。')
+    } catch {
+      setError('コピーに失敗しました。プレビューを選択してコピーしてください。')
     }
   }
 
@@ -565,6 +598,8 @@ export default function TranslationToolbar() {
                   setEndpointId(id)
                   setResult(null)
                   setSnapshot(null)
+                  setCompletedPreview('')
+                  setPartialPreview('')
                   setSelectedModel('')
                   void loadModels(id)
                 }}
@@ -851,14 +886,45 @@ export default function TranslationToolbar() {
                   </button>
                 )
               ) : (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={!consented || saving || loading || !selectedModel}
-                  onClick={runTranslation}
-                >
-                  確認して翻訳
-                </button>
+                <>
+                  {completedPreview && snapshot && (
+                    <>
+                      {snapshot.target === 'file' && (
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={!canApply || saving}
+                          title={
+                            canApply
+                              ? undefined
+                              : '原文または権限が変わりました。現在の文書で翻訳し直してください。'
+                          }
+                          onClick={() => saveEnglishDocument(false)}
+                        >
+                          {saving
+                            ? '保存中…'
+                            : '訳済み部分だけ英語版 .tex に保存（草稿）'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={saving}
+                        onClick={copyCompletedPreview}
+                      >
+                        訳済み部分をコピー
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={!consented || saving || loading || !selectedModel}
+                    onClick={runTranslation}
+                  >
+                    確認して翻訳
+                  </button>
+                </>
               )}
             </footer>
           </section>

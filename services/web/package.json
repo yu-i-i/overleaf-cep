@@ -21,6 +21,7 @@
     "test:unit:app": "yarn run test:unit:run_dir test/unit/src",
     "test:unit": "vitest run",
     "test:bilingual-ui": "NODE_ENV=test vitest run --config modules/local-llm-translation/test/vitest.bilingual.config.mjs",
+    "test:translation-ui": "NODE_ENV=test vitest run --config modules/local-llm-translation/test/vitest.config.mjs",
     "test:project-links": "NODE_ENV=test vitest run --config test/project-linked-files/vitest.config.mjs",
     "test:unit:parallel": "vitest run --project=Parallel",
     "test:unit:sequential": "vitest run --project=Sequential",
