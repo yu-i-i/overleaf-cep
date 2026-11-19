@@ -1237,7 +1237,12 @@ module.exports = {
         '../modules/reference-picker/frontend/js/reference-index/advanced-reference-index.ts'
       ),
     ],
-    railEntries: [],
+    railEntries: [
+      Path.resolve(
+        __dirname,
+        '../modules/project-inspection/frontend/js/project-inspection-rail-entry.tsx'
+      ),
+    ],
     railPopovers: [],
     railActions: [],
     railModals: [],
@@ -1264,6 +1269,7 @@ module.exports = {
     'git-sync/gitlab',
     'git-sync/gitea',
     'zotero',
+    'project-inspection',
     'bib-editor',
   ],
   viewIncludes: {},
