@@ -658,6 +658,42 @@ const DocumentManager = {
     )
   },
 
+  /**
+   * 横並びのスナップショット編集用。通常編集・MCP と同じ更新ロックの内側で
+   * 版を照合するため、読み取り後の外部更新を古い本文で置き換えない。
+   * 既存の setDocWithLock 呼び出しには条件を追加しない。
+   */
+  async setDocIfVersionWithLock(
+    projectId,
+    docId,
+    lines,
+    source,
+    userId,
+    expectedVersion
+  ) {
+    const UpdateManager = require('./UpdateManager')
+    return await UpdateManager.promises.lockUpdatesAndDo(
+      async () => {
+        const { version } = await DocumentManager.getDoc(projectId, docId)
+        if (version !== expectedVersion) return { conflict: true }
+        await DocumentManager.setDoc(
+          projectId,
+          docId,
+          lines,
+          source,
+          userId,
+          false,
+          true,
+          false
+        )
+        const updated = await DocumentManager.getDoc(projectId, docId)
+        return { version: updated.version }
+      },
+      projectId,
+      docId
+    )
+  },
+
   async setDocWithLock(
     projectId,
     docId,

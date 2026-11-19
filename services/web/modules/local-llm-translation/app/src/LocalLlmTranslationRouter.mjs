@@ -108,6 +108,22 @@ export default {
       LocalLlmTranslationController.translate
     )
 
+    // 横並び側の読み書きも、既存のプロジェクト権限・CSRF の対象とする。
+    webRouter.get(
+      '/project/:Project_id/local-llm/doc-content',
+      AuthenticationController.requireLogin(),
+      AuthorizationMiddleware.blockRestrictedUserFromProject,
+      AuthorizationMiddleware.ensureUserCanReadProject,
+      LocalLlmTranslationController.getDocContent
+    )
+    webRouter.put(
+      '/project/:Project_id/local-llm/doc-content',
+      AuthenticationController.requireLogin(),
+      AuthorizationMiddleware.blockRestrictedUserFromProject,
+      AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+      LocalLlmTranslationController.saveDocContent
+    )
+
     // 英語版 .en.tex 文書の作成・上書き保存。書き込み権限が必要です。
     webRouter.put(
       '/project/:Project_id/local-llm/english-document',
