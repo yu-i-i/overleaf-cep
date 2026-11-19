@@ -244,11 +244,21 @@ const setDocSchema = z.object({
     source: z.string(),
     user_id: zz.objectId().nullish(),
     undoing: z.boolean().optional(),
+    expected_version: z.number().int().nonnegative().optional(),
     trackChanges: z.boolean().optional(),
   }),
 })
 
 async function setDoc(req, res) {
+  // 条件付き保存では logOnly の入力検証に依存せず、不正な版を必ず拒否する。
+  const conditional = req.body && Object.hasOwn(req.body, 'expected_version')
+  if (
+    conditional &&
+    (!Number.isSafeInteger(req.body.expected_version) ||
+      req.body.expected_version < 0)
+  ) {
+    return res.sendStatus(400)
+  }
   const { params, body } = parseReq(req, setDocSchema, { logOnly: true })
   const { project_id: projectId, doc_id: docId } = params
   const { lines, source, user_id: userId, undoing, trackChanges } = body
@@ -270,16 +280,29 @@ async function setDoc(req, res) {
   )
   const timer = new Metrics.Timer('http.setDoc')
 
-  const result = await DocumentManager.promises.setDocWithLock(
-    projectId,
-    docId,
-    lines,
-    source,
-    userId,
-    undoing,
-    true,
-    trackChanges
-  )
+  const result = conditional
+    ? await DocumentManager.promises.setDocIfVersionWithLock(
+        projectId,
+        docId,
+        lines,
+        source,
+        userId,
+        body.expected_version
+      )
+    : await DocumentManager.promises.setDocWithLock(
+        projectId,
+        docId,
+        lines,
+        source,
+        userId,
+        undoing,
+        true,
+        trackChanges
+      )
+  if (result?.conflict) {
+    timer.done()
+    return res.sendStatus(409)
+  }
   timer.done()
   logger.debug({ projectId, docId }, 'set doc via http')
 

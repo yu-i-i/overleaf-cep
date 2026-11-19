@@ -12,6 +12,7 @@
  *    場所の変更や同名ファイル衝突などの競合は、日本語の案内付き 409 で返します。
  */
 
+import DocumentUpdaterHandler from '../../../../app/src/Features/DocumentUpdater/DocumentUpdaterHandler.mjs'
 import logger from '@overleaf/logger'
 import { expressify } from '@overleaf/promise-utils'
 import {
@@ -102,6 +103,32 @@ const endpointTestSchema = z.object({
     clear_api_key: z.boolean().optional(),
   }),
 })
+const docContentReadSchema = z.object({
+  params: z.strictObject({ Project_id: zz.objectId() }),
+  query: z.strictObject({ doc_id: zz.objectId() }),
+})
+const docContentSaveSchema = z.object({
+  params: z.strictObject({ Project_id: zz.objectId() }),
+  body: z.strictObject({
+    doc_id: zz.objectId(),
+    content: z.string().max(2 * 1024 * 1024),
+    version: z.number().int().nonnegative(),
+  }),
+})
+
+// ID だけで document-updater を呼ばず、毎回このプロジェクト内の文書かを確認する。
+async function locateProjectDoc(projectId, docId) {
+  const project = await ProjectGetter.promises.getProject(projectId, {
+    rootFolder: true,
+  })
+  if (!project) return null
+  return await ProjectLocator.promises.findElement({
+    project,
+    element_id: docId,
+    type: 'doc',
+  })
+}
+
 const englishDocumentSchema = z.object({
   params: projectParams,
   body: z.strictObject({
@@ -371,6 +398,46 @@ export default {
    * 翻訳中にファイル移動・改名があった場合は 409 で保存を止めます。
    * 日本語原文には一切触れません。
    */
+  getDocContent: expressify(async (req, res) => {
+    const { params, query } = parseReq(req, docContentReadSchema)
+    if (!(await locateProjectDoc(params.Project_id, query.doc_id)))
+      return res.sendStatus(404)
+    // Mongo の定期保存を待たず、編集中の最新本文と版を取得する。
+    const doc = await DocumentUpdaterHandler.promises.getDocument(
+      params.Project_id,
+      query.doc_id,
+      -1
+    )
+    return res.json({ content: doc.lines.join('\n'), version: doc.version })
+  }),
+
+  saveDocContent: expressify(async (req, res) => {
+    const { params, body } = parseReq(req, docContentSaveSchema)
+    if (!(await locateProjectDoc(params.Project_id, body.doc_id)))
+      return res.sendStatus(404)
+    try {
+      const result = await DocumentUpdaterHandler.promises.setDocumentIfVersion(
+        params.Project_id,
+        body.doc_id,
+        SessionManager.getLoggedInUserId(req.session),
+        body.content.split('\n'),
+        body.version
+      )
+      return res.json(result)
+    } catch (error) {
+      if (
+        error.response?.statusCode === 409 ||
+        error.response?.status === 409
+      ) {
+        return res.status(409).json({
+          detail:
+            '別の場所で文書が更新されています。編集中の内容をコピーしてから、再読込してください。',
+        })
+      }
+      throw error
+    }
+  }),
+
   saveEnglishDocument: expressify(async (req, res) => {
     // 新設 API は検証失敗を拒否します。ログだけで不正入力を通しません。
     const { params, body } = parseReq(req, englishDocumentSchema)

@@ -420,6 +420,83 @@ describe('DocumentManager', function () {
     })
   })
 
+  describe('setDocIfVersionWithLock', function () {
+    beforeEach(function () {
+      this.locked = false
+      this.UpdateManager.promises.lockUpdatesAndDo = async (fn, ...args) => {
+        this.locked = true
+        try {
+          return await fn(...args)
+        } finally {
+          this.locked = false
+        }
+      }
+      this.DocumentManager.promises.getDoc = sinon
+        .stub()
+        .callsFake(async () => {
+          expect(this.locked).to.equal(true)
+          return { version: this.version }
+        })
+      this.DocumentManager.promises.setDoc = sinon
+        .stub()
+        .callsFake(async () => {
+          expect(this.locked).to.equal(true)
+          this.version++
+        })
+    })
+    it('refuses a stale snapshot without any mutation', async function () {
+      const result =
+        await this.DocumentManager.promises.setDocIfVersionWithLock(
+          this.project_id,
+          this.doc_id,
+          this.lines,
+          this.source,
+          this.user_id,
+          this.version - 1
+        )
+      expect(result).to.deep.equal({ conflict: true })
+      expect(this.DocumentManager.promises.setDoc.called).to.equal(false)
+    })
+    it('compares, writes and returns the new version within the same lock', async function () {
+      const before = this.version
+      const result =
+        await this.DocumentManager.promises.setDocIfVersionWithLock(
+          this.project_id,
+          this.doc_id,
+          this.lines,
+          this.source,
+          this.user_id,
+          before
+        )
+      expect(result).to.deep.equal({ version: before + 1 })
+      expect(this.DocumentManager.promises.setDoc.firstCall.args).to.deep.equal(
+        [
+          this.project_id,
+          this.doc_id,
+          this.lines,
+          this.source,
+          this.user_id,
+          false,
+          true,
+          false,
+        ]
+      )
+    })
+    it('does not report success after the write fails', async function () {
+      this.DocumentManager.promises.setDoc.rejects(new Error('write failed'))
+      await expect(
+        this.DocumentManager.promises.setDocIfVersionWithLock(
+          this.project_id,
+          this.doc_id,
+          this.lines,
+          this.source,
+          this.user_id,
+          this.version
+        )
+      ).to.be.rejectedWith('write failed')
+    })
+  })
+
   describe('setDoc', function () {
     describe('with plain tex lines', function () {
       beforeEach(function () {

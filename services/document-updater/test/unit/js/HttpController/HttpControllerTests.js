@@ -23,6 +23,7 @@ describe('HttpController', function () {
         getDocAndRecentOpsWithLock: sinon.stub(),
         getCommentWithLock: sinon.stub(),
         setDocWithLock: sinon.stub(),
+        setDocIfVersionWithLock: sinon.stub(),
         flushDocIfLoadedWithLock: sinon.stub().resolves(),
         flushAndDeleteDocWithLock: sinon.stub().resolves(),
         acceptChangesWithLock: sinon.stub().resolves(),
@@ -325,6 +326,43 @@ describe('HttpController', function () {
         },
       }
     })
+
+    it('uses the conditional path only when a valid version is supplied', async function () {
+      this.req.body.expected_version = 0
+      this.DocumentManager.promises.setDocIfVersionWithLock.resolves({
+        version: 1,
+      })
+      await this.HttpController.setDoc(this.req, this.res, this.next)
+      this.DocumentManager.promises.setDocIfVersionWithLock.should.have.been.calledWith(
+        this.project_id,
+        this.doc_id,
+        this.lines,
+        this.source,
+        this.user_id,
+        0
+      )
+      this.DocumentManager.promises.setDocWithLock.should.not.have.been.called
+      this.res.json.should.have.been.calledWith({ version: 1 })
+    })
+    it('returns 409 for a stale version', async function () {
+      this.req.body.expected_version = 5
+      this.DocumentManager.promises.setDocIfVersionWithLock.resolves({
+        conflict: true,
+      })
+      await this.HttpController.setDoc(this.req, this.res, this.next)
+      this.res.sendStatus.should.have.been.calledWith(409)
+      this.res.json.should.not.have.been.called
+    })
+    for (const invalid of [null, -1, 1.5, '1']) {
+      it(`refuses invalid expected_version ${invalid} before any write`, async function () {
+        this.req.body.expected_version = invalid
+        await this.HttpController.setDoc(this.req, this.res, this.next)
+        this.res.sendStatus.should.have.been.calledWith(400)
+        this.DocumentManager.promises.setDocWithLock.should.not.have.been.called
+        this.DocumentManager.promises.setDocIfVersionWithLock.should.not.have
+          .been.called
+      })
+    }
 
     describe('successfully', function () {
       beforeEach(async function () {

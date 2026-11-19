@@ -23,6 +23,7 @@ const mocks = {
     promises: { findElement: async () => ({ element: sourceDoc, folder }) },
   },
   EditorController: { promises: {} },
+  DocumentUpdaterHandler: { promises: {} },
   AuthenticationController: { requireLogin: () => 'login' },
   AuthorizationMiddleware: {
     blockRestrictedUserFromProject: 'restricted',
@@ -233,7 +234,7 @@ test('読み取りと書き込みの権限チェックをルートに登録す�
     ])
   )
   router.apply(webRouter)
-  assert.equal(routes.length, 12)
+  assert.equal(routes.length, 14)
   for (const { method, args } of routes) {
     assert.equal(args[1], 'login')
     if (args[0].startsWith('/project/')) {
@@ -388,5 +389,74 @@ test('共有接続先の管理 API は一般利用者を JSON の403で拒否す
     assert.equal(allowed, true)
   } finally {
     mocks.AuthorizationManager.promises.isUserSiteAdmin = async () => false
+  }
+})
+
+test('横並びは最新の本文と版を読み、保存時にその版を引き渡す', async () => {
+  mocks.DocumentUpdaterHandler.promises.getDocument = async () => ({
+    lines: ['fresh', 'content'],
+    version: 7,
+  })
+  const read = await invoke(
+    controller.getDocContent,
+    {},
+    { query: { doc_id: sourceId } }
+  )
+  assert.deepEqual(read.payload, { content: 'fresh\ncontent', version: 7 })
+  let args
+  mocks.DocumentUpdaterHandler.promises.setDocumentIfVersion = async (
+    ...passed
+  ) => {
+    args = passed
+    return { version: 8 }
+  }
+  const saved = await invoke(controller.saveDocContent, {
+    doc_id: sourceId,
+    content: 'edited',
+    version: 7,
+  })
+  assert.deepEqual(args, [projectId, sourceId, userId, ['edited'], 7])
+  assert.deepEqual(saved.payload, { version: 8 })
+})
+
+test('横並びの競合は 409 になり、版なし・不正版では保存しない', async () => {
+  mocks.DocumentUpdaterHandler.promises.setDocumentIfVersion = async () => {
+    throw Object.assign(new Error('conflict'), { response: { status: 409 } })
+  }
+  const conflict = await invoke(controller.saveDocContent, {
+    doc_id: sourceId,
+    content: 'old snapshot',
+    version: 7,
+  })
+  assert.equal(conflict.statusCode, 409)
+  for (const version of [undefined, null, -1, '7']) {
+    const invalid = await invoke(controller.saveDocContent, {
+      doc_id: sourceId,
+      content: 'old snapshot',
+      version,
+    })
+    assert.ok(invalid.error)
+  }
+})
+
+test('別プロジェクトの文書 ID は更新層へ渡さない', async () => {
+  const original = mocks.ProjectLocator.promises.findElement
+  let called = false
+  mocks.ProjectLocator.promises.findElement = async () => {
+    throw new Error('document not in this project')
+  }
+  mocks.DocumentUpdaterHandler.promises.setDocumentIfVersion = async () => {
+    called = true
+  }
+  try {
+    const res = await invoke(controller.saveDocContent, {
+      doc_id: sourceId,
+      content: 'bad',
+      version: 1,
+    })
+    assert.ok(res.error)
+    assert.equal(called, false)
+  } finally {
+    mocks.ProjectLocator.promises.findElement = original
   }
 })
