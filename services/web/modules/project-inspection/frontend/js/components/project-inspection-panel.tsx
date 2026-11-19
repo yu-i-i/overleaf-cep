@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { FetchError } from '@/infrastructure/fetch-json'
 import Button from '@/shared/components/ol/ol-button'
 import MaterialIcon, {
   type AvailableUnfilledIcon,
@@ -30,16 +32,22 @@ const PAGE_SIZE = 100
 const MAX_ENTRY_POINTS = 50
 const TOOLTIP_AUTO_HIDE_DELAY = 2500
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(
+  error: unknown,
+  t: ReturnType<typeof useTranslation>['t']
+) {
   if (
     error &&
     typeof error === 'object' &&
     'getUserFacingMessage' in error &&
     typeof error.getUserFacingMessage === 'function'
   ) {
-    return String(error.getUserFacingMessage())
+    const message = String(error.getUserFacingMessage())
+    return message.startsWith('inspection_error_')
+      ? t(message, error instanceof FetchError ? error.data?.params ?? {} : {})
+      : message
   }
-  return 'Project inspection could not be completed. Please try again.'
+  return t('inspection_error')
 }
 
 function StatusDot({ status }: { status: string }) {
@@ -55,23 +63,32 @@ const DEPENDENCY_TYPE_ICONS: Record<
   string,
   { icon: string; label: string }
 > = {
-  document: { icon: 'description', label: 'Document' },
-  file: { icon: 'description', label: 'File' },
-  'figure-file': { icon: 'description', label: 'Image file' },
-  include: { icon: 'input', label: 'Included file' },
-  figure: { icon: 'image', label: 'Figure' },
-  table: { icon: 'table_chart', label: 'Table' },
-  label: { icon: 'label', label: 'Label' },
-  reference: { icon: 'link', label: 'Reference' },
-  citation: { icon: 'format_quote', label: 'Citation' },
-  'citation-occurrence': { icon: 'link', label: 'Citation occurrence' },
-  bibliography: { icon: 'book_5', label: 'Bibliography' },
+  document: { icon: 'description', label: 'inspection_type_document' },
+  file: { icon: 'description', label: 'file' },
+  'figure-file': {
+    icon: 'description',
+    label: 'image_file',
+  },
+  include: { icon: 'input', label: 'inspection_type_included_file' },
+  figure: { icon: 'image', label: 'figure' },
+  table: { icon: 'table_chart', label: 'table' },
+  label: { icon: 'label', label: 'inspection_type_label' },
+  reference: { icon: 'link', label: 'reference' },
+  citation: { icon: 'format_quote', label: 'citation' },
+  'citation-occurrence': {
+    icon: 'link',
+    label: 'inspection_type_citation_occurrence',
+  },
+  bibliography: { icon: 'book_5', label: 'inspection_type_bibliography' },
   'bibliography-include': {
     icon: 'input',
-    label: 'Included bibliography file',
+    label: 'inspection_type_included_bibliography_file',
   },
-  'bibliography-entry': { icon: 'text_snippet', label: 'Bibliography entry' },
-  'missing-resource': { icon: 'help', label: 'Missing resource' },
+  'bibliography-entry': {
+    icon: 'text_snippet',
+    label: 'inspection_type_bibliography_entry',
+  },
+  'missing-resource': { icon: 'help', label: 'inspection_type_missing_resource' },
 }
 
 const ISSUE_DEPENDENCY_TYPES: Record<string, string> = {
@@ -111,6 +128,7 @@ function isUnfilledCategoryIcon(
 }
 
 function CategoryIcon({ issue }: { issue: InspectionIssue }) {
+  const { t } = useTranslation()
   if (
     issue.target &&
     [
@@ -124,7 +142,7 @@ function CategoryIcon({ issue }: { issue: InspectionIssue }) {
       <MaterialIcon
         unfilled
         type={newEditorIconTypeFromName(issue.target)}
-        accessibilityLabel="File"
+        accessibilityLabel={t('file')}
         className="project-inspection-category-icon"
       />
     )
@@ -137,7 +155,7 @@ function CategoryIcon({ issue }: { issue: InspectionIssue }) {
       <MaterialIcon
         unfilled
         type={definition.icon}
-        accessibilityLabel={definition.label}
+        accessibilityLabel={t(definition.label)}
         className="project-inspection-category-icon"
       />
     )
@@ -145,7 +163,7 @@ function CategoryIcon({ issue }: { issue: InspectionIssue }) {
   return (
     <MaterialIcon
       type={definition.icon}
-      accessibilityLabel={definition.label}
+      accessibilityLabel={t(definition.label)}
       className="project-inspection-category-icon"
     />
   )
@@ -160,6 +178,17 @@ const DEPENDENCY_STATUS_ICONS: Record<
   unreferenced: 'warning',
   duplicate: 'content_copy',
   circular: 'autorenew',
+}
+
+const DEPENDENCY_STATUS_LABELS: Record<
+  Exclude<InspectionGraphNode['status'], 'normal'>,
+  string
+> = {
+  missing: 'inspection_status_missing',
+  unused: 'inspection_status_unused',
+  unreferenced: 'inspection_status_unreferenced',
+  duplicate: 'inspection_status_duplicate',
+  circular: 'inspection_status_circular',
 }
 
 const DEPENDENCY_STATUS_PRIORITY: Record<
@@ -254,6 +283,7 @@ function DependencyTypeIcon({
   node: InspectionGraphNode
   incomingKind?: string
 }) {
+  const { t } = useTranslation()
   if (
     node.kind === 'document' ||
     node.kind === 'file' ||
@@ -265,7 +295,7 @@ function DependencyTypeIcon({
       <MaterialIcon
         unfilled
         type={newEditorIconTypeFromName(filePath)}
-        accessibilityLabel="File"
+        accessibilityLabel={t('file')}
       />
     )
   }
@@ -279,7 +309,7 @@ function DependencyTypeIcon({
       <MaterialIcon
         unfilled
         type={definition.icon}
-        accessibilityLabel={definition.label}
+        accessibilityLabel={t(definition.label)}
         className="project-inspection-tree-type"
       />
     )
@@ -287,7 +317,7 @@ function DependencyTypeIcon({
   return (
     <MaterialIcon
       type={definition.icon}
-      accessibilityLabel={definition.label}
+      accessibilityLabel={t(definition.label)}
       className="project-inspection-tree-type"
     />
   )
@@ -300,6 +330,7 @@ function DependencyStatus({
   status: InspectionGraphNode['status']
   showLabel?: boolean
 }) {
+  const { t } = useTranslation()
   if (status === 'normal') return null
   return (
     <span
@@ -308,12 +339,28 @@ function DependencyStatus({
       <MaterialIcon
         unfilled
         type={DEPENDENCY_STATUS_ICONS[status]}
-        accessibilityLabel={showLabel ? undefined : `Contains ${status} issue`}
+        accessibilityLabel={
+          showLabel
+            ? undefined
+            : t('inspection_contains_issue', {
+                status: t(DEPENDENCY_STATUS_LABELS[status]),
+              })
+        }
         className="project-inspection-tree-status-icon"
       />
-      {showLabel && status}
+      {showLabel && t(DEPENDENCY_STATUS_LABELS[status])}
     </span>
   )
+}
+
+function translatedIssueTitle(
+  issue: InspectionIssue,
+  t: ReturnType<typeof useTranslation>['t']
+) {
+  const title = t(issue.title)
+  return issue.target
+    ? t('inspection_issue_with_target', { title, target: issue.target })
+    : title
 }
 
 type Navigate = (location?: SourceLocation, fallbackPath?: string) => void
@@ -325,19 +372,21 @@ function CircularIssue({
   issue: InspectionIssue
   onNavigate: Navigate
 }) {
+  const { t } = useTranslation()
+  const title = translatedIssueTitle(issue, t)
   return (
     <>
       <div className="project-inspection-issue">
         <MaterialIcon
           type="autorenew"
-          accessibilityLabel="Circular dependency"
+          accessibilityLabel={t('inspection_circular_dependency')}
           className="project-inspection-category-icon project-inspection-circular-icon"
         />
         <span
           className="project-inspection-issue-title"
-          title={issue.title}
+          title={title}
         >
-          {issue.title}
+          {title}
         </span>
       </div>
       {issue.cycleEdges?.map(edge => (
@@ -364,11 +413,16 @@ function IssueList({
   issues: Record<string, InspectionIssue>
   onNavigate: Navigate
 }) {
+  const { t } = useTranslation()
   const [limit, setLimit] = useState(PAGE_SIZE)
   useEffect(() => setLimit(PAGE_SIZE), [ids])
 
   if (ids.length === 0) {
-    return <p className="project-inspection-empty">No issues found.</p>
+    return (
+      <p className="project-inspection-empty">
+        {t('inspection_no_issues_found')}
+      </p>
+    )
   }
 
   return (
@@ -377,6 +431,7 @@ function IssueList({
         {ids.slice(0, limit).map(id => {
           const issue = issues[id]
           if (!issue) return null
+          const title = translatedIssueTitle(issue, t)
           const primaryLocation = issue.locations[0]
           if (issue.type === 'circular-dependency') {
             return (
@@ -393,9 +448,9 @@ function IssueList({
                   <span className="project-inspection-issue-content">
                     <span
                       className="project-inspection-issue-title"
-                      title={issue.title}
+                      title={title}
                     >
-                      {issue.title}
+                      {title}
                     </span>
                   </span>
                 </div>
@@ -409,9 +464,9 @@ function IssueList({
                   <span className="project-inspection-issue-content">
                     <span
                       className="project-inspection-issue-title"
-                      title={issue.title}
+                      title={title}
                     >
-                      {issue.title}
+                      {title}
                     </span>
                   </span>
                 </button>
@@ -438,7 +493,7 @@ function IssueList({
             size="sm"
             onClick={() => setLimit(value => value + PAGE_SIZE)}
           >
-            Show more
+            {t('inspection_show_more')}
           </OLButton>
         </div>
       )}
@@ -517,12 +572,20 @@ function DependencyNode({
   root?: boolean
 }) {
   const [expanded, setExpanded] = useState(root)
+  const { t } = useTranslation()
   const node = nodes.get(nodeId)
   if (!node) return null
+  const generatedEnvironmentLabel =
+    (node.kind === 'figure' || node.kind === 'table') &&
+    node.path &&
+    node.location &&
+    node.label === `${node.kind === 'figure' ? 'Figure' : 'Table'} ${node.path}:${node.location.line}`
   const displayLabel =
     node.kind === 'document' || node.kind === 'file'
       ? (node.path ?? node.label)
-      : node.label
+      : generatedEnvironmentLabel
+        ? `${t(node.kind)} ${node.path}:${node.location?.line}`
+        : node.label
   const children = childrenByParent.get(nodeId) ?? []
   const circular = path.has(nodeId)
   const hasDirectStatus = node.status !== 'normal'
@@ -616,6 +679,7 @@ function DependencyTree({
   result: ProjectInspectionResult
   onNavigate: Navigate
 }) {
+  const { t } = useTranslation()
   const { nodes, childrenByParent, incomingKindByNode, subtreeStatusByNode } =
     useMemo(() => {
       const nodeMap = new Map(result.graph.nodes.map(node => [node.id, node]))
@@ -676,7 +740,7 @@ function DependencyTree({
     >
       <summary>
         <InspectionCaret />
-        <span>Dependency Tree</span>
+        <span>{t('inspection_dependency_tree')}</span>
       </summary>
       <ul className="project-inspection-tree project-inspection-children">
         {result.graph.roots.map(root => (
@@ -695,7 +759,7 @@ function DependencyTree({
       </ul>
       {result.graph.truncated && (
         <p className="project-inspection-note">
-          The displayed graph was truncated because the project is large.
+          {t('inspection_graph_truncated')}
         </p>
       )}
     </details>
@@ -703,6 +767,7 @@ function DependencyTree({
 }
 
 function ProjectInspectionPanel() {
+  const { t } = useTranslation()
   const { projectId, project } = useProjectContext()
   const { docs } = useFileTreeData()
   const { findEntityByPath } = useFileTreePathContext()
@@ -775,13 +840,13 @@ function ProjectInspectionPanel() {
       } catch (error) {
         if (!controller.signal.aborted) {
           debugConsole.error(error)
-          setError(getErrorMessage(error))
+          setError(getErrorMessage(error, t))
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }
     },
-    [openDocs, projectId, selectedIds]
+    [openDocs, projectId, selectedIds, t]
   )
 
   const onNavigate = useCallback<Navigate>(
@@ -848,11 +913,11 @@ function ProjectInspectionPanel() {
 
   return (
     <div className="project-inspection-panel">
-      <RailPanelHeader title="Project inspection" />
+      <RailPanelHeader title={t('inspection_title')} />
       <div ref={contentRef} className="project-inspection-content">
         <form onSubmit={onSubmit}>
           <fieldset disabled={loading}>
-            <legend>Entry points</legend>
+            <legend>{t('inspection_entry_points')}</legend>
             <div className="project-inspection-entry-points">
               {displayedEntryPoints.map(item => {
                 const id = String(item.doc.id)
@@ -887,12 +952,14 @@ function ProjectInspectionPanel() {
             </div>
             {entryPoints.length === 0 && (
               <p className="project-inspection-note">
-                This project has no compilable entry point.
+                {t('inspection_no_entry_points')}
               </p>
             )}
             {selectedIds.size >= MAX_ENTRY_POINTS && (
               <p className="project-inspection-note">
-                Up to {MAX_ENTRY_POINTS} entry points can be analyzed at once.
+                {t('inspection_entry_point_limit', {
+                  count: MAX_ENTRY_POINTS,
+                })}
               </p>
             )}
             <div className="d-flex justify-content-center">
@@ -900,10 +967,10 @@ function ProjectInspectionPanel() {
                 type="submit"
                 size="sm"
                 isLoading={loading}
-                loadingLabel="Analyzing project"
+                loadingLabel={t('inspection_analyzing')}
                 disabled={selectedIds.size === 0}
               >
-                Analyze Project
+                {t('inspection_analyze')}
               </OLButton>
             </div>
           </fieldset>
@@ -914,27 +981,32 @@ function ProjectInspectionPanel() {
         {result && (
           <>
             <p className="project-inspection-timestamp">
-              Last analyzed: {new Date(result.analyzedAt).toLocaleTimeString()}
+              {t('inspection_last_analyzed', {
+                time: new Date(result.analyzedAt).toLocaleTimeString(),
+              })}
             </p>
             {hasCoverageWarning && (
               <Notification
                 type="warning"
-                content={`${coverageWarningCount} item(s) could not be analyzed conclusively or the displayed result was truncated. Results favor fewer false positives.`}
+                content={t('inspection_coverage_warning', {
+                  count: coverageWarningCount,
+                })}
               />
             )}
             <hr className="project-inspection-divider" />
             <section className="project-inspection-overview">
-              <h3>Overview</h3>
+              <h3>{t('overview')}</h3>
               <p className="project-inspection-totals">
-                {result.overview.fileCount} files · {result.overview.figureCount}{' '}
-                figures · {result.overview.tableCount} tables ·{' '}
-                {result.overview.citationCount} citations
+                {result.overview.fileCount} {t('inspection_files')} ·{' '}
+                {result.overview.figureCount} {t('inspection_figures')} ·{' '}
+                {result.overview.tableCount} {t('inspection_tables')} ·{' '}
+                {result.overview.citationCount} {t('inspection_citations')}
               </p>
               <div className="project-inspection-summary-grid">
                 <OLTooltip
                   id="project-inspection-overview-circular"
                   hidden={expiredTooltip === 'circular'}
-                  description="Shows the number of circular file-dependency cycles."
+                  description={t('inspection_circular_description')}
                   overlayProps={{
                     placement: 'top',
                     trigger: ['hover', 'focus'],
@@ -948,14 +1020,15 @@ function ProjectInspectionPanel() {
                     onFocus={() => startTooltipTimeout('circular')}
                     onBlur={clearTooltipTimeout}
                   >
-                    <StatusDot status="circular" /> Circular
+                    <StatusDot status="circular" />
+                    {t('inspection_circular')}
                     <strong>{result.overview.circular}</strong>
                   </button>
                 </OLTooltip>
                 <OLTooltip
                   id="project-inspection-overview-missing"
                   hidden={expiredTooltip === 'missing'}
-                  description="Shows the number of missing components."
+                  description={t('inspection_missing_description')}
                   overlayProps={{
                     placement: 'top',
                     trigger: ['hover', 'focus'],
@@ -969,14 +1042,15 @@ function ProjectInspectionPanel() {
                     onFocus={() => startTooltipTimeout('missing')}
                     onBlur={clearTooltipTimeout}
                   >
-                    <StatusDot status="missing" /> Missing
+                    <StatusDot status="missing" />
+                    {t('inspection_missing')}
                     <strong>{result.overview.missing}</strong>
                   </button>
                 </OLTooltip>
                 <OLTooltip
                   id="project-inspection-overview-duplicate"
                   hidden={expiredTooltip === 'duplicate'}
-                  description="Shows the number of duplicate labels, figure or table captions, bibliography keys, or bibliography titles."
+                  description={t('inspection_duplicate_description')}
                   overlayProps={{
                     placement: 'bottom',
                     trigger: ['hover', 'focus'],
@@ -990,14 +1064,15 @@ function ProjectInspectionPanel() {
                     onFocus={() => startTooltipTimeout('duplicate')}
                     onBlur={clearTooltipTimeout}
                   >
-                    <StatusDot status="duplicate" /> Duplicate
+                    <StatusDot status="duplicate" />
+                    {t('inspection_duplicate')}
                     <strong>{result.overview.duplicate}</strong>
                   </button>
                 </OLTooltip>
                 <OLTooltip
                   id="project-inspection-overview-unused"
                   hidden={expiredTooltip === 'unused'}
-                  description="Shows the number of unused or unreferenced components."
+                  description={t('inspection_unused_description')}
                   overlayProps={{
                     placement: 'bottom',
                     trigger: ['hover', 'focus'],
@@ -1011,7 +1086,8 @@ function ProjectInspectionPanel() {
                     onFocus={() => startTooltipTimeout('unused')}
                     onBlur={clearTooltipTimeout}
                   >
-                    <StatusDot status="unused" /> Unused
+                    <StatusDot status="unused" />
+                    {t('inspection_unused')}
                     <strong>{result.overview.unusedUnreferenced}</strong>
                   </button>
                 </OLTooltip>
@@ -1020,14 +1096,14 @@ function ProjectInspectionPanel() {
             <DependencyTree result={result} onNavigate={onNavigate} />
             <IssueSection
               id="inspection-circular"
-              title="Circular Dependencies"
+              title={t('inspection_circular_dependencies')}
               issueIds={result.views.circular}
               result={result}
               onNavigate={onNavigate}
             />
             <IssueSection
               id="inspection-missing"
-              title="Missing Components"
+              title={t('inspection_missing_components')}
               issueIds={result.views.missing}
               result={result}
               onNavigate={onNavigate}
@@ -1035,14 +1111,14 @@ function ProjectInspectionPanel() {
             />
             <IssueSection
               id="inspection-duplicate"
-              title="Duplicate Components"
+              title={t('inspection_duplicate_components')}
               issueIds={result.views.duplicate}
               result={result}
               onNavigate={onNavigate}
             />
             <IssueSection
               id="inspection-unused"
-              title="Unused / Unreferenced Components"
+              title={`${t('inspection_unused')} / ${t('inspection_unreferenced')} ${t('inspection_components')}`}
               issueIds={result.views.unused}
               result={result}
               onNavigate={onNavigate}

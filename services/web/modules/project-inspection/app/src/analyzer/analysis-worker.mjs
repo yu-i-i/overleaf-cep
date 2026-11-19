@@ -5,6 +5,7 @@ try {
   const result = analyzeProject(workerData)
   parentPort.postMessage({ ok: true, result })
 } catch (error) {
+  console.error('Project inspection analysis failed:', error)
   parentPort.postMessage({
     ok: false,
     error: {

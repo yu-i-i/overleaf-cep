@@ -723,7 +723,8 @@ content
         }),
       ])
     )
-    expect(issue.title).toContain(' ↔ ')
+    expect(issue.title).toBe('inspection_issue_circular_dependency')
+    expect(issue.target).toContain(' ↔ ')
   })
 
   it('reports each edge in a multi-file include cycle', function () {
@@ -824,7 +825,8 @@ content
     )
     expect(issues).toHaveLength(1)
     expect(issues[0]).toMatchObject({
-      title: 'Duplicate figure caption: Shared {Figure}~Caption',
+      title: 'inspection_issue_duplicate_figure_caption',
+      target: 'Shared {Figure}~Caption',
       category: 'figure',
       status: 'duplicate',
     })
@@ -881,7 +883,8 @@ content
     expect(duplicateIssues).toEqual([
       expect.objectContaining({
         type: 'duplicate-table-caption',
-        title: 'Duplicate table caption: Shared caption',
+        title: 'inspection_issue_duplicate_table_caption',
+        target: 'Shared caption',
       }),
     ])
     expect(
@@ -948,9 +951,8 @@ content
       item => item.type === 'duplicate-bibliography-title'
     )
     expect(issues).toHaveLength(1)
-    expect(issues[0].title).toBe(
-      'Duplicate bibliography title: A Sample Document'
-    )
+    expect(issues[0].title).toBe('inspection_issue_duplicate_bibliography_title')
+    expect(issues[0].target).toBe('A Sample Document')
     expect(issues[0].locations).toEqual([
       expect.objectContaining({
         path: 'references.bib',

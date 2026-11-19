@@ -63,7 +63,7 @@ async function run(snapshot, { signal } = {}) {
           finish(
             reject,
             new ProjectInspectionError(
-              message?.error?.message ?? 'Project inspection worker failed',
+              message?.error?.message ?? 'inspection_error_worker_failed',
               { code: message?.error?.code }
             )
           )
@@ -72,7 +72,7 @@ async function run(snapshot, { signal } = {}) {
       worker.once('error', error => {
         finish(
           reject,
-          new ProjectInspectionError('Project inspection worker failed', {
+          new ProjectInspectionError('inspection_error_worker_failed', {
             cause: error,
           })
         )
@@ -81,9 +81,9 @@ async function run(snapshot, { signal } = {}) {
         if (code !== 0 && !settled) {
           finish(
             reject,
-            new ProjectInspectionError(
-              `Project inspection worker exited with code ${code}`
-            )
+            new ProjectInspectionError('inspection_error_worker_exit', {
+              params: { code },
+            })
           )
         }
       })

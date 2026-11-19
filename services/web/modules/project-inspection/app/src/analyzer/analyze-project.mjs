@@ -350,30 +350,6 @@ function collectScope(rootPath, latexByPath, relationsByPath, bibByPath) {
   return { documents, images, bibliographies, bibliographyIncomplete }
 }
 
-function issueTitle(type, target) {
-  const titles = {
-    'missing-file': 'Missing included file',
-    'missing-figure': 'Missing figure resource',
-    'missing-bibliography': 'Missing bibliography file',
-    'missing-reference': 'Reference has no matching label',
-    'missing-citation': 'Citation has no matching bibliography entry',
-    'duplicate-label': 'Duplicate label',
-    'duplicate-figure-caption': 'Duplicate figure caption',
-    'duplicate-table-caption': 'Duplicate table caption',
-    'duplicate-bibliography-key': 'Duplicate bibliography key',
-    'duplicate-bibliography-title': 'Duplicate bibliography title',
-    'unreferenced-label': 'Label is not referenced',
-    'unreferenced-figure': 'Figure is not referenced',
-    'unreferenced-table': 'Table is not referenced',
-    'unlabeled-figure': 'Figure has no label',
-    'unlabeled-table': 'Table has no label',
-    'unused-bibliography-entry': 'Bibliography entry is not cited',
-    'possibly-unused-file': 'File is possibly unused',
-    'circular-dependency': 'Circular file dependency',
-  }
-  return target ? `${titles[type] ?? type}: ${target}` : titles[type] ?? type
-}
-
 export function analyzeProject(snapshot) {
   const entities = [
     ...snapshot.documents.map(item => ({ ...item, entityKind: 'document' })),
@@ -396,7 +372,7 @@ export function analyzeProject(snapshot) {
   const addIssue = (key, issue, entryPointId, groups = []) => {
     issues.add(
       key,
-      { ...issue, title: issueTitle(issue.type, issue.target) },
+      { ...issue, title: `inspection_issue_${issue.type.replaceAll('-', '_')}` },
       entryPointId
     )
     for (const group of groups) issueGroups[group].add(key)

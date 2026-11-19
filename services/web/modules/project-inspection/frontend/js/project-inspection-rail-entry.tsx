@@ -1,4 +1,5 @@
 import { FileMagnifyingGlass } from '@phosphor-icons/react'
+import { t } from 'i18next'
 import type { RailElement } from '@/features/ide-react/util/rail-types'
 import type { RailTabKey } from '@/features/ide-react/context/rail-context'
 import ProjectInspectionPanel from './components/project-inspection-panel'
@@ -15,7 +16,9 @@ const ProjectInspectionIcon: RailElement['icon'] = ({ open, title }) => (
 const projectInspectionRailEntry: RailElement = {
   key: 'project-inspection' as RailTabKey,
   icon: ProjectInspectionIcon,
-  title: 'Project inspection',
+  get title() {
+    return t('inspection_title')
+  },
   component: <ProjectInspectionPanel />,
 }
 

@@ -53,6 +53,7 @@ async function analyze(req, res, next) {
       return res.status(error.statusCode).json({
         error: error.code,
         message: error.message,
+        params: error.params,
       })
     }
     next(error)

@@ -111,9 +111,9 @@ async function read(projectId, entryPointIds, { signal } = {}) {
   }))
 
   if (documents.length + files.length > Settings.maxEntitiesPerProject) {
-    throw new ProjectTooLargeError(
-      `Project contains more than ${Settings.maxEntitiesPerProject} entities`
-    )
+    throw new ProjectTooLargeError('inspection_error_too_many_entities', {
+      limit: Settings.maxEntitiesPerProject,
+    })
   }
 
   const documentsById = new Map(documents.map(doc => [doc.id, doc]))
@@ -130,7 +130,7 @@ async function read(projectId, entryPointIds, { signal } = {}) {
         !validRootExtensions.has(path.posix.extname(entryPoint.path).toLowerCase())
     )
   ) {
-    throw new InvalidEntryPointError('Entry point must be a compilable document')
+    throw new InvalidEntryPointError('inspection_error_invalid_entry_point_file')
   }
 
   const totalSourceBytes = documents.reduce(
@@ -138,9 +138,9 @@ async function read(projectId, entryPointIds, { signal } = {}) {
     0
   )
   if (totalSourceBytes > MAX_SOURCE_BYTES) {
-    throw new ProjectTooLargeError(
-      `Project source exceeds the ${MAX_SOURCE_BYTES} byte analysis limit`
-    )
+    throw new ProjectTooLargeError('inspection_error_source_too_large', {
+      limit: MAX_SOURCE_BYTES,
+    })
   }
 
   const binaryBibliographies = []
@@ -154,9 +154,9 @@ async function read(projectId, entryPointIds, { signal } = {}) {
       'utf8'
     )
     if (totalBinaryBibliographyBytes > MAX_TOTAL_BIB_BYTES) {
-      throw new ProjectTooLargeError(
-        `Bibliography content exceeds the ${MAX_TOTAL_BIB_BYTES} byte analysis limit`
-      )
+      throw new ProjectTooLargeError('inspection_error_bibliography_too_large', {
+        limit: MAX_TOTAL_BIB_BYTES,
+      })
     }
     binaryBibliographies.push({
       id: file.id,
