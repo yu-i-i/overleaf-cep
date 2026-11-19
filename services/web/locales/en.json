@@ -3661,12 +3661,16 @@
   "works_by_author": "Works by __author__",
   "year_format_hint": "Year format: YYYY (e.g. 2026)",
   "personal_mcp_access_tokens": "Model Context Protocol (MCP)",
-  "personal_mcp_info": "Issue personal read-only tokens for local MCP clients (for example, editors and agents on your own machine). Each token can only read projects that your account itself can read, and tokens can be revoked at any time.",
+  "personal_mcp_info": "Issue personal access tokens for local MCP clients (for example, editors and agents on your own machine). Read-only tokens can only read projects that your account itself can read; read-write tokens can additionally create, edit, move, delete and upload content in projects that you can edit. Tokens can be revoked at any time.",
   "personal_mcp_endpoint_info": "MCP endpoint URL: {{url}} (transport: Streamable HTTP). Set the token below as the Authorization: Bearer value.",
   "personal_mcp_token_purpose": "Purpose",
   "personal_mcp_new_token_warning": "Copy this token now. For security reasons it will not be shown again.",
   "personal_mcp_created": "Created",
   "personal_mcp_expires": "Expires",
   "personal_mcp_last_used": "Last used",
+  "personal_mcp_scope": "Access",
+  "personal_mcp_scope_choice": "Permissions",
+  "personal_mcp_scope_read": "Read only",
+  "personal_mcp_scope_read_write": "Read + write",
   "personal_mcp_no_tokens": "You do not have any MCP access tokens yet."
 }
