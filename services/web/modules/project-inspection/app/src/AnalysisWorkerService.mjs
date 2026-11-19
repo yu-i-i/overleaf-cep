@@ -56,7 +56,8 @@ async function run(snapshot, { signal } = {}) {
         onAbort()
         return
       }
-      worker.once('message', message => {
+      worker.on('message', message => {
+        if (message?.['watch:require'] || message?.['watch:import']) return
         if (message?.ok) {
           finish(resolve, message.result)
         } else {
