@@ -1123,6 +1123,12 @@ module.exports = {
         '../modules/git-bridge/frontend/js/widget/components/git-integration-widget.tsx'
       )
     ],
+    personalMcpTokens: [
+      Path.resolve(
+        __dirname,
+        '../modules/personal-mcp/frontend/js/components/personal-mcp-tokens-widget.tsx'
+      ),
+    ],
     managedGroupSubscriptionEnrollmentNotification: [],
     managedGroupEnrollmentInvite: [],
     ssoCertificateInfo: [],
@@ -1221,6 +1227,7 @@ module.exports = {
     'registration-page', // import after authentication
     'template-gallery',
     'git-bridge',
+    'personal-mcp',
     'github-sync',
     'zotero',
     'bib-editor',

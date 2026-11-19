@@ -129,6 +129,13 @@ ENV LOG_LEVEL="info"
 ENV GIT_BRIDGE_HOST=git-bridge
 ENV GIT_BRIDGE_PORT=8000
 ENV GIT_BRIDGE_REPOSTORE_MAX_FILE_SIZE=52428800
+# On build hosts with restrictive default ACLs / a docker daemon umask of 007,
+# files and dirs generated inside build layers (webpack output, precompiled
+# pug views, yarn PnP cache entries) get baked without o+r/o+rx, which breaks
+# the unprivileged `overleaf` runtime user. This idempotent pass fixes only
+# affected paths; on normal build hosts it is a no-op.
+RUN set -e; find /overleaf -type d ! -perm -o+rx -exec chmod o+rx {} +; find /overleaf -type f ! -perm -o+r -exec chmod o+r {} +; find /overleaf/.yarn/install-state.gz ! -perm -o+rw -exec chmod o+rw {} +
+
 EXPOSE 80
 
 ENTRYPOINT ["/sbin/my_init"]
