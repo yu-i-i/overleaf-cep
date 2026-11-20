@@ -49,6 +49,10 @@ export default {
       AuthorizationMiddleware.ensureUserIsSiteAdmin,
       UserListController.restoreDeletedUser
     )
+    webRouter.post('/admin/projects',
+      AuthorizationMiddleware.ensureUserIsSiteAdmin,
+      ProjectListController.getProjectsJson
+    )
     webRouter.post('/admin/user/:userId/projects',
       AuthorizationMiddleware.ensureUserIsSiteAdmin,
       ProjectListController.getProjectsJson

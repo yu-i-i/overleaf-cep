@@ -36,6 +36,10 @@ function SearchForm({
     setLocalValue(inputValue)
   }, [inputValue])
 
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+  }, [])
+
   const handleChange: React.ComponentProps<
     typeof OLFormControl
   >['onChange'] = e => {
@@ -57,6 +61,7 @@ function SearchForm({
   }
 
   const handleClear = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     setLocalValue('')
     setInputValue('')
   }

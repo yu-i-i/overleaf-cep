@@ -1,21 +1,21 @@
-import _ from 'lodash'
 import Path from 'node:path'
+import { DeletedUser } from '../../../../app/src/models/DeletedUser.mjs'
+import {
+  parseProjectListRequest,
+  buildProjectQuery,
+  buildProjectPipeline,
+  getProjectPageNumber,
+} from './ProjectListQuery.mjs'
+import { getOwnerSortedPage } from './ProjectOwnerSort.mjs'
 import { fileURLToPath } from 'node:url'
 import { expressify } from '@overleaf/promise-utils'
-import logger from '@overleaf/logger'
-import Metrics from '@overleaf/metrics'
 import SessionManager from '../../../../app/src/Features/Authentication/SessionManager.mjs'
-import PrivilegeLevels from '../../../../app/src/Features/Authorization/PrivilegeLevels.mjs'
 import ProjectHelper from '../../../../app/src/Features/Project/ProjectHelper.mjs'
-import ProjectGetter from '../../../../app/src/Features/Project/ProjectGetter.mjs'
 import ProjectDeleter from '../../../../app/src/Features/Project/ProjectDeleter.mjs'
 import UserSettingsHelper from '../../../../app/src/Features/Project/UserSettingsHelper.mjs'
-import UserGetter from '../../../../app/src/Features/User/UserGetter.mjs'
 import { User } from '../../../../app/src/models/User.mjs'
 import { Project } from '../../../../app/src/models/Project.mjs'
 import { DeletedProject } from '../../../../app/src/models/DeletedProject.mjs'
-import { OError } from '../../../../app/src/Features/Errors/Errors.js'
-import HttpErrorHandler from '../../../../app/src/Features/Errors/HttpErrorHandler.mjs'
 
 const __dirname = Path.dirname(fileURLToPath(import.meta.url))
 
@@ -26,22 +26,11 @@ function cleanupSession(req) {
   delete req.session.postOnboardingRedirect
 }
 
-async function manageProjectsPage(req, res, next) {
+async function manageProjectsPage(req, res) {
   cleanupSession(req)
 
-  const projectsBlobPending = _getProjects().catch(err => {
-    logger.err({ err }, 'projects listing in background failed')
-    return undefined
-  })
-
-  const prefetchedProjectsBlob = await projectsBlobPending
-
-  Metrics.inc('project-list-prefetch-projects', 1, {
-    status: prefetchedProjectsBlob ? 'success' : 'error',
-  })
-
   const userId = SessionManager.getLoggedInUserId(req.session)
-  const user = await User.findById(userId, 'ace')
+  const user = await User.findById(userId, 'ace signUpDate')
 
   const userSettings = await UserSettingsHelper.buildUserSettings(
     req,
@@ -52,108 +41,65 @@ async function manageProjectsPage(req, res, next) {
   res.render(Path.resolve(__dirname, '../views/manage-projects-react'), {
     title: 'Manage Projects',
     userSettings,
-    prefetchedProjectsBlob,
+    initialTheme: UserSettingsHelper.getInitialTheme(userSettings.overallTheme),
   })
 }
 
 async function getProjectsJson(req, res) {
-  const { filters, page, sort } = req.body
-  const { userId } = req.params
+  const options = parseProjectListRequest(req)
 
-  const projectsPage = await _getProjects(userId, filters, sort, page)
-  res.json(projectsPage)
-}
-
-async function _getProjects(
-  userId = null,
-  filters = {},
-  sort = { by: 'lastUpdated', order: 'desc' },
-  page = { size: 20 }
-) {
-
-  const projection = {
-    _id: 1,
-    name: 1,
-    lastUpdated: 1,
-    lastUpdatedBy: 1,
-    lastOpened: 1,
-    trashed: 1,
-    owner_ref: 1,
-  }
-
-  const actualProjects = await Project.find(
-    userId == null ? {} : { owner_ref: userId },
-    projection,
-  ).lean().exec()
-
-  const delProjection = Object.fromEntries(
-    Object.keys(projection).map(k => [`project.${k}`, 1])
-  )
-  delProjection['deleterData.deletedAt'] = 1
-  delProjection['deleterData.deleterId'] = 1
-
-  const deletedProjects = await DeletedProject.find(
-    userId == null ? { project: { $type: 'object' } } : { 'project.owner_ref': userId },
-    delProjection
-  ).lean().exec()
-
-  const formattedActualProjects = _formatProjects(actualProjects, _formatProjectInfo)
-  const formattedDeletedProjects = _formatProjects(deletedProjects, _formatDeletedProjectInfo)
-  const formattedProjects = [...formattedActualProjects, ...formattedDeletedProjects]
-  const filteredProjects = _applyFilters(formattedProjects, filters)
-  const projects = _sortAndPaginate(filteredProjects, sort, page)
-
-  return {
-    totalSize: filteredProjects.length,
-    projects,
-  }
-}
-
-function _formatProjects(projects, formatProjectInfo) {
   const yearAgo = new Date()
   yearAgo.setFullYear(yearAgo.getFullYear() - 1)
-  const formattedProjects = []
+  const ownerId = options.userId ?? null
+  const query = buildProjectQuery(options, ownerId, yearAgo)
+  const model = options.filter === 'deleted' ? DeletedProject : Project
+  const { totalSize, pageNumber, rows } = await getProjectPage(
+    model,
+    options,
+    query
+  )
+  const format =
+    options.filter === 'deleted'
+      ? _formatDeletedProjectInfo
+      : _formatProjectInfo
 
-  for (const project of projects) {
-    formattedProjects.push(
-      formatProjectInfo(project, yearAgo)
-    )
-  }
-  return formattedProjects
+  res.json({
+    totalSize,
+    page: { number: pageNumber, size: options.page.size },
+    projects: rows.map((project) => format(project, yearAgo)),
+  })
 }
 
-function _applyFilters(projects,  filters) {
-  if (!_hasActiveFilter(filters)) {
-    return projects
-  }
-  return projects.filter(project => _matchesFilters(project, filters))
-}
+async function getProjectPage(model, options, query) {
+  const aggregate = pipeline =>
+    model
+      .aggregate(pipeline)
+      .collation({ locale: 'en', strength: 2 })
+      .allowDiskUse(true)
+      .exec()
 
-function _sortAndPaginate(projects, sort, page) {
-  if (
-    (sort.by && !['lastUpdated', 'title', 'deletedAt', 'owner'].includes(sort.by)) ||
-    (sort.order && !['asc', 'desc'].includes(sort.order))
-  ) {
-    throw new OError('Invalid sorting criteria', { sort })
+  if (options.sort.by === 'owner' && !options.userId) {
+    const collections = {
+      users: User.collection.name,
+      deletedUsers: DeletedUser.collection.name,
+      projects: model.collection.name,
+    }
+    return getOwnerSortedPage(options, query, collections, aggregate)
   }
 
-// sorting by owner is not implemented, it is not needed
-  const sortedProjects =
-    sort.by === 'title'
-      ? [...projects].sort((a, b) =>
-          (a.name ?? '\uffff').localeCompare(b.name ?? '\uffff')
-        )
-      : _.orderBy(
-          projects,
-          [sort.by || 'lastUpdated'],
-          [sort.order || 'desc']
-        )
-  return sortedProjects
+  const totalSize = await model.countDocuments(query).exec()
+  const pageNumber = getProjectPageNumber(options.page, totalSize)
+  const rows = totalSize
+    ? await aggregate(buildProjectPipeline(options, query, pageNumber))
+    : []
+  return { totalSize, pageNumber, rows }
 }
 
 function _formatProjectInfo(project, maxDate) {
   const owner_ref = project.owner_ref
-  const trashed = owner_ref ? ProjectHelper.isTrashed(project, owner_ref) : false
+  const trashed = owner_ref
+    ? ProjectHelper.isTrashed(project, owner_ref)
+    : false
 
   return {
     id: project._id.toString(),
@@ -161,61 +107,19 @@ function _formatProjectInfo(project, maxDate) {
     owner: project.owner_ref,
     lastUpdated: project.lastUpdated?.toISOString(),
     lastUpdatedBy: project.lastUpdatedBy,
-    inactive: project.lastOpened < maxDate, 
+    inactive: project.lastOpened < maxDate,
     trashed,
     deleted: false,
   }
 }
 
 function _formatDeletedProjectInfo(deletedProject, maxDate) {
-  const project = deletedProject.project
-  const owner_ref = project.owner_ref
-  const trashed = owner_ref ? ProjectHelper.isTrashed(project, owner_ref) : false
-
   return {
-    id: project._id.toString(),
-    name: project.name,
-    owner: owner_ref,
-    lastUpdated: project.lastUpdated?.toISOString(),
-    lastUpdatedBy: project.lastUpdatedBy,
-    inactive: project.lastOpened < maxDate,
-    trashed,
+    ..._formatProjectInfo(deletedProject.project, maxDate),
     deleted: true,
     deletedAt: deletedProject.deleterData?.deletedAt?.toISOString(),
     deleterId: deletedProject.deleterData?.deleterId,
   }
-}
-
-function _matchesFilters(project, filters) {
-  if (filters.owned && (project.trashed || project.deleted)) {
-    return false
-  }
-  if (filters.trashed && (!project.trashed || project.deleted)) {
-    return false
-  }
-  if (filters.deleted && !project.deleted) {
-    return false
-  }
-  if (filters.inactive && (project.trashed || project.deleted || !project.inactive)) {
-    return false
-  }
-  if (
-    filters.search?.length &&
-    project.name.toLowerCase().indexOf(filters.search.toLowerCase()) === -1
-  ) {
-    return false
-  }
-  return true
-}
-
-function _hasActiveFilter(filters) {
-  return Boolean(
-    filters.owned ||
-      filters.inactive ||
-      filters.trashed ||
-      filters.deleted ||
-      filters.search?.length
-  )
 }
 
 async function trashProjectForUser(req, res) {
@@ -235,15 +139,21 @@ async function untrashProjectForUser(req, res) {
 async function deleteProject(req, res) {
   const projectId = req.params.project_id
   const deleterId = SessionManager.getLoggedInUserId(req.session)
-  const options = { deleterUser: {_id: deleterId } }
-  const deletedProjectData = await ProjectDeleter.promises.deleteProject(projectId, options)
+  const options = { deleterUser: { _id: deleterId } }
+  const deletedProjectData = await ProjectDeleter.promises.deleteProject(
+    projectId,
+    options
+  )
   return res.json(deletedProjectData)
 }
 
 async function undeleteProject(req, res) {
   const projectId = req.params.project_id
   const { userId } = req.body
-  const undelededProject = await ProjectDeleter.promises.undeleteProject(projectId, { userId })
+  const undelededProject = await ProjectDeleter.promises.undeleteProject(
+    projectId,
+    { userId }
+  )
   await ProjectDeleter.promises.untrashProject(projectId, userId)
 
   return res.json({

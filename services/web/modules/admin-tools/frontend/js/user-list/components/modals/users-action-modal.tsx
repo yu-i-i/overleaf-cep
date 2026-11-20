@@ -98,7 +98,8 @@ function UsersActionModal({
       onHide={handleCloseModal}
       id="action-user-modal"
       backdrop="static"
-      themed="true"
+      scrollable
+      themed
     >
       <OLModalHeader>
         <OLModalTitle>{title}</OLModalTitle>

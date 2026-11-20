@@ -4,12 +4,15 @@ import { Sort } from '../../../../../types/project/api'
 type SortBtnOwnProps = {
   column: string
   sort: Sort
+  appliedSort?: Sort | null
+  showSortProgress?: boolean
   text: string
   onClick: () => void
 }
 
 type WithContentProps = {
   iconType?: string
+  showSpinner?: boolean
   screenReaderText: string
 }
 
@@ -20,14 +23,18 @@ function withContent<T extends SortBtnOwnProps>(
 ) {
   function WithContent(hocProps: T) {
     const { t } = useTranslation()
-    const { column, text, sort } = hocProps
+    const { column, text, sort, appliedSort, showSortProgress } = hocProps
+    const displayedSort = appliedSort ?? sort
+    const showSpinner = !!showSortProgress && column === sort.by
     let iconType
-
     let screenReaderText = t('sort_by_x', { x: text })
 
-    if (column === sort.by) {
-      iconType =
-        sort.order === 'asc' ? 'arrow_upward_alt' : 'arrow_downward_alt'
+    if (column === displayedSort.by) {
+      if (!showSpinner) {
+        iconType = displayedSort.order === 'asc'
+          ? 'arrow_upward_alt'
+          : 'arrow_downward_alt'
+      }
       screenReaderText = t('reverse_x_sort_order', { x: text })
     }
 
@@ -35,6 +42,7 @@ function withContent<T extends SortBtnOwnProps>(
       <WrappedComponent
         {...hocProps}
         iconType={iconType}
+        showSpinner={showSpinner}
         screenReaderText={screenReaderText}
       />
     )

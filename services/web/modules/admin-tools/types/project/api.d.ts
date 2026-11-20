@@ -4,7 +4,7 @@ import { User } from '../user/api'
 
 export type Page = {
   size: number
-  lastId?: string
+  number: number
 }
 
 export type Sort = {
@@ -13,6 +13,7 @@ export type Sort = {
 }
 
 export type Filters = {
+  inactive?: boolean
   owned?: boolean
   trashed?: boolean
   deleted?: boolean
@@ -25,11 +26,7 @@ export type GetProjectsRequestBody = {
   filters: Filters
 }
 
-export type UserRef = Pick<
-  User,
-  'id' | 'email' | 'firstName' | 'lastName'
->
-
+export type UserRef = Pick<User, 'id' | 'email' | 'firstName' | 'lastName'>
 
 export type ProjectApi = {
   id: string
@@ -54,6 +51,7 @@ export type Project = MergeAndOverride<
 >
 
 export type GetProjectsResponseBody = {
+  page: Page
   totalSize: number
   projects: Project[]
 }

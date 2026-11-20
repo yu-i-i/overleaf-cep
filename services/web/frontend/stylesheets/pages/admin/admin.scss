@@ -1,10 +1,26 @@
+[data-theme='light'] .red-nav-bar-for-admins {
+  --admin-navbar-red: var(--red-40);
+  --admin-navbar-hover: var(--red-30);
+}
+
 .red-nav-bar-for-admins {
+  --admin-navbar-red: var(--red-70);
+  --admin-navbar-hover: var(--red-60);
   .navbar-default {
     background: linear-gradient(
       to right,
       var(--navbar-bg) 10rem,
-      var(--red-50) 40rem
+      var(--admin-navbar-red) 40rem
     );
+    .subdued .dropdown-toggle:focus,
+    .subdued .dropdown-toggle:active,
+    .subdued .dropdown-toggle:hover,
+    .subdued .dropdown-toggle[aria-expanded='true'] {
+      background-color: var(--admin-navbar-hover) !important;
+    }
+    .nav-link:hover {
+      background-color: var(--admin-navbar-hover) !important;
+    }
   }
 
   .ide-redesign-toolbar {

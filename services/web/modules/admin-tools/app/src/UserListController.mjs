@@ -3,7 +3,6 @@ import { fileURLToPath } from 'node:url'
 import _ from 'lodash'
 import crypto from 'crypto'
 import Settings from '@overleaf/settings'
-import Metrics from '@overleaf/metrics'
 import logger from '@overleaf/logger'
 import { User } from '../../../../app/src/models/User.mjs'
 import { DeletedUser } from '../../../../app/src/models/DeletedUser.mjs'
@@ -72,19 +71,8 @@ function cleanupSession(req) {
 async function manageUsersPage(req, res, next) {
   cleanupSession(req)
 
-  const usersBlobPending = _getUsers().catch(err => {
-    logger.err({ err }, 'users listing in background failed')
-    return undefined
-  })
-
-  const prefetchedUsersBlob = await usersBlobPending
-
-  Metrics.inc('user-list-prefetch-users', 1, {
-    status: prefetchedUsersBlob ? 'success' : 'error',
-  })
-
   const userId = SessionManager.getLoggedInUserId(req.session)
-  const user = await User.findById(userId, 'ace')
+  const user = await User.findById(userId, 'ace signUpDate')
 
   const userSettings = await UserSettingsHelper.buildUserSettings(
     req,
@@ -95,7 +83,7 @@ async function manageUsersPage(req, res, next) {
   res.render(Path.resolve(__dirname, '../views/manage-users-react'), {
     title: 'Manage Users',
     userSettings,
-    prefetchedUsersBlob,
+    initialTheme: UserSettingsHelper.getInitialTheme(userSettings.overallTheme),
     availableAuthMethods,
     userDetailsUpdatedOnLogin,
     userIsAdminUpdatedOnLogin,

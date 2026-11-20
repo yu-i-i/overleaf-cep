@@ -254,13 +254,13 @@
     url('../../../frontend/js/shared/svgs/overleaf-green.svg')
   );
   --navbar-subdued-color: var(--content-primary);
-  --navbar-subdued-hover-bg: var(--bg-dark-primary);
-  --navbar-subdued-hover-color: var(--content-primary-dark);
+  --navbar-subdued-hover-bg: var(--bg-light-tertiary);
+  --navbar-subdued-hover-color: var(--content-primary);
   --navbar-bg: var(--bg-light-primary);
 
   // Navbar links
   --navbar-link-color: var(--content-primary);
-  --navbar-link-border-color: var(--border-primary);
+  --navbar-link-border-color: transparent;
   --navbar-link-hover-color: var(--navbar-link-color);
   --navbar-link-hover-bg: var(--bg-light-tertiary);
   --navbar-link-hover-border-color: var(--navbar-link-border-color);
@@ -290,9 +290,9 @@
 
   // Navbar links
   --navbar-link-color: var(--content-primary-dark);
-  --navbar-link-border-color: var(--border-primary-dark);
+  --navbar-link-border-color: transparent;
   --navbar-link-hover-color: var(--navbar-link-color);
-  --navbar-link-hover-bg: var(--bg-dark-tertiary);
+  --navbar-link-hover-bg: var(--bg-dark-secondary);
   --navbar-link-hover-border-color: var(--navbar-link-border-color);
 
   // Toggler

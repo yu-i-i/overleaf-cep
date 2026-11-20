@@ -8,9 +8,6 @@ import {
   useRef,
   useState,
 } from 'react'
-import getMeta from '@/utils/meta'
-import { debugConsole } from '@/utils/debugging'
-import useAsync from '@/shared/hooks/use-async'
 import usePersistedState from '@/shared/hooks/use-persisted-state'
 import {
   GetProjectsResponseBody,
@@ -18,46 +15,22 @@ import {
   Sort,
 } from '../../../../types/project/api'
 import { getProjects } from '../util/api'
-import { useUserIdentityContext } from '../../user-list/context/user-identity-context'
-import sortProjects from '../util/sort-projects'
 
 export type Filter = 'owned' | 'trashed' | 'deleted' | 'inactive'
-
-type FilterMap = {
-  [key in Filter]: Partial<Project> | ((project: Project) => boolean)
-}
-
-const filters: FilterMap = {
-  owned: (project) =>
-    project.deleted === false &&
-    project.trashed === false &&
-    project.owner != null,
-
-  trashed: (project) =>
-    project.deleted === false &&
-    project.trashed === true &&
-    project.owner != null,
-
-  deleted: (project) =>
-    project.deleted === true,
-
-  inactive: (project) =>
-    project.deleted === false &&
-    project.trashed === false &&
-    project.inactive === true,
-}
 
 export type ProjectListContextValue = {
   error: Error | null
   filter: Filter
   hiddenProjectsCount: number
-  isLoading: ReturnType<typeof useAsync>['isLoading']
-  loadProgress: number
+  isLoading: boolean
+  hasLoaded: boolean
+  appliedSort: Sort | null
+  showSortProgress: boolean
   removeProjectFromView: (project: Project) => void
   selectFilter: (filter: Filter) => void
   selectedProjectIds: Set<string>
   selectedProjects: Project[]
-  selectOrUnselectAllProjects: React.Dispatch<React.SetStateAction<boolean>>
+  selectOrUnselectAllProjects: (checked: boolean) => void
   searchText: string
   setSearchText: React.Dispatch<React.SetStateAction<string>>
   setSelectedProjectIds: React.Dispatch<React.SetStateAction<Set<string>>>
@@ -71,8 +44,8 @@ export type ProjectListContextValue = {
   currentPage: number
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>
   totalPages: number
-  projectsPerPage: number,
-  setProjectsPerPage: React.Dispatch<React.SetStateAction<number>>,
+  projectsPerPage: number
+  setProjectsPerPage: React.Dispatch<React.SetStateAction<number>>
 }
 
 export const ProjectListContext = createContext<
@@ -84,22 +57,10 @@ type ProjectListProviderProps = {
   children: ReactNode
 }
 
-export function ProjectListProvider({ projectsOwnerId, children }: ProjectListProviderProps) {
-  const { getUserById } = useUserIdentityContext()
-
-  const prefetchedProjectsBlob = projectsOwnerId ? null : getMeta('ol-prefetchedProjectsBlob')
-  const [loadedProjects, setLoadedProjects] = useState<Project[]>(
-    prefetchedProjectsBlob?.projects ?? []
-  )
-
-  const [loadProgress, setLoadProgress] = useState(
-    prefetchedProjectsBlob ? 100 : 20
-  )
-
-  const [totalProjectsCount, setTotalProjectsCount] = useState<number>(
-    prefetchedProjectsBlob?.totalSize ?? 0
-  )
-
+export function ProjectListProvider({
+  projectsOwnerId,
+  children,
+}: ProjectListProviderProps) {
   const [filter, setFilter] = usePersistedState<Filter>(
     'admin-project-list-filter',
     'owned'
@@ -108,126 +69,129 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
     by: filter === 'deleted' ? 'deletedAt' : 'lastUpdated',
     order: 'desc',
   })
-  const prevSortRef = useRef<Sort>(sort)
-
   const [searchText, setSearchTextState] = useState('')
-  const lastNonSearchPageRef = useRef(1)
-  const isSearchingRef = useRef(false)
-
   const [currentPage, setCurrentPage] = useState(1)
-
-  const setSearchText: React.Dispatch<React.SetStateAction<string>> = value => {
-    setSearchTextState(prev => {
-      const nextValue =
-        typeof value === 'function' ? value(prev) : value
-
-      const wasSearching = isSearchingRef.current
-      const willSearch = nextValue.length > 0
-
-      if (!wasSearching && willSearch) {
-        lastNonSearchPageRef.current = currentPage
-        isSearchingRef.current = true
-        setCurrentPage(1)
-      } else if (wasSearching && !willSearch) {
-        isSearchingRef.current = false
-        setCurrentPage(lastNonSearchPageRef.current)
-      }
-
-      return nextValue
-    })
-  }
-
-  const {
-    isLoading: loading,
-    isIdle,
-    error,
-    runAsync,
-  } = useAsync<GetProjectsResponseBody>({
-    status: prefetchedProjectsBlob ? 'resolved' : 'pending',
-    data: prefetchedProjectsBlob,
-  })
-
-  const isLoading = isIdle ? true : loading
-
-  useEffect(() => {
-    if (prefetchedProjectsBlob) return
-
-    setLoadProgress(40)
-    runAsync(getProjects({ userId: projectsOwnerId, by: 'lastUpdated', order: 'desc' }))
-      .then(data => {
-        setLoadedProjects(data.projects)
-        setTotalProjectsCount(data.totalSize)
-      })
-      .catch(debugConsole.error)
-      .finally(() => {
-        setLoadProgress(100)
-      })
-  }, [projectsOwnerId, runAsync, prefetchedProjectsBlob])
-
-  const sortedProjects = useMemo(() => {
-    if (
-      prevSortRef.current.by === sort.by &&
-      prevSortRef.current.order === sort.order
-    ) {
-      return loadedProjects
-    }
-
-    const sorted = sortProjects(loadedProjects, sort, getUserById)
-    prevSortRef.current = sort
-    return sorted
-  }, [loadedProjects, sort, getUserById])
-
-  const filteredProjects = useMemo(() => {
-    const predicate = filters[filter]
-    const hasSearch = searchText.length > 0
-    const lower = hasSearch ? searchText.toLowerCase() : null
-
-    return sortedProjects.filter(project => {
-      if (hasSearch) {
-        if (!project.name.toLowerCase().includes(lower!)) {
-          return false
-        }
-      }
-
-      return typeof predicate === 'function'
-        ? predicate(project)
-        : true
-    })
-  }, [sortedProjects, searchText, filter])
-
-  const [projectsPerPage, setProjectsPerPage] = useState(20)
-  const previousProjectsPerPageRef = useRef(projectsPerPage)
-
-  useEffect(() => {
-    const previousProjectsPerPage = previousProjectsPerPageRef.current
-
-    if (previousProjectsPerPage !== projectsPerPage) {
-      const oldStartIndex = (currentPage - 1) * previousProjectsPerPage
-      const newPage = Math.floor(oldStartIndex / projectsPerPage) + 1
-      setCurrentPage(newPage)
-      previousProjectsPerPageRef.current = projectsPerPage
-    }
-  }, [projectsPerPage])
-
-  const totalPages = Math.ceil(filteredProjects.length / projectsPerPage)
-  const startIndex = (currentPage - 1) * projectsPerPage
-
-  const visibleProjects = useMemo(() => {
-    return filteredProjects.slice(startIndex, startIndex + projectsPerPage)
-  }, [filteredProjects, startIndex, projectsPerPage])
-
-  const hiddenProjectsCount = Math.max(
-    filteredProjects.length - visibleProjects.length,
-    0
-  )
-
+  const [projectsPerPage, setProjectsPerPageState] = useState(20)
+  const [revision, setRevision] = useState(0)
   const [selectedProjectIds, setSelectedProjectIds] = useState(
     () => new Set<string>()
+  )
+  const [response, setResponse] = useState<{
+    key: string
+    sort: Sort
+    data: GetProjectsResponseBody
+  } | null>(null)
+  const [error, setError] = useState<Error | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const lastNonSearchPageRef = useRef(1)
+
+  const setSearchText = useCallback<
+    React.Dispatch<React.SetStateAction<string>>
+  >(
+    (value) => {
+      const next = typeof value === 'function' ? value(searchText) : value
+      if (next === searchText) return
+      if (!searchText && next) lastNonSearchPageRef.current = currentPage
+      setCurrentPage(next ? 1 : lastNonSearchPageRef.current)
+      setSearchTextState(next)
+    },
+    [searchText, currentPage]
+  )
+
+  const setProjectsPerPage = useCallback<
+    React.Dispatch<React.SetStateAction<number>>
+  >(
+    (value) => {
+      const size = typeof value === 'function' ? value(projectsPerPage) : value
+      setCurrentPage(
+        (page) => Math.floor(((page - 1) * projectsPerPage) / size) + 1
+      )
+      lastNonSearchPageRef.current =
+        Math.floor(
+          ((lastNonSearchPageRef.current - 1) * projectsPerPage) / size
+        ) + 1
+      setProjectsPerPageState(size)
+    },
+    [projectsPerPage]
+  )
+
+  useEffect(() => {
+    setCurrentPage(1)
+    lastNonSearchPageRef.current = 1
+  }, [projectsOwnerId])
+
+  const request = useMemo(
+    () => ({
+      userId: projectsOwnerId,
+      filters: { [filter]: true, search: searchText },
+      sort,
+      page: { number: currentPage, size: projectsPerPage },
+    }),
+    [projectsOwnerId, filter, searchText, sort, currentPage, projectsPerPage]
+  )
+  const requestKey = JSON.stringify(request)
+
+  useEffect(() => {
+    setSelectedProjectIds(new Set())
+  }, [requestKey])
+
+  useEffect(() => {
+    let cancelled = false
+    setIsLoading(true)
+    setError(null)
+    getProjects(request)
+      .then((data) => {
+        if (cancelled) return
+        // The last page can disappear after an action or a concurrent deletion.
+        const key = JSON.stringify({ ...request, page: data.page })
+        setResponse({ key, sort: request.sort, data })
+        setCurrentPage(data.page.number)
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setError(error)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [request, requestKey, revision])
+
+  // Keep the last successful page visible until its replacement is ready.
+  const visibleProjects = useMemo(
+    () => response?.data.projects ?? [],
+    [response]
+  )
+  const hasLoaded = response !== null
+  const appliedSort = response?.sort ?? null
+  const sortPending =
+    !!appliedSort &&
+    !error &&
+    (appliedSort.by !== sort.by || appliedSort.order !== sort.order)
+  const [sortProgressDelayElapsed, setSortProgressDelayElapsed] = useState(false)
+  const showSortProgress = sortPending && sortProgressDelayElapsed
+
+  // Delay the indicator so fast sorting requests do not flash the header.
+  useEffect(() => {
+    if (!sortPending) {
+      setSortProgressDelayElapsed(false)
+      return
+    }
+    const timeout = window.setTimeout(() => setSortProgressDelayElapsed(true), 180)
+    return () => window.clearTimeout(timeout)
+  }, [sortPending, sort.by, sort.order])
+  const totalProjectsCount = response?.data.totalSize ?? 0
+  const totalPages = Math.ceil(totalProjectsCount / projectsPerPage)
+  const hiddenProjectsCount = Math.max(
+    totalProjectsCount - visibleProjects.length,
+    0
   )
 
   const toggleSelectedProject = useCallback(
     (projectId: string, selected?: boolean) => {
-      setSelectedProjectIds(prevSelectedProjectIds => {
+      setSelectedProjectIds((prevSelectedProjectIds) => {
         const selectedProjectIds = new Set(prevSelectedProjectIds)
         if (selected === true) {
           selectedProjectIds.add(projectId)
@@ -245,12 +209,15 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
   )
 
   const selectedProjects = useMemo(() => {
-    return visibleProjects.filter(project => selectedProjectIds.has(project.id))
-  }, [selectedProjectIds, visibleProjects])
+    if (response?.key !== requestKey) return []
+    return visibleProjects.filter((project) =>
+      selectedProjectIds.has(project.id)
+    )
+  }, [selectedProjectIds, visibleProjects, response, requestKey])
 
   const selectOrUnselectAllProjects = useCallback(
     (checked: boolean) => {
-      setSelectedProjectIds(prevSelectedProjectIds => {
+      setSelectedProjectIds((prevSelectedProjectIds) => {
         const selectedProjectIds = new Set(prevSelectedProjectIds)
         for (const project of visibleProjects) {
           if (checked) {
@@ -268,10 +235,11 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
   const selectFilter = useCallback(
     (filter: Filter) => {
       setFilter(filter)
-      selectOrUnselectAllProjects(false)
+      setSelectedProjectIds(new Set())
+      lastNonSearchPageRef.current = 1
       setCurrentPage(1)
 
-      setSort(prev => {
+      setSort((prev) => {
         if (filter === 'deleted' && prev.by === 'lastUpdated') {
           return { ...prev, by: 'deletedAt' }
         }
@@ -281,22 +249,14 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
         return prev
       })
     },
-    [selectOrUnselectAllProjects]
+    [setFilter]
   )
 
-  const updateProjectViewData = useCallback((newProjectData: Project) => {
-    setLoadedProjects(loadedProjects => {
-      return loadedProjects.map(p =>
-        p.id === newProjectData.id ? { ...newProjectData } : p
-      )
-    })
+  // Re-query after mutations: membership, order, totals and page boundaries may change.
+  const updateProjectViewData = useCallback((_project: Project) => {
+    setRevision((revision) => revision + 1)
   }, [])
-
-  const removeProjectFromView = useCallback((project: Project) => {
-    setLoadedProjects(loadedProjects => {
-      return loadedProjects.filter(p => p.id !== project.id)
-    })
-  }, [])
+  const removeProjectFromView = updateProjectViewData
 
   const value = useMemo<ProjectListContextValue>(
     () => ({
@@ -304,7 +264,9 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
       filter,
       hiddenProjectsCount,
       isLoading,
-      loadProgress,
+      hasLoaded,
+      appliedSort,
+      showSortProgress,
       removeProjectFromView,
       selectFilter,
       selectedProjects,
@@ -324,14 +286,16 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
       setCurrentPage,
       totalPages,
       projectsPerPage,
-      setProjectsPerPage
+      setProjectsPerPage,
     }),
     [
       error,
       filter,
       hiddenProjectsCount,
       isLoading,
-      loadProgress,
+      hasLoaded,
+      appliedSort,
+      showSortProgress,
       removeProjectFromView,
       selectFilter,
       selectedProjectIds,
@@ -351,7 +315,7 @@ export function ProjectListProvider({ projectsOwnerId, children }: ProjectListPr
       setCurrentPage,
       totalPages,
       projectsPerPage,
-      setProjectsPerPage
+      setProjectsPerPage,
     ]
   )
 

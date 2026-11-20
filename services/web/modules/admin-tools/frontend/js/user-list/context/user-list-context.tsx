@@ -67,7 +67,6 @@ export type UserListContextValue = {
   filterTranslations: Map<Filter, string>
   hiddenUsersCount: number
   isLoading: ReturnType<typeof useAsync>['isLoading']
-  loadProgress: number
   removeUserFromView: (user: User) => void
   searchText: string
   selectFilter: (filter: Filter) => void
@@ -100,17 +99,8 @@ type UserListProviderProps = {
 }
 
 export function UserListProvider({ children }: UserListProviderProps) {
-  const prefetchedUsersBlob = getMeta('ol-prefetchedUsersBlob')
-  const [loadedUsers, setLoadedUsers] = useState<User[]>(
-    prefetchedUsersBlob?.users ?? []
-  )
-
-  const [loadProgress, setLoadProgress] = useState(
-    prefetchedUsersBlob ? 100 : 20
-  )
-  const [totalUsersCount, setTotalUsersCount] = useState<number>(
-    prefetchedUsersBlob?.totalSize ?? 0
-  )
+  const [loadedUsers, setLoadedUsers] = useState<User[]>([])
+  const [totalUsersCount, setTotalUsersCount] = useState(0)
   const [sort, setSort] = useState<Sort>({
     by: 'name',
     order: 'asc',
@@ -159,26 +149,17 @@ export function UserListProvider({ children }: UserListProviderProps) {
     isIdle,
     error,
     runAsync,
-  } = useAsync<GetUsersResponseBody>({
-    status: prefetchedUsersBlob ? 'resolved' : 'pending',
-    data: prefetchedUsersBlob,
-  })
+  } = useAsync<GetUsersResponseBody>({ status: 'pending' })
   const isLoading = isIdle ? true : loading
 
-
   useEffect(() => {
-    if (prefetchedUsersBlob) return
-    setLoadProgress(40)
     runAsync(getUsers({ by: 'name', order: 'asc' }))
       .then(data => {
         setLoadedUsers(data.users)
         setTotalUsersCount(data.totalSize)
       })
       .catch(debugConsole.error)
-      .finally(() => {
-        setLoadProgress(100)
-      })
-  }, [prefetchedUsersBlob, runAsync])
+  }, [runAsync])
 
   const addUserToView = useCallback((newUser: Partial<User>) => {
     setLoadedUsers(prev => [newUser as User, ...prev])
@@ -335,7 +316,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
       filterTranslations,
       hiddenUsersCount,
       isLoading,
-      loadProgress,
       removeUserFromView,
       searchText,
       selectFilter,
@@ -365,7 +345,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
       filterTranslations,
       hiddenUsersCount,
       isLoading,
-      loadProgress,
       removeUserFromView,
       searchText,
       selectFilter,
@@ -389,8 +368,6 @@ export function UserListProvider({ children }: UserListProviderProps) {
       setUsersPerPage,
     ]
   )
-
-  if (isLoading) return null
 
   return (
     <UserIdentityProvider users={loadedUsers}>

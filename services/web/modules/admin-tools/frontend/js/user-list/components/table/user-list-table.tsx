@@ -7,6 +7,7 @@ import withContent, { SortBtnProps } from '../sort/with-content'
 import OLTable from '@/shared/components/ol/ol-table'
 import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
 import MaterialIcon from '@/shared/components/material-icon'
+import OLSpinner from '@/shared/components/ol/ol-spinner'
 
 function SortBtn({ onClick, text, iconType, screenReaderText }: SortBtnProps) {
   return (
@@ -27,14 +28,13 @@ function UserListTable() {
   const { t } = useTranslation()
   const {
     visibleUsers,
+    isLoading,
+    error,
     sort,
-    searchText,
     selectedUsers,
     selectOrUnselectAllUsers,
     selfVisibleCount,
     filter,
-    currentPage,
-    setCurrentPage,
   } = useUserListContext()
   const { handleSort } = useSort()
   const checkAllRef = useRef<HTMLInputElement>(null)
@@ -55,7 +55,12 @@ function UserListTable() {
   }, [selectedUsers, visibleUsers])
 
   return (
-    <OLTable className="user-dash-table" container={false} hover>
+    <OLTable
+      className="user-dash-table"
+      container={false}
+      hover
+      {...(isLoading || error ? { inert: '' } : {})}
+    >
       <caption className="visually-hidden">{t('users_list')}</caption>
       <thead className="visually-hidden-max-md">
         <tr>
@@ -181,7 +186,7 @@ function UserListTable() {
         </tr>
       </thead>
       <tbody>
-        {visibleUsers.length > 0 ? (
+        {!isLoading && visibleUsers.length > 0 ? (
           visibleUsers.map(u => (
             <UserListTableRow
               user={u}
@@ -192,8 +197,13 @@ function UserListTable() {
           ))
         ) : (
           <tr className="no-users">
-            <td className="text-center" colSpan={5}>
-              {t('no_users')}
+            <td className="text-center" colSpan={6}>
+              {isLoading && !error ? (
+                <div className="d-flex align-items-center justify-content-center gap-2 py-3" role="status">
+                  <OLSpinner size="sm" />
+                  <span>{t('loading')}</span>
+                </div>
+              ) : !error ? t('no_users') : null}
             </td>
           </tr>
         )}

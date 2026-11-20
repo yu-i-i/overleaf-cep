@@ -1,22 +1,52 @@
-import { useCallback, useRef, useEffect, useState } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import ProjectListTableRow from './project-list-table-row'
 import { useProjectListContext } from '../../context/project-list-context'
+import { useUserListContext } from '../../../user-list/context/user-list-context'
 import useSort from '../../hooks/use-sort'
 import withContent, { SortBtnProps } from '../sort/with-content'
 import OLTable from '@/shared/components/ol/ol-table'
 import OLFormCheckbox from '@/shared/components/ol/ol-form-checkbox'
 import MaterialIcon from '@/shared/components/material-icon'
+import OLSpinner from '@/shared/components/ol/ol-spinner'
 
-function SortBtn({ onClick, text, iconType, screenReaderText }: SortBtnProps) {
+function SortBtn({
+  onClick,
+  text,
+  iconType,
+  screenReaderText,
+  showSpinner,
+}: SortBtnProps) {
   return (
     <button
-      className="table-header-sort-btn d-none d-md-inline-block"
+      className="table-header-sort-btn d-none d-md-inline-flex align-items-center"
+      style={{ overflow: 'visible', textOverflow: 'clip' }}
       onClick={onClick}
       aria-label={screenReaderText}
     >
-      <span>{text}</span>
-      {iconType && <MaterialIcon type={iconType} />}
+      <span
+        style={{
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'clip',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {text}
+      </span>
+      {(showSpinner || iconType) && (
+        <span
+          className="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+          style={{ width: '1.5em', marginLeft: '0.15em' }}
+          aria-hidden="true"
+        >
+          {showSpinner ? (
+            <OLSpinner size="sm" />
+          ) : iconType ? (
+            <MaterialIcon type={iconType} />
+          ) : null}
+        </span>
+      )}
     </button>
   )
 }
@@ -27,15 +57,20 @@ function ProjectListTable() {
   const { t } = useTranslation()
   const {
     visibleProjects,
+    hasLoaded,
+    isLoading,
+    error,
     sort,
-    searchText,
+    appliedSort,
+    showSortProgress,
     selectedProjects,
     selectOrUnselectAllProjects,
     filter,
-    currentPage,
-    setCurrentPage,
   } = useProjectListContext()
+  const { isLoading: areUsersLoading } = useUserListContext()
+  const showInitialLoading = !error && (!hasLoaded || areUsersLoading)
   const { handleSort } = useSort()
+  const displayedSort = appliedSort ?? sort
   const checkAllRef = useRef<HTMLInputElement>(null)
 
   const handleAllProjectsCheckboxChange = useCallback(
@@ -53,11 +88,13 @@ function ProjectListTable() {
     }
   }, [selectedProjects, visibleProjects])
 
-  const [lastNonSearchPage, setLastNonSearchPage] = useState(1)
-  const [isSearching, setIsSearching] = useState(false)
-
   return (
-    <OLTable className="project-dash-table" container={false} hover>
+    <OLTable
+      className="project-dash-table"
+      container={false}
+      hover
+      {...(isLoading || error ? { inert: '' } : {})}
+    >
       <caption className="visually-hidden">{t('projects_list')}</caption>
       <thead className="visually-hidden-max-md">
         <tr>
@@ -82,8 +119,8 @@ function ProjectListTable() {
             className="dash-cell-name"
             aria-label={t('title')}
             aria-sort={
-              sort.by === 'title'
-                ? sort.order === 'asc'
+              displayedSort.by === 'title'
+                ? displayedSort.order === 'asc'
                   ? 'ascending'
                   : 'descending'
                 : undefined
@@ -93,6 +130,8 @@ function ProjectListTable() {
               column="title"
               text={t('title')}
               sort={sort}
+              appliedSort={appliedSort}
+              showSortProgress={showSortProgress}
               onClick={() => handleSort('title')}
             />
           </th>
@@ -106,8 +145,8 @@ function ProjectListTable() {
             className="dash-cell-owner d-none d-md-table-cell"
             aria-label={t('owner')}
             aria-sort={
-              sort.by === 'owner'
-                ? sort.order === 'asc'
+              displayedSort.by === 'owner'
+                ? displayedSort.order === 'asc'
                   ? 'ascending'
                   : 'descending'
                 : undefined
@@ -117,6 +156,8 @@ function ProjectListTable() {
               column="owner"
               text={t('owner')}
               sort={sort}
+              appliedSort={appliedSort}
+              showSortProgress={showSortProgress}
               onClick={() => handleSort('owner')}
             />
           </th>
@@ -125,8 +166,8 @@ function ProjectListTable() {
               className="dash-cell-date d-none d-md-table-cell"
               aria-label={t('last_modified')}
               aria-sort={
-                sort.by === 'lastUpdated'
-                  ? sort.order === 'asc'
+                displayedSort.by === 'lastUpdated'
+                  ? displayedSort.order === 'asc'
                     ? 'ascending'
                     : 'descending'
                   : undefined
@@ -136,6 +177,8 @@ function ProjectListTable() {
                 column="lastUpdated"
                 text={t('last_modified')}
                 sort={sort}
+                appliedSort={appliedSort}
+                showSortProgress={showSortProgress}
                 onClick={() => handleSort('lastUpdated')}
               />
             </th>
@@ -144,8 +187,8 @@ function ProjectListTable() {
               className="dash-cell-date d-none d-md-table-cell"
               aria-label={t('deleted_at')}
               aria-sort={
-               sort.by === 'deletedAt'
-                  ? sort.order === 'asc'
+               displayedSort.by === 'deletedAt'
+                  ? displayedSort.order === 'asc'
                     ? 'ascending'
                     : 'descending'
                   : undefined
@@ -155,6 +198,8 @@ function ProjectListTable() {
                 column="deletedAt"
                 text={t('deleted_at')}
                 sort={sort}
+                appliedSort={appliedSort}
+                showSortProgress={showSortProgress}
                 onClick={() => handleSort('deletedAt')}
               />
             </th>
@@ -165,7 +210,7 @@ function ProjectListTable() {
         </tr>
       </thead>
       <tbody>
-        {visibleProjects.length > 0 ? (
+        {!showInitialLoading && visibleProjects.length > 0 ? (
           visibleProjects.map(p => (
             <ProjectListTableRow
               project={p}
@@ -176,8 +221,13 @@ function ProjectListTable() {
           ))
         ) : (
           <tr className="no-projects">
-            <td className="text-center" colSpan={4}>
-              {t('no_projects')}
+            <td className="text-center" colSpan={6}>
+              {showInitialLoading ? (
+                <div className="d-flex align-items-center justify-content-center gap-2 py-3" role="status">
+                  <OLSpinner size="sm" />
+                  <span>{t('loading')}</span>
+                </div>
+              ) : hasLoaded ? t('no_projects') : null}
             </td>
           </tr>
         )}

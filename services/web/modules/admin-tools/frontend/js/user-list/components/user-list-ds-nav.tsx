@@ -30,6 +30,7 @@ export function UserListDsNav() {
   const { t } = useTranslation()
   const {
     error,
+    isLoading,
     searchText,
     setSearchText,
     selectedUsers,
@@ -39,6 +40,7 @@ export function UserListDsNav() {
     totalPages,
   } = useUserListContext()
   const activeOverallTheme = useActiveOverallTheme()
+  const hasLoaded = !isLoading && !error
 
   const tableTopArea = (
     <div className="pt-2 pb-3 d-md-none d-flex gap-2">
@@ -68,7 +70,7 @@ export function UserListDsNav() {
           <div className="user-ds-nav-content">
             <div className="user-ds-nav-main">
               {error ? <DashApiError /> : ''}
-              <main aria-labelledby="main-content">
+              <main aria-labelledby="main-content" aria-busy={isLoading}>
                 <div className="user-list-header-row">
                   <UserListTitle
                     filter={filter}
@@ -106,10 +108,10 @@ export function UserListDsNav() {
                     </TableContainer>
                   </div>
                   <div className="mt-3">
-                    <UserListSummary />
+                    {hasLoaded && <UserListSummary />}
                   </div>
                   <div className="mt-3">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    {hasLoaded && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
                   </div>
                 </div>
               </main>

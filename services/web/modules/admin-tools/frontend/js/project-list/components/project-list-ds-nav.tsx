@@ -5,7 +5,6 @@ import ProjectsDropdown from './dropdown/projects-dropdown'
 import SortByDropdown from './dropdown/sort-by-dropdown'
 import ProjectTools from './table/project-tools/project-tools'
 import ProjectListTitle from './title/project-list-title'
-import LoadMore from './load-more'
 import OLCol from '@/shared/components/ol/ol-col'
 import OLRow from '@/shared/components/ol/ol-row'
 import { TableContainer } from '@/shared/components/ol/ol-table'
@@ -19,6 +18,7 @@ import overleafLogoDark from '@/shared/svgs/overleaf-a-ds-solution-mallard-dark.
 import { getUserName } from '../util/user'
 import { useProjectListContext } from '../context/project-list-context'
 import { useUserIdentityContext } from '../../user-list/context/user-identity-context'
+import { useUserListContext } from '../../user-list/context/user-list-context'
 import Pagination from '@/shared/components/pagination-cep'
 import ProjectListSummary from './project-list-summary'
 import { useActiveOverallTheme } from '@/shared/hooks/use-active-overall-theme'
@@ -31,6 +31,8 @@ export function ProjectListDsNav() {
   const { t } = useTranslation()
   const {
     error,
+    isLoading,
+    hasLoaded,
     searchText,
     setSearchText,
     selectedProjects,
@@ -41,6 +43,7 @@ export function ProjectListDsNav() {
     totalPages,
   } = useProjectListContext()
   const { getUserNameById } = useUserIdentityContext()
+  const { isLoading: areUsersLoading } = useUserListContext()
   const activeOverallTheme = useActiveOverallTheme()
 
   const userName = projectsOwnerId ? getUserNameById(projectsOwnerId) : t('all_users')
@@ -74,7 +77,7 @@ export function ProjectListDsNav() {
           <div className="project-ds-nav-content">
             <div className="project-ds-nav-main">
               {error ? <DashApiError /> : ''}
-              <main aria-labelledby="main-content">
+              <main aria-labelledby="main-content" aria-busy={isLoading || areUsersLoading}>
                 <div className="project-list-header-row position-relative">
                   <ProjectListTitle
                     filter={filter}
@@ -112,10 +115,10 @@ export function ProjectListDsNav() {
                     </TableContainer>
                   </div>
                   <div className="mt-3">
-                    <ProjectListSummary />
+                    {hasLoaded && !areUsersLoading && <ProjectListSummary />}
                   </div>
                   <div className="mt-3">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    {hasLoaded && !areUsersLoading && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
                   </div>
                 </div>
               </main>

@@ -10,11 +10,6 @@ block vars
 	- const suppressPugCookieBanner = true
 
 block append meta
-	meta(
-		name='ol-prefetchedProjectsBlob'
-		data-type='json'
-		content=prefetchedProjectsBlob
-	)
 	meta(name='ol-userSettings' data-type='json' content=userSettings)
 	meta(name='ol-overallThemes' data-type='json' content=overallThemes)
 	if suggestedLanguageSubdomainConfig
