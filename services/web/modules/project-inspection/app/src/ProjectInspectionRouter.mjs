@@ -1,3 +1,4 @@
+import logger from '@overleaf/logger'
 import AuthorizationMiddleware from '../../../../app/src/Features/Authorization/AuthorizationMiddleware.mjs'
 import RateLimiterMiddleware from '../../../../app/src/Features/Security/RateLimiterMiddleware.mjs'
 import { RateLimiter } from '../../../../app/src/infrastructure/RateLimiter.mjs'
@@ -10,6 +11,7 @@ const analysisRateLimiter = new RateLimiter('project-inspection-analysis', {
 
 export default {
   apply(webRouter) {
+    logger.debug('Init Project Inspection router')
     webRouter.post(
       '/project/:project_id/project-inspection/analyze',
       RateLimiterMiddleware.rateLimit(analysisRateLimiter, {

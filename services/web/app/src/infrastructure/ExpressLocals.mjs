@@ -435,6 +435,7 @@ export default async function (webRouter, privateApiRouter, publicApiRouter) {
       giteaBrand: Settings.giteaSync?.brand,
       zoteroEnabled: !!Settings.zotero?.clientKey && !!Settings.zotero?.clientSecret,
       enablePandocConversions: Settings.enablePandocConversions,
+      enableProjectInspection: !!Settings.projectInspection?.enable,
       mixpanelLabsToken:
         Settings.labs?.enable && Settings.analytics?.mixpanel?.labsToken,
     }
