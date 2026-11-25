@@ -235,6 +235,18 @@ function NewProjectButton({
                 {t('existing_project_zip')}
               </OLDropdownItem>
             </li>
+            <li role="none">
+              <OLDropdownItem
+                onClick={e =>
+                  handleModalMenuClick(e, {
+                    modalVariant: 'upload_projects',
+                    dropdownMenuEvent: 'upload-projects',
+                  })
+                }
+              >
+                {t('existing_projects_zip')}
+              </OLDropdownItem>
+            </li>
             {docxImportEnabled && (
               <li role="none">
                 <OLDropdownItem

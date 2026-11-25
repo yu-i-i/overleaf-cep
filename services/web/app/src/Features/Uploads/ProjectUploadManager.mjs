@@ -17,14 +17,17 @@ import { DeletedProjectReasons } from '../Project/DeletedProjectReasons.mjs'
 import TpdsProjectFlusher from '../ThirdPartyDataStore/TpdsProjectFlusher.mjs'
 import logger from '@overleaf/logger'
 import OError from '@overleaf/o-error'
+import globby from 'globby'
 
 export default {
   createProjectFromZipArchive: callbackify(createProjectFromZipArchive),
+  createProjectsFromZipArchive: callbackify(createProjectsFromZipArchive),
   createProjectFromZipArchiveWithName: callbackify(
     createProjectFromZipArchiveWithName
   ),
   promises: {
     createProjectFromZipArchive,
+    createProjectsFromZipArchive,
     createProjectFromZipArchiveWithName,
   },
 }
@@ -68,6 +71,37 @@ async function createProjectFromZipArchive(ownerId, defaultName, zipPath) {
       throw err
     }
     return project
+  } finally {
+    await fs.promises.rm(contentsPath, { recursive: true, force: true })
+  }
+}
+
+async function createProjectsFromZipArchive(ownerId, zipPath) {
+  const contentsPath = await _extractZip(zipPath)
+  try {
+    const zipFiles = await globby(['*.zip'], {
+      cwd: contentsPath,
+      followSymlinkedDirectories: false,
+      onlyFiles: true,
+      case: false,
+    })
+
+    // Try to create projects for each zip file found in the extracted data
+    const projects = []
+    for (const zipFile of zipFiles) {
+      const zipFilePath = Path.join(contentsPath, zipFile)
+      try {
+        const name = Path.basename(zipFile, '.zip')
+        logger.info({ zipFilePath, name }, 'creating project from zip file')
+        const result = await createProjectFromZipArchiveWithName(ownerId, name, zipFilePath)
+        projects.push(result.project)
+      } catch (error) {
+        logger.error({ err, zipFilePath }, 'error creating project from zip file')
+      }
+    }
+
+    return projects
+
   } finally {
     await fs.promises.rm(contentsPath, { recursive: true, force: true })
   }

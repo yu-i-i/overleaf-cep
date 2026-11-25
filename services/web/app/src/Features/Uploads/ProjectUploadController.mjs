@@ -129,6 +129,47 @@ function uploadProject(req, res) {
  * @param {Request} req
  * @param {Response} res
  */
+function bulkUploadProjects(req, res) {
+  const timer = new metrics.Timer('bulk-project-upload')
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  const { body, file } = parseReq(req, uploadProjectSchema, {
+    logOnly: true,
+  })
+  const { path } = file
+  return ProjectUploadManager.createProjectsFromZipArchive(
+    userId,
+    path,
+    function (error, projects) {
+      fs.unlink(path, function () {})
+      timer.done()
+      if (error != null) {
+        logger.error(
+          { err: error, filePath: path, fileName: name },
+          'error uploading projects'
+        )
+        if (error instanceof InvalidZipFileError) {
+          return res.status(422).json({
+            success: false,
+            error: req.i18n.translate(error.message),
+          })
+        } else {
+          return res.status(500).json({
+            success: false,
+            error: req.i18n.translate('upload_failed'),
+          })
+        }
+      } else {
+        logger.info({ projectIds: projects.map(p => p._id) }, 'bulk upload success')
+        return res.json({ success: true })
+      }
+    }
+  )
+}
+
+/**
+ * @param {Request} req
+ * @param {Response} res
+ */
 async function uploadFile(req, res) {
   const timer = new metrics.Timer('file-upload')
   const { params, query, body, file } = parseReq(req, uploadFileSchema)
@@ -362,6 +403,7 @@ function multerMiddleware(req, res, next) {
 
 export default {
   uploadProject,
+  bulkUploadProjects,
   uploadFile: expressify(uploadFile),
   multerMiddleware,
   importDocument: expressify(importDocument),

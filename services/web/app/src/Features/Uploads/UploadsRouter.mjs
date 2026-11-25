@@ -30,6 +30,15 @@ export default {
       multerErrorHandler
     )
 
+    webRouter.post(
+      '/project/new/bulk_upload',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(rateLimiters.projectUpload),
+      ProjectUploadController.multerMiddleware,
+      ProjectUploadController.bulkUploadProjects,
+      multerErrorHandler
+    )
+
     if (Settings.enablePandocConversions) {
       webRouter.post(
         '/project/new/import-document',

@@ -141,6 +141,17 @@ function WelcomeMessageCreateNewProjectDropdown({
             {t('existing_project_zip')}
           </OLDropdownItem>
         </li>
+        <li role="none">
+          <OLDropdownItem
+            as="button"
+            onClick={e =>
+              handleDropdownItemClick(e, 'upload_projects', 'upload-projects')
+            }
+            tabIndex={-1}
+          >
+            {t('existing_projects_zip')}
+          </OLDropdownItem>
+        </li>
         {docxImportEnabled && (
           <li role="none">
             <OLDropdownItem
