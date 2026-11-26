@@ -6,20 +6,21 @@ import getMeta from '@/utils/meta'
 type BulkUploaderConfig = {
   endpoint: string
   allowedFileTypes: string[]
-  onSuccess: () => void
+  onUploaded: (importId: string) => void
   onError?: (response: ErrorResponse | undefined) => void
   onFileAdded?: () => void
   onFileRemoved?: () => void
 }
 
-type ImportResponse = {
-  project_id?: string
+type BulkUploadResponse = {
+  success?: boolean
+  importId?: string
 }
 
 export function useBulkProjectUploader({
   endpoint,
   allowedFileTypes,
-  onSuccess,
+  onUploaded,
   onError,
   onFileAdded,
   onFileRemoved,
@@ -59,7 +60,13 @@ export function useBulkProjectUploader({
         onError?.(response)
       })
       .on('upload-success', (_file, response) => {
-          onSuccess()
+        const { success, importId }: BulkUploadResponse = response.body
+
+        if (success && importId) {
+          onUploaded(importId)
+        } else {
+          onError?.(response)
+        }
       })
       .on('restriction-failed', () => {
         // 'restriction-failed event will be invoked when one of the "restrictions" above

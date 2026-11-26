@@ -5,6 +5,7 @@ import fsPromises from 'node:fs/promises'
 import Path from 'node:path'
 import FileSystemImportManager from './FileSystemImportManager.mjs'
 import ProjectUploadManager from './ProjectUploadManager.mjs'
+import ProjectUploadProgress from './ProjectUploadProgress.mjs'
 import SessionManager from '../Authentication/SessionManager.mjs'
 import EditorController from '../Editor/EditorController.mjs'
 import ProjectLocator from '../Project/ProjectLocator.mjs'
@@ -76,6 +77,18 @@ const importDocumentSchema = z.object({
   file: zz.uploadedFile(),
 })
 
+const getBulkUploadStatusSchema = z.object({
+  query: z.object({
+    importId: z.uuid(),
+  }),
+})
+
+const cancelBulkUploadSchema = z.object({
+  body: z.object({
+    importId: z.uuid(),
+  }),
+})
+
 const upload = multerUploadHandler({
   dest: Settings.path.uploadFolder,
   limits: {
@@ -129,41 +142,98 @@ function uploadProject(req, res) {
  * @param {Request} req
  * @param {Response} res
  */
-function bulkUploadProjects(req, res) {
+async function bulkUploadProjects(req, res) {
   const timer = new metrics.Timer('bulk-project-upload')
   const userId = SessionManager.getLoggedInUserId(req.session)
   const { body, file } = parseReq(req, uploadProjectSchema, {
     logOnly: true,
   })
   const { path } = file
-  return ProjectUploadManager.createProjectsFromZipArchive(
-    userId,
-    path,
-    function (error, projects) {
+  const name = Path.basename(body.name, '.zip')
+  const importId = await ProjectUploadProgress.promises.create(userId)
+  res.json({ success: true, importId })
+
+  // The import can take a long time, so the response is sent as soon as the upload has been received
+  // Progress is tracked in Redis (see ProjectUploadProgress) and the client polls getBulkUploadStatus
+  void (async () => {
+    try {
+      const projects = await ProjectUploadManager.promises.createProjectsFromZipArchive(
+          userId,
+          path,
+          async update => {
+            if (update.type === 'total') {
+              await ProjectUploadProgress.promises.setTotal(importId, update.total)
+            } else {
+              await ProjectUploadProgress.promises.recordResult(importId, {
+                id: update.id,
+                name: update.name,
+                status: update.status,
+                projectId: update.projectId,
+              })
+            }
+          },
+          () => ProjectUploadProgress.promises.isCancelled(importId)
+        )
+
+      if (!(await ProjectUploadProgress.promises.isCancelled(importId))) {
+        await ProjectUploadProgress.promises.finish(importId, { status: 'complete', })
+      }
+    } catch (error) {
+      logger.error(
+        { err: error, importId, filePath: path, fileName: name },
+        'error uploading projects'
+      )
+      await ProjectUploadProgress.promises.finish(importId, {
+        status: 'failed',
+        error: error instanceof InvalidZipFileError ? error.message : 'upload_failed',
+      })
+    } finally {
       fs.unlink(path, function () {})
       timer.done()
-      if (error != null) {
-        logger.error(
-          { err: error, filePath: path, fileName: name },
-          'error uploading projects'
-        )
-        if (error instanceof InvalidZipFileError) {
-          return res.status(422).json({
-            success: false,
-            error: req.i18n.translate(error.message),
-          })
-        } else {
-          return res.status(500).json({
-            success: false,
-            error: req.i18n.translate('upload_failed'),
-          })
-        }
-      } else {
-        logger.info({ projectIds: projects.map(p => p._id) }, 'bulk upload success')
-        return res.json({ success: true })
-      }
     }
-  )
+  })()
+}
+
+/**
+ * @param {Request} req
+ * @param {Response} res
+ */
+async function getBulkUploadStatus(req, res) {
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  const { query } = parseReq(req, getBulkUploadStatusSchema)
+  const progress = await ProjectUploadProgress.promises.get(userId, query.importId)
+  if (progress == null) {
+    return res.status(404).json({ success: false, error: 'not_found' })
+  }
+
+  return res.json({
+    success: true,
+    progress: {
+      status: progress.status,
+      total: progress.total,
+      completed: progress.completed,
+      failed: progress.failed,
+      updatedAt: progress.updatedAt,
+      results: progress.results,
+      error: progress.error != null ? req.i18n.translate(progress.error) : undefined,
+    },
+  })
+}
+
+/**
+ * @param {Request} req
+ * @param {Response} res
+ */
+async function cancelBulkUpload(req, res) {
+  const userId = SessionManager.getLoggedInUserId(req.session)
+  const { body } = parseReq(req, cancelBulkUploadSchema)
+  const progress = await ProjectUploadProgress.promises.get(userId, body.importId)
+  if (progress == null) {
+    return res.status(404).json({ success: false, error: 'not_found' })
+  }
+
+  await ProjectUploadProgress.promises.cancel(userId, body.importId)
+  return res.json({ success: true })
 }
 
 /**
@@ -403,7 +473,9 @@ function multerMiddleware(req, res, next) {
 
 export default {
   uploadProject,
-  bulkUploadProjects,
+  bulkUploadProjects: expressify(bulkUploadProjects),
+  getBulkUploadStatus: expressify(getBulkUploadStatus),
+  cancelBulkUpload: expressify(cancelBulkUpload),
   uploadFile: expressify(uploadFile),
   multerMiddleware,
   importDocument: expressify(importDocument),

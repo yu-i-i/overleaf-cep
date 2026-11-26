@@ -608,7 +608,8 @@ ul.project-list-filters {
 }
 
 /* stylelint-disable selector-class-pattern */
-.project-list-upload-project-modal-uppy-dashboard .uppy-Root {
+.project-list-upload-project-modal-uppy-dashboard .uppy-Root,
+.projects-list-upload-project-modal-uppy-dashboard .uppy-Root {
   .uppy-Dashboard-AddFiles-title {
     display: flex;
     flex-direction: column;
@@ -624,6 +625,38 @@ ul.project-list-filters {
 
       margin-bottom: var(--spacing-07);
     }
+  }
+}
+
+.upload-projects-modal-import-progress {
+  display: flex;
+  flex-direction: column;
+  // Match the Uppy dashboard height so the modal does not jump between phases
+  min-height: 300px;
+
+  .upload-projects-modal-import-progress-header {
+    display: flex;
+    align-items: center;
+  }
+
+  .upload-projects-modal-import-results {
+    list-style: none;
+    margin: var(--spacing-06) 0 0;
+    padding-right: var(--spacing-04);
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .upload-projects-modal-import-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-04);
+    padding: var(--spacing-03) 0;
+  }
+
+  .upload-projects-modal-import-result-name {
+    overflow-wrap: anywhere;
   }
 }
 

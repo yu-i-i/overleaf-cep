@@ -2,6 +2,7 @@ import Path from 'node:path'
 import fs from 'node:fs'
 import { callbackify } from 'node:util'
 import ArchiveManager from './ArchiveManager.mjs'
+import { NoProjectsInArchiveError } from './ArchiveErrors.mjs'
 import { Doc } from '../../models/Doc.mjs'
 import DocstoreManager from '../Docstore/DocstoreManager.mjs'
 import DocumentHelper from '../Documents/DocumentHelper.mjs'
@@ -76,7 +77,7 @@ async function createProjectFromZipArchive(ownerId, defaultName, zipPath) {
   }
 }
 
-async function createProjectsFromZipArchive(ownerId, zipPath) {
+async function createProjectsFromZipArchive(ownerId, zipPath, onProgress, isCancelled) {
   const contentsPath = await _extractZip(zipPath)
   try {
     const zipFiles = await globby(['*.zip'], {
@@ -86,17 +87,35 @@ async function createProjectsFromZipArchive(ownerId, zipPath) {
       case: false,
     })
 
+    if (zipFiles.length === 0) {
+      throw new NoProjectsInArchiveError({ contentsPath })
+    }
+
+    await onProgress?.({ type: 'total', total: zipFiles.length })
+
     // Try to create projects for each zip file found in the extracted data
     const projects = []
     for (const zipFile of zipFiles) {
+      if (await isCancelled?.())
+        break
+
       const zipFilePath = Path.join(contentsPath, zipFile)
+      const name = Path.basename(zipFile, '.zip')
+      // Use the zipFile path as the id to avoid collisions in case there are multiple zips with the same name in different subfolders
+      await onProgress?.({ type: 'result', id: zipFile, name, status: 'importing' })
       try {
-        const name = Path.basename(zipFile, '.zip')
-        logger.info({ zipFilePath, name }, 'creating project from zip file')
         const result = await createProjectFromZipArchiveWithName(ownerId, name, zipFilePath)
         projects.push(result.project)
+        await onProgress?.({
+          type: 'result',
+          id: zipFile,
+          name,
+          status: 'success',
+          projectId: result.project._id,
+        })
       } catch (error) {
-        logger.error({ err, zipFilePath }, 'error creating project from zip file')
+        logger.error({ error, zipFilePath }, 'error creating project from zip file')
+        await onProgress?.({ type: 'result', id: zipFile, name, status: 'failed' })
       }
     }
 

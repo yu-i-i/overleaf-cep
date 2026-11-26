@@ -27,8 +27,18 @@ export class ZipContentsTooLargeError extends InvalidZipFileError {
   }
 }
 
+export class NoProjectsInArchiveError extends InvalidZipFileError {
+  constructor(options) {
+    super({
+      message: 'no_projects_in_archive',
+      ...options,
+    })
+  }
+}
+
 export default {
   InvalidZipFileError,
   EmptyZipFileError,
   ZipContentsTooLargeError,
+  NoProjectsInArchiveError,
 }
