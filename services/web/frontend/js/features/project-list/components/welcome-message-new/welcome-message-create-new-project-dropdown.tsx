@@ -186,7 +186,7 @@ function WelcomeMessageCreateNewProjectDropdown({
         )}
         {(isOverleaf || gitlabSyncEnabled) && (
           <li role="none">
-            <DropdownItem
+            <OLDropdownItem
               as="button"
               onClick={e =>
                 handleDropdownItemClick(
@@ -198,12 +198,12 @@ function WelcomeMessageCreateNewProjectDropdown({
               tabIndex={-1}
             >
               {t('import_from_gitlab')}
-            </DropdownItem>
+            </OLDropdownItem>
           </li>
         )}
         {(isOverleaf || giteaSyncEnabled) && (
           <li role="none">
-            <DropdownItem
+            <OLDropdownItem
               as="button"
               onClick={e =>
                 handleDropdownItemClick(
@@ -215,7 +215,7 @@ function WelcomeMessageCreateNewProjectDropdown({
               tabIndex={-1}
             >
               {t('import_from_gitea')}
-            </DropdownItem>
+            </OLDropdownItem>
           </li>
         )}
         {(portalTemplates?.length ?? 0) > 0 ? (
