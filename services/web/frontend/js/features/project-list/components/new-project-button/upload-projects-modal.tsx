@@ -135,6 +135,7 @@ function UploadProjectsModal({
     if (phase === 'importing' && importId != null) {
       void postJSON('/project/new/bulk_upload/cancel', {
         body: { importId },
+        keepalive: true,
       }).catch(() => {})
     } else if (phase === 'upload') {
       uppy.cancelAll()
