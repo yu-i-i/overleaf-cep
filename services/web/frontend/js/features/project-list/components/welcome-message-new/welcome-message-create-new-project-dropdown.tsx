@@ -67,7 +67,7 @@ function WelcomeMessageCreateNewProjectDropdown({
     useFeatureFlag('import-markdown') &&
     getMeta('ol-ExposedSettings').enablePandocConversions
 
-  const { isOverleaf, githubSyncEnabled, gitlabSyncEnabled, giteaSyncEnabled } = getMeta('ol-ExposedSettings')
+  const { isOverleaf, githubSyncEnabled, gitlabSyncEnabled, giteaSyncEnabled, giteaBrand } = getMeta('ol-ExposedSettings')
 
   const handleDropdownItemClick = useCallback(
     (
@@ -180,13 +180,13 @@ function WelcomeMessageCreateNewProjectDropdown({
               }
               tabIndex={-1}
             >
-              {t('import_from_github')}
+              {t('import_from_github', { provider: 'GitHub' })}
             </OLDropdownItem>
           </li>
         )}
         {(isOverleaf || gitlabSyncEnabled) && (
           <li role="none">
-            <DropdownItem
+            <OLDropdownItem
               as="button"
               onClick={e =>
                 handleDropdownItemClick(
@@ -197,13 +197,13 @@ function WelcomeMessageCreateNewProjectDropdown({
               }
               tabIndex={-1}
             >
-              {t('import_from_gitlab')}
-            </DropdownItem>
+              {t('import_from_github', { provider: 'GitLab' })}
+            </OLDropdownItem>
           </li>
         )}
         {(isOverleaf || giteaSyncEnabled) && (
           <li role="none">
-            <DropdownItem
+            <OLDropdownItem
               as="button"
               onClick={e =>
                 handleDropdownItemClick(
@@ -214,8 +214,8 @@ function WelcomeMessageCreateNewProjectDropdown({
               }
               tabIndex={-1}
             >
-              {t('import_from_gitea')}
-            </DropdownItem>
+              {t('import_from_github', { provider: (giteaBrand === 'forgejo' ? 'Forgejo' : 'Gitea') })}
+            </OLDropdownItem>
           </li>
         )}
         {(portalTemplates?.length ?? 0) > 0 ? (
