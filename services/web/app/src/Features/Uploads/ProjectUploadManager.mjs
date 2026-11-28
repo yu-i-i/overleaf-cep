@@ -2,6 +2,7 @@ import Path from 'node:path'
 import fs from 'node:fs'
 import { callbackify } from 'node:util'
 import ArchiveManager from './ArchiveManager.mjs'
+import { NoProjectsInArchiveError } from './ArchiveErrors.mjs'
 import { Doc } from '../../models/Doc.mjs'
 import DocstoreManager from '../Docstore/DocstoreManager.mjs'
 import DocumentHelper from '../Documents/DocumentHelper.mjs'
@@ -17,14 +18,17 @@ import { DeletedProjectReasons } from '../Project/DeletedProjectReasons.mjs'
 import TpdsProjectFlusher from '../ThirdPartyDataStore/TpdsProjectFlusher.mjs'
 import logger from '@overleaf/logger'
 import OError from '@overleaf/o-error'
+import globby from 'globby'
 
 export default {
   createProjectFromZipArchive: callbackify(createProjectFromZipArchive),
+  createProjectsFromZipArchive: callbackify(createProjectsFromZipArchive),
   createProjectFromZipArchiveWithName: callbackify(
     createProjectFromZipArchiveWithName
   ),
   promises: {
     createProjectFromZipArchive,
+    createProjectsFromZipArchive,
     createProjectFromZipArchiveWithName,
   },
 }
@@ -68,6 +72,55 @@ async function createProjectFromZipArchive(ownerId, defaultName, zipPath) {
       throw err
     }
     return project
+  } finally {
+    await fs.promises.rm(contentsPath, { recursive: true, force: true })
+  }
+}
+
+async function createProjectsFromZipArchive(ownerId, zipPath, onProgress, isCancelled) {
+  const contentsPath = await _extractZip(zipPath)
+  try {
+    const zipFiles = await globby(['*.zip'], {
+      cwd: contentsPath,
+      followSymlinkedDirectories: false,
+      onlyFiles: true,
+      case: false,
+    })
+
+    if (zipFiles.length === 0) {
+      throw new NoProjectsInArchiveError({ contentsPath })
+    }
+
+    await onProgress?.({ type: 'total', total: zipFiles.length })
+
+    // Try to create projects for each zip file found in the extracted data
+    const projects = []
+    for (const zipFile of zipFiles) {
+      if (await isCancelled?.())
+        break
+
+      const zipFilePath = Path.join(contentsPath, zipFile)
+      const name = Path.basename(zipFile, '.zip')
+      // Use the zipFile path as the id to avoid collisions in case there are multiple zips with the same name in different subfolders
+      await onProgress?.({ type: 'result', id: zipFile, name, status: 'importing' })
+      try {
+        const result = await createProjectFromZipArchiveWithName(ownerId, name, zipFilePath)
+        projects.push(result.project)
+        await onProgress?.({
+          type: 'result',
+          id: zipFile,
+          name,
+          status: 'success',
+          projectId: result.project._id,
+        })
+      } catch (error) {
+        logger.error({ error, zipFilePath }, 'error creating project from zip file')
+        await onProgress?.({ type: 'result', id: zipFile, name, status: 'failed' })
+      }
+    }
+
+    return projects
+
   } finally {
     await fs.promises.rm(contentsPath, { recursive: true, force: true })
   }

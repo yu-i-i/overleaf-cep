@@ -8,12 +8,14 @@ import { useLocation } from '@/shared/hooks/use-location'
 import { Tag } from '../../../../../../app/src/Features/Tags/types'
 
 const UploadProjectModal = lazy(() => import('./upload-project-modal'))
+const UploadProjectsModal = lazy(() => import('./upload-projects-modal'))
 const ImportDocumentModal = lazy(() => import('./import-document-modal'))
 
 export type NewProjectButtonModalVariant =
   | 'blank_project'
   | 'example_project'
   | 'upload_project'
+  | 'upload_projects'
   | 'import_from_github'
   | 'import_from_gitlab'
   | 'import_from_gitea'
@@ -65,6 +67,11 @@ function NewProjectButtonModal({
     [location]
   )
 
+  const hideAndRefresh = useCallback(() => {
+    onHide()
+    location.reload()
+  }, [onHide, location])
+
   switch (modal) {
     case 'blank_project':
       return <BlankProjectModal onHide={onHide} initialTags={initialTags} />
@@ -74,6 +81,12 @@ function NewProjectButtonModal({
       return (
         <Suspense fallback={<FullSizeLoadingSpinner delay={500} />}>
           <UploadProjectModal onHide={onHide} openProject={openProject} />
+        </Suspense>
+      )
+    case 'upload_projects':
+      return (
+        <Suspense fallback={<FullSizeLoadingSpinner delay={500} />}>
+          <UploadProjectsModal onHide={onHide} hideAndRefresh={hideAndRefresh} />
         </Suspense>
       )
     case 'import_docx':

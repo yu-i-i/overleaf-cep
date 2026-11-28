@@ -30,6 +30,28 @@ export default {
       multerErrorHandler
     )
 
+    webRouter.post(
+      '/project/new/bulk_upload',
+      AuthenticationController.requireLogin(),
+      RateLimiterMiddleware.rateLimit(rateLimiters.projectUpload),
+      ProjectUploadController.multerMiddleware,
+      ProjectUploadController.bulkUploadProjects,
+      multerErrorHandler
+    )
+
+    // No rate limiting here, because this endpoint is polled by the frontend during bulk imports
+    webRouter.get(
+      '/project/new/bulk_upload/status',
+      AuthenticationController.requireLogin(),
+      ProjectUploadController.getBulkUploadStatus
+    )
+
+    webRouter.post(
+      '/project/new/bulk_upload/cancel',
+      AuthenticationController.requireLogin(),
+      ProjectUploadController.cancelBulkUpload
+    )
+
     if (Settings.enablePandocConversions) {
       webRouter.post(
         '/project/new/import-document',
