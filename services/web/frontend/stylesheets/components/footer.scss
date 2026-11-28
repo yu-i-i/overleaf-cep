@@ -133,14 +133,15 @@ $footer-width-delta: 320px;
 }
 
 footer.site-footer {
-  --link-color: var(--link-web);
-  --link-hover-color: var(--link-web-hover);
-  --link-visited-color: var(--link-web-visited);
+  --link-color: var(--link-web-themed);
+  --link-hover-color: var(--link-web-hover-themed);
+  --link-visited-color: var(--link-web-visited-themed);
   --link-text-decoration: none;
   --link-hover-text-decoration: underline;
 
-  background-color: var(--bg-light-primary);
-  border-top: 1px solid var(--border-primary-dark);
+  color: var(--content-primary-themed);
+  background-color: var(--bg-primary-themed);
+  border-top: 1px solid var(--border-divider-themed);
 
   @include body-sm;
 
