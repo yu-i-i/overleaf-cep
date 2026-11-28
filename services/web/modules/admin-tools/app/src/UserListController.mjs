@@ -91,7 +91,7 @@ async function manageUsersPage(req, res, next) {
 }
 
 async function registerNewUser(req, res, next) {
-  const { email, isExternal, isAdmin } = req.body
+  const { email, isExternal, isAdmin, isGuestUser } = req.body
   if (email == null || email === '') {
     return HttpErrorHandler.unprocessableEntity(req, res, 'Email address is empty')
   }
@@ -128,6 +128,9 @@ async function registerNewUser(req, res, next) {
     const update = {
       $set: { isAdmin, emails: [{ email, reversedHostname, confirmedAt: Date.now() }] },
     }
+    if (isGuestUser) {
+      update.$set.adminRoles = ['guest-user']
+    }
     if (isExternal) {
       update.$unset = { hashedPassword: "" }
     }
@@ -150,7 +153,18 @@ async function registerNewUser(req, res, next) {
 
   const authMethods = isExternal ? [] : ['local']
   const { id, first_name, last_name, signUpDate } = user
-  const newUser = { id, email, firstName: first_name, lastName: last_name, isAdmin, signUpDate, inactive: true, deleted: false, authMethods }
+  const newUser = {
+    id,
+    email,
+    firstName: first_name,
+    lastName: last_name,
+    isAdmin,
+    isGuestUser: Boolean(isGuestUser),
+    signUpDate,
+    inactive: true,
+    deleted: false,
+    authMethods
+  }
   res.json({ user: newUser, emailIsNotSent })
 }
 
@@ -218,6 +232,7 @@ async function _getUsers(
     hashedPassword: 1,
     samlIdentifiers: 1,
     thirdPartyIdentifiers: 1,
+    adminRoles: 1,
     suspended: 1,
   }
   const projectionDeleted = {};
@@ -318,6 +333,7 @@ function _formatUserInfo(user, maxDate) {
     authMethods,
     allowUpdateDetails,
     allowUpdateIsAdmin,
+    isGuestUser: Array.isArray(user.adminRoles) && user.adminRoles.includes('guest-user'),
     ...(user.suspended && { suspended: user.suspended }),
     inactive: !user.lastActive || user.lastActive < maxDate,
     ...(user.deletedAt && { deletedAt: user.deletedAt }),
@@ -337,6 +353,7 @@ function _matchesFilters(user, filters) {
   if (filters.all) return true
   if (filters.admin) return user.isAdmin
   if (filters.inactive && !user.inactive) return false
+  if (filters.guestUser && !user.isGuestUser) return false
   if (filters.suspended && !user.suspended) return false
   for (const method of availableAuthMethods) {
     if (filters[method] && !user.authMethods.includes(method)) {
@@ -352,6 +369,7 @@ function _hasActiveFilter(filters) {
     filters.all ||
     filters.admin ||
     filters.inactive ||
+    filters.guestUser ||
     filters.suspended ||
     filters.local ||
     filters.saml ||
@@ -495,8 +513,14 @@ async function updateUser(req, res, next) {
     updatesInput.last_name = updatesInput.lastName
     delete updatesInput.lastName
   }
+  const hasGuestUserUpdate = Object.prototype.hasOwnProperty.call(updatesInput, 'isGuestUser')
+  const isGuestUser = Boolean(updatesInput.isGuestUser)
+  delete updatesInput.isGuestUser
 
   const projection = Object.fromEntries(Object.keys(updatesInput).map(k => [k, 1]))
+  if (hasGuestUserUpdate) {
+    projection.adminRoles = 1
+  }
   const user = await User.findById(userId, projection).exec()
 
   if (!user) {
@@ -546,6 +570,18 @@ async function updateUser(req, res, next) {
     update[key] = newValue
   }
 
+  if (hasGuestUserUpdate) {
+    const currentRoles = Array.isArray(user.adminRoles) ? user.adminRoles : []
+    if (isGuestUser) {
+      if (!currentRoles.includes('guest-user')) {
+        update.adminRoles = [...currentRoles, 'guest-user']
+      }
+    } else if (currentRoles.includes('guest-user')) {
+      const nextRoles = currentRoles.filter(role => role !== 'guest-user')
+      update.adminRoles = nextRoles.length > 0 ? nextRoles : undefined
+    }
+  }
+
   Object.assign(user, update)
   try {
     await user.save()
@@ -569,6 +605,9 @@ async function updateUser(req, res, next) {
   if (update.last_name != null) {
     update.lastName = update.last_name
     delete update.last_name
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'isGuestUser')) {
+    update.isGuestUser = isGuestUser
   }
 
   return res.json(update)

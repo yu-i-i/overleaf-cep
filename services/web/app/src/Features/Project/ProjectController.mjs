@@ -57,6 +57,8 @@ import AiFeatureUsageRateLimiter from '../../infrastructure/rate-limiters/AiFeat
 import WorkbenchRateLimiter from '../../infrastructure/rate-limiters/WorkbenchRateLimiter.mjs'
 import PermissionsManager from '../Authorization/PermissionsManager.mjs'
 import { FileTooLargeError } from '../Errors/Errors.js'
+import HttpErrorHandler from '../Errors/HttpErrorHandler.mjs'
+import { GuestUserProjectCreationForbiddenError } from '../../../../modules/authentication/guest-user/app/src/GuestUserProjectCreationGuard.mjs'
 
 const { checkUserPermissions } = PermissionsManager.promises
 const { isPaidSubscription } = SubscriptionHelper
@@ -437,6 +439,9 @@ const _ProjectController = {
         },
       })
     } catch (err) {
+      if (err instanceof GuestUserProjectCreationForbiddenError) {
+        return HttpErrorHandler.forbidden(req, res, err.message)
+      }
       OError.tag(err, 'error cloning project', {
         projectId,
         userId: currentUser._id,
@@ -469,30 +474,37 @@ const _ProjectController = {
       body.projectName != null ? body.projectName.trim() : undefined
     const { template } = body
 
-    const project = await (template === 'example'
-      ? ProjectCreationHandler.promises.createExampleProject(
-          userId,
-          projectName
-        )
-      : ProjectCreationHandler.promises.createBasicProject(userId, projectName))
+    try {
+      const project = await (template === 'example'
+        ? ProjectCreationHandler.promises.createExampleProject(
+            userId,
+            projectName
+          )
+        : ProjectCreationHandler.promises.createBasicProject(userId, projectName))
 
-    ProjectAuditLogHandler.addEntryIfManagedInBackground(
-      project._id,
-      'project-created',
-      project.owner_ref,
-      req.ip
-    )
+      ProjectAuditLogHandler.addEntryIfManagedInBackground(
+        project._id,
+        'project-created',
+        project.owner_ref,
+        req.ip
+      )
 
-    res.json({
-      project_id: project._id,
-      owner_ref: project.owner_ref,
-      owner: {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        _id: userId,
-      },
-    })
+      res.json({
+        project_id: project._id,
+        owner_ref: project.owner_ref,
+        owner: {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          _id: userId,
+        },
+      })
+    } catch (err) {
+      if (err instanceof GuestUserProjectCreationForbiddenError) {
+        return HttpErrorHandler.forbidden(req, res, err.message)
+      }
+      throw err
+    }
   },
 
   async renameProject(req, res) {
